@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "workspace": "/home/wilson/USA_OPS",
+  "generated_at": "2026-03-16T19:10:35.257429+00:00",
+  "files": [
+    {
+      "path": "lib/engine.py",
+      "transform": "copy",
+      "local_sha256": "7c2fc13a9eb04e7e2dc2c2d079fb007312ccdc2d602b75e43558c80ea464d519",
+      "origin": {
+        "repo": "RENDA_OPS",
+        "path": "lib/engine.py",
+        "abs_path": "/home/wilson/RENDA_OPS/lib/engine.py",
+        "sha256": "7c2fc13a9eb04e7e2dc2c2d079fb007312ccdc2d602b75e43558c80ea464d519"
+      },
+      "sha256_match_origin": true
+    },
+    {
+      "path": "lib/metrics.py",
+      "transform": "copy",
+      "local_sha256": "a72277df8cb6071d7d12f7a0eb30eb9886e5e90ec4bf71f4f736f146766c4598",
+      "origin": {
+        "repo": "RENDA_OPS",
+        "path": "lib/metrics.py",
+        "abs_path": "/home/wilson/RENDA_OPS/lib/metrics.py",
+        "sha256": "a72277df8cb6071d7d12f7a0eb30eb9886e5e90ec4bf71f4f736f146766c4598"
+      },
+      "sha256_match_origin": true
+    },
+    {
+      "path": "lib/io.py",
+      "transform": "copy",
+      "local_sha256": "616c27a3558bb7c86d13eea48597fe43b57a67245b7d72495873a05ad1fbda91",
+      "origin": {
+        "repo": "RENDA_OPS",
+        "path": "lib/io.py",
+        "abs_path": "/home/wilson/RENDA_OPS/lib/io.py",
+        "sha256": "616c27a3558bb7c86d13eea48597fe43b57a67245b7d72495873a05ad1fbda91"
+      },
+      "sha256_match_origin": true
+    },
+    {
+      "path": "lib/adapters.py",
+      "transform": "new",
+      "local_sha256": "08da07f8df44ce135b1fb3a1f79a1b1e3e8d4e9c5b2781066273c3174b004094",
+      "origin": null
+    },
+    {
+      "path": "lib/__init__.py",
+      "transform": "new",
+      "local_sha256": "f19056d0296744b91f8164946e2bd17202496e9e378a128ace1559121a904b12",
+      "origin": null
+    },
+    {
+      "path": "requirements.txt",
+      "transform": "new",
+      "local_sha256": "1106119d7516cf21fc844f0cd3b1e41c5be6058f915a851bce64649ac72e8320",
+      "origin": null
+    },
+    {
+      "path": "GOVERNANCE.md",
+      "transform": "rewrite",
+      "local_sha256": "506bfd5372ea98f953da8b9a77f4b082a57c59572888debc9743d5f4027ece25",
+      "origin": null
+    },
+    {
+      "path": "DECISION_LOG.md",
+      "transform": "rewrite",
+      "local_sha256": "aaacbb47576d86e32ebbd43a4ecd717037685f56fbde5e17efe7cf51e97d2f06",
+      "origin": null
+    },
+    {
+      "path": "ROADMAP.md",
+      "transform": "rewrite",
+      "local_sha256": "d0f780310de10c9b01a53e76f0e45dce501a6a502fb5d253793b0ed02fa9674d",
+      "origin": null
+    },
+    {
+      "path": "README.md",
+      "transform": "rewrite",
+      "local_sha256": "cf5cf7892eb1d9971289258539cbb6c94dd7193373a6a6fe52dc92130acb31c5",
+      "origin": null
+    },
+    {
+      "path": "docs/PLANO_USA_OPS.md",
+      "transform": "new",
+      "local_sha256": "d691ca6ed0f0fe05a7bfa5a6647c69981766c15466756b9b75af0ece319cb764",
+      "origin": null
+    },
+    {
+      "path": "docs/BRIEFING_ARCHITECT.md",
+      "transform": "new",
+      "local_sha256": "bdbc22ded53ee029e4858abb0d84d3bdaaa75b910edc2d85e6bb9ba2e98f5142",
+      "origin": null
+    },
+    {
+      "path": "docs/CORPUS_FABRICA_BR.md",
+      "transform": "copy",
+      "local_sha256": "0032bc96f427de69cc1ca80fa9fba3dad70f4b0dafa25f5e75386c13c13c4fe7",
+      "origin": {
+        "repo": "RENDA_OPS",
+        "path": "docs/CORPUS_FABRICA_BR.md",
+        "abs_path": "/home/wilson/RENDA_OPS/docs/CORPUS_FABRICA_BR.md",
+        "sha256": "0032bc96f427de69cc1ca80fa9fba3dad70f4b0dafa25f5e75386c13c13c4fe7"
+      },
+      "sha256_match_origin": true
+    },
+    {
+      "path": ".gitignore",
+      "transform": "new",
+      "local_sha256": "84e305f6a19b4b82c0202b9a301517406b832b1eba47c7b27bb7e6628a14deb4",
+      "origin": null
+    },
+    {
+      "path": ".env.example",
+      "transform": "new",
+      "local_sha256": "a675504dd3e5ba74125b863ed64512df8c9f2e3edccea6cb005910320d5a6aa6",
+      "origin": null
+    },
+    {
+      "path": "config/index_proxies_us.json",
+      "transform": "new",
+      "local_sha256": "2ebb6f386f8c4960d2be9ace0e88ed0cc26c45939ff2de97a3833eab119f7925",
+      "origin": null
+    },
+    {
+      "path": "scripts/t006_build_index_compositions.py",
+      "transform": "new",
+      "local_sha256": "c2cbe0e6faa6d952514d5b9d61f2297af776625b24d5e34ae680fce260a2f501",
+      "origin": null
+    },
+    {
+      "path": "docs/SPEC_PIPELINE_US.md",
+      "transform": "new",
+      "local_sha256": "183bcffab6d4c30ea24223fad47c68231c47c9e5195a03d5d192be554329fa28",
+      "origin": null
+    },
+    {
+      "path": "CHANGELOG.md",
+      "transform": "rewrite",
+      "local_sha256": "a08c3aab9fe3b50c7ffa04dc06620fd8a794a4cdf83a6db6cc6dd46c83690f39",
+      "origin": null
+    }
+  ]
+}

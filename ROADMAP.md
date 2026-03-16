@@ -13,17 +13,17 @@
 
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
-| T-001 | Setup repositório (git, venv, deps) | BACKLOG | D-001 |
-| T-002 | Portar componentes agnósticos do RENDA_OPS | BACKLOG | D-001 |
-| T-003 | MANIFESTO_ORIGEM.json | BACKLOG | D-001 |
-| T-004 | Copiar corpus BR como referência | BACKLOG | D-001 |
+| T-001 | Setup repositório (git, venv, deps) | DONE | D-001 |
+| T-002 | Portar componentes agnósticos do RENDA_OPS | DONE | D-001 |
+| T-003 | MANIFESTO_ORIGEM.json | DONE | D-001 |
+| T-004 | Copiar corpus BR como referência | DONE | D-001 |
 
 ## Phase 1 — Dados Reais US
 
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
-| T-005 | SPEC do pipeline US | BACKLOG | D-003 |
-| T-006 | Composição histórica Russell 1000 + SmallCap 600 | BACKLOG | D-001, D-003 |
+| T-005 | SPEC do pipeline US | DONE | D-003 |
+| T-006 | Composição do universo via snapshot iShares (IWB/IJR) + evidências | DONE | D-005 |
 | T-007 | Ingestão massiva OHLCV US (Polygon.io) | BACKLOG | D-003 |
 | T-008 | Qualidade SPC + blacklist | BACKLOG | D-002 |
 | T-009 | Excluir BDRs do universo | BACKLOG | D-001 |

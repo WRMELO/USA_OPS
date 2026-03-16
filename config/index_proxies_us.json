@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "decision_ref": "D-005",
+  "source": "ishares_csv_public",
+  "notes": [
+    "Composicao via snapshot atual de holdings iShares (CSV publico).",
+    "Limitacao aceita em D-005: snapshot nao fornece composicao historica por effective_date."
+  ],
+  "proxies": [
+    {
+      "index_id": "R1000",
+      "composite_ticker": "IWB",
+      "index_name": "Russell 1000",
+      "holdings_csv_url": "https://www.ishares.com/us/products/239707/ishares-russell-1000-etf/1467271812596.ajax?fileType=csv&fileName=IWB_holdings&dataType=fund"
+    },
+    {
+      "index_id": "SP600",
+      "composite_ticker": "IJR",
+      "index_name": "S&P SmallCap 600",
+      "holdings_csv_url": "https://www.ishares.com/us/products/239774/ishares-core-sp-smallcap-etf/1467271812596.ajax?fileType=csv&fileName=IJR_holdings&dataType=fund"
+    }
+  ]
+}
