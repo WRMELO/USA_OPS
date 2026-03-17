@@ -63,6 +63,7 @@ class PolygonAdapter:
             raise ValueError("POLYGON_API_KEY not found in environment.")
         self.client = RESTClient(api_key=api_key, trace=False, connect_timeout=timeout_seconds, read_timeout=timeout_seconds)
         self.max_retries = max_retries
+        self.retry_events = 0
 
     def _with_retry(self, fn: Callable[[], Any], label: str) -> Any:
         last_exc: Exception | None = None
@@ -71,6 +72,7 @@ class PolygonAdapter:
                 return fn()
             except Exception as exc:  # noqa: BLE001
                 last_exc = exc
+                self.retry_events += 1
                 if attempt == self.max_retries:
                     break
                 wait_s = min(2**attempt, 60)
@@ -84,8 +86,8 @@ class PolygonAdapter:
             return pd.Timestamp(value).normalize()
         return pd.to_datetime(value, errors="coerce").normalize()
 
-    def get_ohlcv(self, ticker: str, start: date, end: date) -> pd.DataFrame:
-        label = f"aggs:{ticker}:{start}:{end}"
+    def get_ohlcv(self, ticker: str, start: date, end: date, adjusted: bool = True) -> pd.DataFrame:
+        label = f"aggs:{ticker}:{start}:{end}:adjusted={str(adjusted).lower()}"
 
         def _call() -> list[Any]:
             return list(
@@ -95,7 +97,7 @@ class PolygonAdapter:
                     timespan="day",
                     from_=start,
                     to=end,
-                    adjusted=True,
+                    adjusted=adjusted,
                     sort="asc",
                     limit=50000,
                 )

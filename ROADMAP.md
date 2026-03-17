@@ -32,7 +32,7 @@
 | T-011 | Macro expandido US (FRED) | DONE (SUPERSEDED) | D-003, D-007, D-008 |
 | T-PURGE | Purga física dos artefatos Phase 1 v1 + archive auditorias | DONE | D-008 |
 | T-006v2 | Universo histórico anual via Polygon `/v3/reference/tickers` | DONE | D-007 |
-| T-007v2 | Ingestão OHLCV com `adjusted=False` | BACKLOG | D-007 |
+| T-007v2 | Ingestão OHLCV com `adjusted=False` | DONE | D-007 |
 | T-008av2 | Reference data US reprocessado no universo v2 | BACKLOG | D-007 |
 | T-008v2 | SPC Shewhart completo (I-MR + Xbar-R) | BACKLOG | D-007 |
 | T-009v2 | Exclusão BDR reexecutada no universo v2 | BACKLOG | D-007 |

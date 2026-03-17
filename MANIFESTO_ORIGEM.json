@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workspace": "/home/wilson/USA_OPS",
-  "generated_at": "2026-03-17T02:10:46.972594+00:00",
+  "generated_at": "2026-03-17T06:07:23.995092+00:00",
   "files": [
     {
       "path": "lib/engine.py",
@@ -42,7 +42,7 @@
     {
       "path": "lib/adapters.py",
       "transform": "new",
-      "local_sha256": "08da07f8df44ce135b1fb3a1f79a1b1e3e8d4e9c5b2781066273c3174b004094",
+      "local_sha256": "91a31d8aa170ed94ee5863aab60873bf0f8bedb5b4de164e791d3cff6c2a19ed",
       "origin": null
     },
     {
@@ -72,7 +72,7 @@
     {
       "path": "ROADMAP.md",
       "transform": "rewrite",
-      "local_sha256": "5ba9c03ce0e4ad1c1ca5ccfe97cbb63c3b742e03c2bd7657e65cdd3f9faeb8c7",
+      "local_sha256": "d2eeb5b3c70741df68fee4fc3f601868ed4a7d005e86e23403885fd1ad7f5018",
       "origin": null
     },
     {
@@ -126,7 +126,7 @@
     {
       "path": "scripts/t006_build_index_compositions.py",
       "transform": "new",
-      "local_sha256": "7b2754202bb2d9e85ec2d9b4d970fad39d2f4cf3c68ec61d2d00501c73102aef",
+      "local_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
       "origin": null
     },
     {
@@ -138,7 +138,13 @@
     {
       "path": "CHANGELOG.md",
       "transform": "rewrite",
-      "local_sha256": "eee0e933cbb4e823fde2ab6d5654c4463141c95836988a5d3bb602ed35c5dd8b",
+      "local_sha256": "87a6ad3817185c3f7c47c2e06bb3cf835ff7cfa835dad6a839a6429067af58bf",
+      "origin": null
+    },
+    {
+      "path": "scripts/t007_ingest_us_market_data_raw.py",
+      "transform": "new",
+      "local_sha256": "4dea2d9f4ef63d0050d12e5d4f89543ed912f1bca176992e4f45edd1fdad61bd",
       "origin": null
     }
   ]
