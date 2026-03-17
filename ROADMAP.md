@@ -33,11 +33,11 @@
 | T-PURGE | Purga física dos artefatos Phase 1 v1 + archive auditorias | DONE | D-008 |
 | T-006v2 | Universo histórico anual via Polygon `/v3/reference/tickers` | DONE | D-007 |
 | T-007v2 | Ingestão OHLCV com `adjusted=False` | DONE | D-007 |
-| T-008av2 | Reference data US reprocessado no universo v2 | BACKLOG | D-007 |
-| T-008v2 | SPC Shewhart completo (I-MR + Xbar-R) | BACKLOG | D-007 |
-| T-009v2 | Exclusão BDR reexecutada no universo v2 | BACKLOG | D-007 |
-| T-010v2 | Canonical US com `close_raw` + `close_operational` dinâmico | BACKLOG | D-007 |
-| T-011v2 | Macro US com `outer merge -> ffill -> filter` | BACKLOG | D-007 |
+| T-008av2 | Reference data US reprocessado no universo v2 | DONE | D-007 |
+| T-008v2 | SPC Shewhart completo (I-MR + Xbar-R) | DONE | D-007, D-009 |
+| T-009v2 | Exclusão BDR reexecutada no universo v2 | DONE | D-007 |
+| T-010v2 | Canonical US com `close_raw` + `close_operational` dinâmico | DONE | D-007 |
+| T-011v2 | Macro US com `outer merge -> ffill -> filter` | DONE | D-007 |
 
 ## Phase 2 — Motor M3-US + Features
 

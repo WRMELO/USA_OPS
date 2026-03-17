@@ -104,14 +104,25 @@ Após auditoria forense dual (Gemini + Kimi) com PASS, os arquivos do motor ser�
 1. Tag git (`v1.0.0-motor-us`)
 2. Pre-commit hook bloqueando alterações sem flag `MOTOR_OVERRIDE=1`
 
-## 7) Corpus de referência
+## 7) Gate de paridade metodológica com RENDA_OPS (D-009)
+
+**Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.
+
+**Checklist obrigatório no JSON de task (campo `parity_check`):**
+1. Mecanismo existe no RENDA_OPS? (sim/não, com path de referência)
+2. Se sim: parâmetros idênticos? Se não, justificativa da diferença.
+3. Se não existe no RENDA_OPS: justificativa técnica para introdução, com aprovação explícita do Owner.
+
+**Motivação**: a Fábrica US é uma réplica metodológica da Fábrica BR adaptada ao mercado americano. Divergências só são aceitáveis quando impostas pelas diferenças de mercado (ex.: T+1 vs D+2, Fed Funds vs CDI), nunca por decisão autônoma de um agente.
+
+## 8) Corpus de referência
 
 Antes de iniciar qualquer fase, consultar:
 - `docs/CORPUS_FABRICA_BR.md` — lições aprendidas da Fábrica BR
 - `docs/PLANO_USA_OPS.md` — plano de execução completo
 - `RENDA_OPS/docs/CORPUS_FABRICA_BR.md` — corpus original
 
-## 8) Vigência
+## 9) Vigência
 
 Esta governança entra em vigor com o primeiro commit que a inclui.
 Alterações exigem registro prévio no `DECISION_LOG.md`.

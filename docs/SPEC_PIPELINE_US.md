@@ -87,7 +87,7 @@ Regras obrigatorias:
   - `r_ucl = D4 * r_bar`
 - Referencia obrigatoria: `RENDA_OPS/pipeline/04_build_canonical.py` (trecho de Shewhart completo).
 - Blacklist HARD: ticker ausente no raw, estrutura OHLCV invalida, `active=false`, `delisted_utc` preenchido, ou `fetch_status=FAIL` no reference.
-- Blacklist SOFT: historico insuficiente (`history_days < 252`) ou taxa de outlier acima do limiar soft.
+- Blacklist SOFT: historico insuficiente (`history_days < 252`) apenas.
 
 ### T-009v2 — Exclusao de BDRs
 
