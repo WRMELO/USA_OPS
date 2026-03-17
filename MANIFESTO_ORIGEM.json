@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workspace": "/home/wilson/USA_OPS",
-  "generated_at": "2026-03-16T19:10:35.257429+00:00",
+  "generated_at": "2026-03-17T02:10:46.972594+00:00",
   "files": [
     {
       "path": "lib/engine.py",
@@ -66,13 +66,13 @@
     {
       "path": "DECISION_LOG.md",
       "transform": "rewrite",
-      "local_sha256": "aaacbb47576d86e32ebbd43a4ecd717037685f56fbde5e17efe7cf51e97d2f06",
+      "local_sha256": "073e93876609b733c67ce5cf2d5b0f641f549f48927dbdd82381b546cd2fcc56",
       "origin": null
     },
     {
       "path": "ROADMAP.md",
       "transform": "rewrite",
-      "local_sha256": "d0f780310de10c9b01a53e76f0e45dce501a6a502fb5d253793b0ed02fa9674d",
+      "local_sha256": "5ba9c03ce0e4ad1c1ca5ccfe97cbb63c3b742e03c2bd7657e65cdd3f9faeb8c7",
       "origin": null
     },
     {
@@ -126,19 +126,19 @@
     {
       "path": "scripts/t006_build_index_compositions.py",
       "transform": "new",
-      "local_sha256": "c2cbe0e6faa6d952514d5b9d61f2297af776625b24d5e34ae680fce260a2f501",
+      "local_sha256": "7b2754202bb2d9e85ec2d9b4d970fad39d2f4cf3c68ec61d2d00501c73102aef",
       "origin": null
     },
     {
       "path": "docs/SPEC_PIPELINE_US.md",
       "transform": "new",
-      "local_sha256": "183bcffab6d4c30ea24223fad47c68231c47c9e5195a03d5d192be554329fa28",
+      "local_sha256": "37d64a6b709341fc311b07ce212de34672ddf0cd790a4da7d6205ce67fae323e",
       "origin": null
     },
     {
       "path": "CHANGELOG.md",
       "transform": "rewrite",
-      "local_sha256": "a08c3aab9fe3b50c7ffa04dc06620fd8a794a4cdf83a6db6cc6dd46c83690f39",
+      "local_sha256": "eee0e933cbb4e823fde2ab6d5654c4463141c95836988a5d3bb602ed35c5dd8b",
       "origin": null
     }
   ]

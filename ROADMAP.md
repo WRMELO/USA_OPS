@@ -18,17 +18,26 @@
 | T-003 | MANIFESTO_ORIGEM.json | DONE | D-001 |
 | T-004 | Copiar corpus BR como referência | DONE | D-001 |
 
-## Phase 1 — Dados Reais US
+## Phase 1 — Dados Reais US (v1 superseded)
 
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
 | T-005 | SPEC do pipeline US | DONE | D-003 |
-| T-006 | Composição do universo via snapshot iShares (IWB/IJR) + evidências | DONE | D-005 |
-| T-007 | Ingestão massiva OHLCV US (Polygon.io) | BACKLOG | D-003 |
-| T-008 | Qualidade SPC + blacklist | BACKLOG | D-002 |
-| T-009 | Excluir BDRs do universo | BACKLOG | D-001 |
-| T-010 | SSOT canônico US | BACKLOG | D-001 |
-| T-011 | Macro expandido US (FRED) | BACKLOG | D-003 |
+| T-006 | Composição do universo via snapshot iShares (IWB/IJR) + evidências | DONE (SUPERSEDED) | D-005, D-007, D-008 |
+| T-007 | Ingestão massiva OHLCV US (Polygon.io) | DONE (SUPERSEDED) | D-003, D-005, D-007, D-008 |
+| T-008a | Reference data US por ticker (Ticker Details + Ticker Events) | DONE (SUPERSEDED) | D-006, D-007, D-008 |
+| T-008 | Qualidade SPC + blacklist | DONE (SUPERSEDED) | D-002, D-007, D-008 |
+| T-009 | Excluir BDRs do universo | DONE (SUPERSEDED) | D-001, D-007, D-008 |
+| T-010 | SSOT canônico US | DONE (SUPERSEDED) | D-001, D-007, D-008 |
+| T-011 | Macro expandido US (FRED) | DONE (SUPERSEDED) | D-003, D-007, D-008 |
+| T-PURGE | Purga física dos artefatos Phase 1 v1 + archive auditorias | DONE | D-008 |
+| T-006v2 | Universo histórico anual via Polygon `/v3/reference/tickers` | DONE | D-007 |
+| T-007v2 | Ingestão OHLCV com `adjusted=False` | BACKLOG | D-007 |
+| T-008av2 | Reference data US reprocessado no universo v2 | BACKLOG | D-007 |
+| T-008v2 | SPC Shewhart completo (I-MR + Xbar-R) | BACKLOG | D-007 |
+| T-009v2 | Exclusão BDR reexecutada no universo v2 | BACKLOG | D-007 |
+| T-010v2 | Canonical US com `close_raw` + `close_operational` dinâmico | BACKLOG | D-007 |
+| T-011v2 | Macro US com `outer merge -> ffill -> filter` | BACKLOG | D-007 |
 
 ## Phase 2 — Motor M3-US + Features
 
