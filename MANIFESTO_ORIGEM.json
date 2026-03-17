@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workspace": "/home/wilson/USA_OPS",
-  "generated_at": "2026-03-17T06:07:23.995092+00:00",
+  "generated_at": "2026-03-17T06:29:46.027339+00:00",
   "files": [
     {
       "path": "lib/engine.py",
@@ -138,13 +138,19 @@
     {
       "path": "CHANGELOG.md",
       "transform": "rewrite",
-      "local_sha256": "87a6ad3817185c3f7c47c2e06bb3cf835ff7cfa835dad6a839a6429067af58bf",
+      "local_sha256": "88590e99fc72870b92122401c4e6763ebe1b250b517f863b8e2e671c2bbc9796",
       "origin": null
     },
     {
       "path": "scripts/t007_ingest_us_market_data_raw.py",
       "transform": "new",
       "local_sha256": "4dea2d9f4ef63d0050d12e5d4f89543ed912f1bca176992e4f45edd1fdad61bd",
+      "origin": null
+    },
+    {
+      "path": "scripts/t008a_ingest_ticker_reference_us.py",
+      "transform": "new",
+      "local_sha256": "a163d5ffd9748e34e259113345d73cc821dc8b32104668e28b6163d547419104",
       "origin": null
     }
   ]
