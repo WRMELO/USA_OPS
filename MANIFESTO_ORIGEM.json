@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workspace": "/home/wilson/USA_OPS",
-  "generated_at": "2026-03-17T22:15:48+00:00",
+  "generated_at": "2026-03-18T09:27:44+00:00",
   "files": [
     {
       "path": "lib/engine.py",
@@ -72,7 +72,7 @@
     {
       "path": "ROADMAP.md",
       "transform": "rewrite",
-      "local_sha256": "5101068acfb0eb69fe3711ebc313bf1d8d4badca548b15ec4950e4292f286c13",
+      "local_sha256": "1fc41ca7b8ae6cedceaed1d75f85ce9f9ce12944650789e3d114d41281e2a653",
       "origin": null
     },
     {
@@ -138,7 +138,7 @@
     {
       "path": "CHANGELOG.md",
       "transform": "rewrite",
-      "local_sha256": "3dae11fc4bfe6ba2dc67e6a671e4bf019be47f6f310b06b489f44e2bc1ae00b4",
+      "local_sha256": "8583c77d8d801df63af594f02a39de7ad327f239ce57d629f307c453c633affd",
       "origin": null
     },
     {
@@ -229,6 +229,36 @@
       "path": "scripts/t012_compute_scores_m3_us.py",
       "transform": "new",
       "local_sha256": "90ef17add57ce418e4d66bd74cb1ca28c456f33c3e8fe8463e883e8f1184f2d4",
+      "origin": null
+    },
+    {
+      "path": "scripts/t013_build_features_us.py",
+      "transform": "new",
+      "local_sha256": "3fa9fbd04a082a647cbabac5c4ea6f02b85a9467c731a6c8abf909a29bbb99f3",
+      "origin": null
+    },
+    {
+      "path": "config/feature_guard_us.json",
+      "transform": "new",
+      "local_sha256": "fcfc550ce91001d7db429e3e833c085d6748d8ce0bfc3e57206ad852da919c4f",
+      "origin": null
+    },
+    {
+      "path": "data/features/t013_features_report.json",
+      "transform": "new",
+      "local_sha256": "bb1779e1f8c82aae61f9c213cfdcb70a8720ecacc2b37697a10fd2950b7633d7",
+      "origin": null
+    },
+    {
+      "path": "scripts/t014_build_labels_us.py",
+      "transform": "new",
+      "local_sha256": "f07080000bc282cab67bba72f950056b14c2b43f13c007b083008c38c259e726",
+      "origin": null
+    },
+    {
+      "path": "data/features/t014_labels_report.json",
+      "transform": "new",
+      "local_sha256": "a64e2bdff95c264cb4f9a5fdb3e1db761e6e0598542062618232f6fe1474d0b4",
       "origin": null
     }
   ]

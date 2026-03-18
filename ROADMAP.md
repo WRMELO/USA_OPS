@@ -44,8 +44,8 @@
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
 | T-012 | Scoring M3-US diário | DONE | D-002, D-011, D-012, D-010 |
-| T-013 | Feature engineering US | BACKLOG | D-002 |
-| T-014 | Labels de regime US | BACKLOG | D-002 |
+| T-013 | Feature engineering US | DONE | D-002, D-009, D-010, D-012 |
+| T-014 | Labels de regime US | DONE | D-002, D-009, D-010 |
 
 ## Phase 3 — Backtest Comparativo com Venda Defensiva
 
