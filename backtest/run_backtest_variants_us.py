@@ -18,12 +18,14 @@ IN_BLACKLIST = ROOT / "config" / "blacklist_us.json"
 OUT_DIR = ROOT / "backtest" / "results"
 TRAIN_END = pd.Timestamp("2022-12-30")
 BASE_CAPITAL = 100_000.0
+MIN_MARKET_CAP_DEFAULT = 300_000_000.0
 
 
 @dataclass
 class BacktestConfig:
     top_n: int
     buffer_k: int
+    rebalance_cadence: int
     friction_one_way_bps: float
     settlement_days: int
     base_capital: float
@@ -45,9 +47,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="T-016 defensive backtest US")
     parser.add_argument("--top-n", type=int, default=10)
     parser.add_argument("--buffer-k", type=int, default=15)
+    parser.add_argument("--rebalance-cadence", type=int, default=1)
     parser.add_argument("--friction-bps", type=float, default=2.5)
     parser.add_argument("--settlement-days", type=int, default=1)
     parser.add_argument("--base-capital", type=float, default=BASE_CAPITAL)
+    parser.add_argument("--min-market-cap", type=float, default=MIN_MARKET_CAP_DEFAULT)
     return parser.parse_args()
 
 
@@ -82,6 +86,7 @@ def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         "ticker",
         "close_raw",
         "close_operational",
+        "market_cap",
         "split_factor",
         "i_value",
         "i_ucl",
@@ -97,6 +102,8 @@ def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     for c in needed:
         if c not in canonical.columns:
             canonical[c] = np.nan
+    canonical["market_cap"] = pd.to_numeric(canonical["market_cap"], errors="coerce")
+    canonical.loc[canonical["market_cap"] <= 0.0, "market_cap"] = np.nan
     canonical = canonical[needed].dropna(subset=["date", "ticker", "close_raw"]).sort_values(["date", "ticker"])
     macro = macro.dropna(subset=["date", "fed_funds_rate"]).sort_values("date")
     scores = scores.dropna(subset=["date", "ticker", "m3_rank"]).sort_values(["date", "m3_rank", "ticker"])
@@ -118,6 +125,41 @@ def build_scores_by_day(scores: pd.DataFrame, blacklist: set[str]) -> dict[pd.Ti
         view = view.dropna(subset=["m3_rank"]).sort_values(["m3_rank", "ticker"]).set_index("ticker")
         out[d] = view
     return out
+
+
+def build_market_cap_wide(canonical: pd.DataFrame) -> pd.DataFrame:
+    if canonical.empty or "market_cap" not in canonical.columns:
+        return pd.DataFrame(dtype=float)
+    view = canonical[["date", "ticker", "market_cap"]].copy()
+    view["market_cap"] = pd.to_numeric(view["market_cap"], errors="coerce")
+    view.loc[view["market_cap"] <= 0.0, "market_cap"] = np.nan
+    return view.pivot_table(index="date", columns="ticker", values="market_cap", aggfunc="first").sort_index().ffill()
+
+
+def apply_min_market_cap_filter(
+    scores_by_day: dict[pd.Timestamp, pd.DataFrame],
+    market_cap_wide: pd.DataFrame,
+    min_market_cap: float,
+) -> tuple[dict[pd.Timestamp, pd.DataFrame], float, float]:
+    pre_counts = [int(len(view)) for view in scores_by_day.values()]
+    pre_median = float(pd.Series(pre_counts, dtype=float).median()) if pre_counts else 0.0
+    if min_market_cap <= 0.0:
+        return scores_by_day, pre_median, pre_median
+
+    filtered: dict[pd.Timestamp, pd.DataFrame] = {}
+    post_counts: list[int] = []
+    for d, view in scores_by_day.items():
+        if d not in market_cap_wide.index or view.empty:
+            filtered_view = view.iloc[0:0].copy()
+        else:
+            cap_row = pd.to_numeric(market_cap_wide.loc[d], errors="coerce")
+            cap_on_date = cap_row.reindex(view.index)
+            keep = cap_on_date.index[cap_on_date.ge(float(min_market_cap)) & cap_on_date.notna()]
+            filtered_view = view.loc[view.index.isin(keep)].copy()
+        filtered[d] = filtered_view
+        post_counts.append(int(len(filtered_view)))
+    post_median = float(pd.Series(post_counts, dtype=float).median()) if post_counts else 0.0
+    return filtered, pre_median, post_median
 
 
 def _select_top_n(scores_day: pd.DataFrame | None, top_n: int, quarantine: set[str] | None = None) -> list[str]:
@@ -371,7 +413,7 @@ def _curve_metrics(curve: pd.DataFrame) -> tuple[float, float]:
 def run_variant(
     variant: str,
     px_exec_wide: pd.DataFrame,
-    split_wide: pd.DataFrame,
+    split_event_wide: pd.DataFrame,
     i_wide: pd.DataFrame,
     z_wide: pd.DataFrame,
     any_rule_wide: pd.DataFrame,
@@ -381,6 +423,7 @@ def run_variant(
     cfg: BacktestConfig,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     friction = cfg.friction_one_way_bps / 10_000.0
+    rebalance_cadence = max(int(cfg.rebalance_cadence), 1)
     trading_dates = list(px_exec_wide.index.intersection(cash_log_daily.index).sort_values())
     if len(trading_dates) < 30:
         raise RuntimeError("Poucas datas de interseção para simular variante.")
@@ -410,7 +453,7 @@ def run_variant(
         if matured > 0:
             cash_free += matured
 
-        split_row = split_wide.loc[d] if d in split_wide.index else pd.Series(dtype=float)
+        split_row = split_event_wide.loc[d] if d in split_event_wide.index else pd.Series(dtype=float)
         lots = _apply_split_adjustment(lots, split_row, d, variant, events_split)
 
         price_row = px_exec_wide.loc[d]
@@ -507,53 +550,57 @@ def run_variant(
                         }
                     )
 
-        # Camada 2: rebalance por variante
+        # Camada 2: rebalance por variante (respeitando cadence).
         held = set(split_lots_by_ticker(lots).keys())
-        if variant == "C1":
-            target = _select_top_n(prev_scores, top_n=cfg.top_n, quarantine=quarantine)
-        elif variant == "C2":
-            target = _select_c2_target(prev_scores, held, cfg.top_n, cfg.buffer_k, quarantine=quarantine)
-        else:  # C3
-            if (not initialized_c3) and prev_scores is not None and not prev_scores.empty:
+        is_rebalance_day = (i % rebalance_cadence) == 0
+        if is_rebalance_day:
+            if variant == "C1":
                 target = _select_top_n(prev_scores, top_n=cfg.top_n, quarantine=quarantine)
-                initialized_c3 = True
-            else:
-                target = sorted(list(held))
+            elif variant == "C2":
+                target = _select_c2_target(prev_scores, held, cfg.top_n, cfg.buffer_k, quarantine=quarantine)
+            else:  # C3
+                if (not initialized_c3) and prev_scores is not None and not prev_scores.empty:
+                    target = _select_top_n(prev_scores, top_n=cfg.top_n, quarantine=quarantine)
+                    initialized_c3 = True
+                else:
+                    target = sorted(list(held))
 
-        target_set = set(target)
-        to_sell = sorted([t for t in held if t not in target_set])
-        for tk in to_sell:
-            lots, proceeds, cost, sold_shares = sell_all_ticker(
-                ticker=tk,
-                lots=lots,
-                price_row=price_row,
-                friction=friction,
-                trading_dates=trading_dates,
-                i=i,
-                settlement_days=cfg.settlement_days,
-                pending_cash=pending_cash,
-            )
-            if sold_shares > 0:
-                total_cost += cost
-                events_def.append(
-                    {
-                        "date": d,
-                        "variant": variant,
-                        "ticker": tk,
-                        "event": "rebalance_sell",
-                        "score": np.nan,
-                        "z_prev": np.nan,
-                        "sell_pct": 1.0,
-                        "sold_shares": int(sold_shares),
-                        "proceeds_net": float(proceeds),
-                        "trade_cost": float(cost),
-                        "settle_dt": _settlement_date(trading_dates, i, cfg.settlement_days),
-                    }
+            target_set = set(target)
+            to_sell = sorted([t for t in held if t not in target_set])
+            for tk in to_sell:
+                lots, proceeds, cost, sold_shares = sell_all_ticker(
+                    ticker=tk,
+                    lots=lots,
+                    price_row=price_row,
+                    friction=friction,
+                    trading_dates=trading_dates,
+                    i=i,
+                    settlement_days=cfg.settlement_days,
+                    pending_cash=pending_cash,
                 )
+                if sold_shares > 0:
+                    total_cost += cost
+                    events_def.append(
+                        {
+                            "date": d,
+                            "variant": variant,
+                            "ticker": tk,
+                            "event": "rebalance_sell",
+                            "score": np.nan,
+                            "z_prev": np.nan,
+                            "sell_pct": 1.0,
+                            "sold_shares": int(sold_shares),
+                            "proceeds_net": float(proceeds),
+                            "trade_cost": float(cost),
+                            "settle_dt": _settlement_date(trading_dates, i, cfg.settlement_days),
+                        }
+                    )
+        else:
+            target = sorted(list(held))
 
         # Compras
         held = set(split_lots_by_ticker(lots).keys())
-        if target and (variant in {"C1", "C2"} or (variant == "C3" and not held)):
+        if is_rebalance_day and target and (variant in {"C1", "C2"} or (variant == "C3" and not held)):
             target_weight = 1.0 / max(len(target), 1)
             equity_now = cash_free + sum(pending_cash.values()) + lots_market_value(lots, price_row)
             for tk in target:
@@ -642,10 +689,17 @@ def run_variant(
                 "def_sell_100_cum": int(def100),
                 "quarantine_size": int(len(quarantine)),
                 "quarantine_entries_cum": int(quarantine_entries),
+                "rebalance_cadence": int(rebalance_cadence),
+                "is_rebalance_day": int(is_rebalance_day),
             }
         )
 
     curve = pd.DataFrame(rows).sort_values("date").reset_index(drop=True)
+    if not curve.empty:
+        base = float(curve["equity"].iloc[0]) if float(curve["equity"].iloc[0]) > 0 else 1.0
+        curve["equity_base100"] = (curve["equity"].astype(float) / base) * 100.0
+    else:
+        curve["equity_base100"] = pd.Series(dtype="float64")
     events_def_df = pd.DataFrame(events_def)
     events_split_df = pd.DataFrame(events_split)
     return curve, events_def_df, events_split_df
@@ -687,6 +741,7 @@ def main() -> None:
     cfg = BacktestConfig(
         top_n=int(args.top_n),
         buffer_k=int(args.buffer_k),
+        rebalance_cadence=int(args.rebalance_cadence),
         friction_one_way_bps=float(args.friction_bps),
         settlement_days=int(args.settlement_days),
         base_capital=float(args.base_capital),
@@ -697,6 +752,12 @@ def main() -> None:
     blacklist = load_blacklist(IN_BLACKLIST)
     cash_log_daily = build_cash_log_daily(macro)
     scores_by_day = build_scores_by_day(scores=scores, blacklist=blacklist)
+    market_cap_wide = build_market_cap_wide(canonical)
+    scores_by_day, median_pre_filter, median_post_filter = apply_min_market_cap_filter(
+        scores_by_day=scores_by_day,
+        market_cap_wide=market_cap_wide,
+        min_market_cap=float(args.min_market_cap),
+    )
 
     px_exec_wide = (
         canonical.pivot_table(index="date", columns="ticker", values="close_raw", aggfunc="first")
@@ -704,6 +765,10 @@ def main() -> None:
         .ffill()
     )
     split_wide = canonical.pivot_table(index="date", columns="ticker", values="split_factor", aggfunc="first").sort_index()
+    split_prev_wide = split_wide.shift(1)
+    split_event_wide = split_wide / split_prev_wide
+    split_event_wide = split_event_wide.replace([np.inf, -np.inf], np.nan)
+    split_event_wide = split_event_wide.where((split_event_wide - 1.0).abs() > 1e-12)
 
     for col in ["i_value", "i_ucl", "i_lcl", "mr_value", "mr_ucl", "xbar_value", "xbar_ucl", "xbar_lcl", "r_value", "r_ucl"]:
         canonical[col] = pd.to_numeric(canonical[col], errors="coerce")
@@ -737,6 +802,7 @@ def main() -> None:
         cfg_local = BacktestConfig(
             top_n=cfg.top_n,
             buffer_k=int(k) if k is not None else cfg.buffer_k,
+            rebalance_cadence=cfg.rebalance_cadence,
             friction_one_way_bps=cfg.friction_one_way_bps,
             settlement_days=cfg.settlement_days,
             base_capital=cfg.base_capital,
@@ -744,7 +810,7 @@ def main() -> None:
         curve, events_def, events_split = run_variant(
             variant=variant,
             px_exec_wide=px_exec_wide,
-            split_wide=split_wide,
+            split_event_wide=split_event_wide,
             i_wide=i_wide,
             z_wide=z_wide,
             any_rule_wide=any_rule_wide,
@@ -784,6 +850,11 @@ def main() -> None:
         "split_events_file_written": events_split_csv.exists(),
         "defensive_events_file_written": events_def_csv.exists(),
         "defensive_events_has_rows": not events_def_df.empty,
+        "split_overflow_guard_zero": (
+            True
+            if events_split_df.empty or "event" not in events_split_df.columns
+            else int((events_split_df["event"] == "split_adjustment_overflow_guard").sum()) == 0
+        ),
         "outputs_written": all(
             p.exists()
             for p in [
@@ -805,9 +876,11 @@ def main() -> None:
         "params": {
             "top_n": cfg.top_n,
             "buffer_k": cfg.buffer_k,
+            "rebalance_cadence": cfg.rebalance_cadence,
             "friction_one_way_bps": cfg.friction_one_way_bps,
             "settlement_days": cfg.settlement_days,
             "base_capital": cfg.base_capital,
+            "min_market_cap": float(args.min_market_cap),
         },
         "inputs": {
             "canonical_us": str(IN_CANONICAL.relative_to(ROOT)),
@@ -824,9 +897,27 @@ def main() -> None:
         "counts": {
             "tickers_px": int(px_exec_wide.shape[1]),
             "scores_dates": int(len(scores_by_day)),
+            "median_scored_tickers_pre_filter": float(median_pre_filter),
+            "median_scored_tickers_post_filter": float(median_post_filter),
             "blacklist_size": int(len(blacklist)),
             "events_defensive_rows": int(len(events_def_df)),
             "events_split_rows": int(len(events_split_df)),
+            "events_split_overflow_guard_rows": (
+                0
+                if events_split_df.empty or "event" not in events_split_df.columns
+                else int((events_split_df["event"] == "split_adjustment_overflow_guard").sum())
+            ),
+        },
+        "metrics": {
+            variant: {
+                "cagr_full": float(_curve_metrics(curves[variant])[0]),
+                "mdd_full": float(_curve_metrics(curves[variant])[1]),
+            }
+            for variant in ("C1", "C2", "C3")
+        },
+        "anti_lookahead_notes": {
+            "scores_reference_day": "A selecao usa prev_scores (D-1 relativo ao dia de execucao).",
+            "market_cap_filter_alignment": "Filtro min_market_cap aplicado no mesmo date do score (D-1), sem acesso ao trade day.",
         },
         "outputs": {
             "curve_c1_csv": "backtest/results/curve_C1.csv",

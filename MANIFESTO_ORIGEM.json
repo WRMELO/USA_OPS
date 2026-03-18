@@ -138,7 +138,7 @@
     {
       "path": "CHANGELOG.md",
       "transform": "rewrite",
-      "local_sha256": "97db6b3d5efbe7d4b0eae66a3ea5d3d160df02276533f07b771d7695e560abb6",
+      "local_sha256": "3faaff9e7ed67a9426a1bc330561a08a434de4f24edff5649ed8d31e28fe3b2d",
       "origin": null
     },
     {
@@ -264,13 +264,13 @@
     {
       "path": "backtest/run_backtest_variants_us.py",
       "transform": "new",
-      "local_sha256": "8096affa807cc8cc7df3ce0c6100b07e1f902a84e241f1bffb7bbb3d063e448b",
+      "local_sha256": "6ca044898b4f06657f6d51ecad3c7275f860b8ed06681274e84c65ec39d79e43",
       "origin": null
     },
     {
       "path": "backtest/plot_t015_plotly.py",
       "transform": "new",
-      "local_sha256": "bdfb4b6f1a716bd9bd5e3ce55fda77cda3586f09eb2bbb57504db84d9848a5d9",
+      "local_sha256": "ebec53ea2d4154f4230f193ba4de5108dd1a0ab0cd37cf76f92ea169512644f3",
       "origin": null
     },
     {
@@ -282,7 +282,31 @@
     {
       "path": "backtest/results/t016_backtest_report.json",
       "transform": "new",
-      "local_sha256": "79141269d304353ec27066c35296180110b631cc7f0ec5e178dd526f85460303",
+      "local_sha256": "80df024eea6888632f14ee659993e75a3c955f01a4858d520ebe33dde2d802ba",
+      "origin": null
+    },
+    {
+      "path": "backtest/run_t017_ablation_us.py",
+      "transform": "new",
+      "local_sha256": "902108353f3818bf4dd321410bc5cc2a33657cba0be0dcfa95f74ff1b7f27143",
+      "origin": null
+    },
+    {
+      "path": "backtest/results/t017_ablation_report.json",
+      "transform": "new",
+      "local_sha256": "a8b8947ee53f5ff712117e694b8cbc3d56f6daf225295ac522be047eae649b08",
+      "origin": null
+    },
+    {
+      "path": "backtest/results/t017_ablation_summary.csv",
+      "transform": "new",
+      "local_sha256": "465e3408a7b0779b5d84bea5728e78f3a59cca7437af8adac31025ac4c3e20f7",
+      "origin": null
+    },
+    {
+      "path": "backtest/results/t017_ablation_summary.json",
+      "transform": "new",
+      "local_sha256": "5284de5fe982dfa4930557900d110c9e1e61e926ed3619d27c5fbb2ebdfff9c6",
       "origin": null
     }
   ]

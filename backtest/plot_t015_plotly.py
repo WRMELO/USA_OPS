@@ -17,8 +17,11 @@ def _load_curve(path: Path, label: str) -> pd.DataFrame:
     df = df.dropna(subset=["date"]).sort_values("date").reset_index(drop=True)
     if df.empty:
         raise RuntimeError(f"Curva vazia: {path}")
-    base = float(df["equity"].iloc[0]) if float(df["equity"].iloc[0]) > 0 else 1.0
-    df["equity_base100"] = (df["equity"] / base) * 100.0
+    if "equity_base100" in df.columns:
+        df["equity_base100"] = pd.to_numeric(df["equity_base100"], errors="coerce")
+    if "equity_base100" not in df.columns or not df["equity_base100"].notna().all():
+        base = float(df["equity"].iloc[0]) if float(df["equity"].iloc[0]) > 0 else 1.0
+        df["equity_base100"] = (df["equity"] / base) * 100.0
     df["label"] = label
     return df
 
