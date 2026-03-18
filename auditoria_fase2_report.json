@@ -1,0 +1,286 @@
+{
+  "audit_timestamp": "2026-03-18T07:55:41.814090",
+  "workspace": "/home/wilson/USA_OPS",
+  "veredicto": "APROVADO",
+  "resumo_por_frente": {
+    "Frente 1 - Consist\u00eancia num\u00e9rica cruzada": {
+      "status": "LIMPO",
+      "findings_count": 0
+    },
+    "Frente 2 - Integridade SHA256": {
+      "status": "LIMPO",
+      "findings_count": 0
+    },
+    "Frente 3 - Reprodutibilidade aritm\u00e9tica": {
+      "status": "LIMPO",
+      "findings_count": 0
+    },
+    "Frente 4 - Anti-lookahead end-to-end": {
+      "status": "LIMPO",
+      "findings_count": 0
+    },
+    "Frente 5 - Distribui\u00e7\u00e3o e anomalias": {
+      "status": "LIMPO",
+      "findings_count": 0
+    },
+    "Frente 6 - Universo e sele\u00e7\u00e3o": {
+      "status": "LIMPO",
+      "findings_count": 0
+    }
+  },
+  "findings": [],
+  "detalhes": {
+    "Frente 1 - Consist\u00eancia num\u00e9rica cruzada": {
+      "status": "LIMPO",
+      "findings": [],
+      "evidencias": {
+        "sha256_chain_t012_t013": true,
+        "sha256_chain_t013_t014": true,
+        "dates_t012": 1999,
+        "dates_t013": 2061,
+        "dates_t014_input": 2061,
+        "dates_t014_labels": 2061,
+        "threshold": -0.12976321096922194,
+        "train_valid_count": 1259,
+        "train_count": 1259,
+        "holdout_count": 802,
+        "train_y0": 999,
+        "train_y1": 260,
+        "holdout_y0": 683,
+        "holdout_y1": 56,
+        "holdout_nan": 63
+      }
+    },
+    "Frente 2 - Integridade SHA256": {
+      "status": "LIMPO",
+      "findings": [],
+      "evidencias": {
+        "scores_m3_us.parquet": {
+          "exists": true,
+          "actual_hash": "04d2302f124c0da33bb063a1c176d671904d2c0bfb4bde9b3d5b64d79614d92c",
+          "expected_hash": "04d2302f124c0da33bb063a1c176d671904d2c0bfb4bde9b3d5b64d79614d92c",
+          "manifesto_hash": null,
+          "match_expected": true,
+          "match_manifesto": null
+        },
+        "dataset_us.parquet": {
+          "exists": true,
+          "actual_hash": "402275123ab667d6842ab175a6f0128131301c1d3ef25ac35fe575d31c28fcb6",
+          "expected_hash": "402275123ab667d6842ab175a6f0128131301c1d3ef25ac35fe575d31c28fcb6",
+          "manifesto_hash": null,
+          "match_expected": true,
+          "match_manifesto": null
+        },
+        "dataset_us_labeled.parquet": {
+          "exists": true,
+          "actual_hash": "34f06cd3ebec63fa24417543810ce564a572fd85fa54301c92993ab15adbfff5",
+          "expected_hash": "34f06cd3ebec63fa24417543810ce564a572fd85fa54301c92993ab15adbfff5",
+          "manifesto_hash": null,
+          "match_expected": true,
+          "match_manifesto": null
+        },
+        "labels_us.parquet": {
+          "exists": true,
+          "actual_hash": "16a0ca44c531667c1b445d737bd2d80b24e98dbcdb9546463b9d08aa2f76e07b",
+          "expected_hash": "16a0ca44c531667c1b445d737bd2d80b24e98dbcdb9546463b9d08aa2f76e07b",
+          "manifesto_hash": null,
+          "match_expected": true,
+          "match_manifesto": null
+        },
+        "t012_scores_report.json": {
+          "exists": true,
+          "actual_hash": "c5c375ca5510430580baaafb6d7a50cfaaf4c7e66a6d27d1dd5949366d9b6370",
+          "expected_hash": null,
+          "manifesto_hash": null,
+          "match_expected": null,
+          "match_manifesto": null
+        },
+        "t013_features_report.json": {
+          "exists": true,
+          "actual_hash": "bb1779e1f8c82aae61f9c213cfdcb70a8720ecacc2b37697a10fd2950b7633d7",
+          "expected_hash": null,
+          "manifesto_hash": "bb1779e1f8c82aae61f9c213cfdcb70a8720ecacc2b37697a10fd2950b7633d7",
+          "match_expected": null,
+          "match_manifesto": true
+        },
+        "t014_labels_report.json": {
+          "exists": true,
+          "actual_hash": "a64e2bdff95c264cb4f9a5fdb3e1db761e6e0598542062618232f6fe1474d0b4",
+          "expected_hash": null,
+          "manifesto_hash": "a64e2bdff95c264cb4f9a5fdb3e1db761e6e0598542062618232f6fe1474d0b4",
+          "match_expected": null,
+          "match_manifesto": true
+        },
+        "feature_guard_us.json": {
+          "exists": true,
+          "actual_hash": "fcfc550ce91001d7db429e3e833c085d6748d8ce0bfc3e57206ad852da919c4f",
+          "expected_hash": "fcfc550ce91001d7db429e3e833c085d6748d8ce0bfc3e57206ad852da919c4f",
+          "manifesto_hash": "fcfc550ce91001d7db429e3e833c085d6748d8ce0bfc3e57206ad852da919c4f",
+          "match_expected": true,
+          "match_manifesto": true
+        }
+      }
+    },
+    "Frente 3 - Reprodutibilidade aritm\u00e9tica": {
+      "status": "LIMPO",
+      "findings": [],
+      "evidencias": {
+        "split_counts_recalc": {
+          "TRAIN": 1259,
+          "HOLDOUT": 802
+        },
+        "threshold_recalc": -0.12976321096922194,
+        "threshold_report": -0.12976321096922194,
+        "y_cash_mismatch_count": 0,
+        "y_cash_nan_mismatch": 0,
+        "y_cash_both_valid": 1998,
+        "y_cash_stats_TRAIN": {
+          "count": 1259,
+          "mean": 0.20651310563939634,
+          "std": 0.4049638274428565,
+          "min": 0.0,
+          "max": 1.0
+        },
+        "y_cash_stats_HOLDOUT": {
+          "count": 739,
+          "mean": 0.07577807848443843,
+          "std": 0.2648219415214833,
+          "min": 0.0,
+          "max": 1.0
+        },
+        "dataset_rows": 2061,
+        "dataset_labeled_rows": 2061,
+        "scores_dates_count": 1999,
+        "dataset_dates_count": 2061,
+        "dates_symmetric_diff": 62
+      }
+    },
+    "Frente 4 - Anti-lookahead end-to-end": {
+      "status": "LIMPO",
+      "findings": [],
+      "evidencias": {
+        "test_dates": {
+          "2023-06-15": {
+            "exists": true,
+            "cutoff": "2023-06-14 23:59:59+00:00",
+            "cutoff_match": true,
+            "macro_level_present": true,
+            "non_macro_present": true
+          },
+          "2024-03-20": {
+            "exists": true,
+            "cutoff": "2024-03-19 23:59:59+00:00",
+            "cutoff_match": true,
+            "macro_level_present": true,
+            "non_macro_present": true
+          },
+          "2025-01-10": {
+            "exists": true,
+            "cutoff": "2025-01-09 23:59:59+00:00",
+            "cutoff_match": true,
+            "macro_level_present": true,
+            "non_macro_present": true
+          }
+        },
+        "tail_nan_expected": 63,
+        "tail_nan_actual": 63,
+        "tail_nan_match": "True",
+        "cutoff_diff_stats": {
+          "min": 1,
+          "max": 1,
+          "mean": 1.0,
+          "unique_values": [
+            1
+          ]
+        }
+      }
+    },
+    "Frente 5 - Distribui\u00e7\u00e3o e anomalias": {
+      "status": "LIMPO",
+      "findings": [],
+      "evidencias": {
+        "train_vs_holdout": {
+          "m3_frac_top_decile": {
+            "train": {
+              "count": 1196,
+              "mean": 0.10018084038348507,
+              "std": 0.00011763254969744825,
+              "min": 0.1,
+              "max": 0.10043457267020763,
+              "median": 0.100181598062954
+            },
+            "holdout": {
+              "count": 802,
+              "mean": 0.10011072218647771,
+              "std": 7.750355855184247e-05,
+              "min": 0.1,
+              "max": 0.1002710027100271,
+              "median": 0.10010607284625148
+            },
+            "mean_diff_std": 0.7039288093924501
+          },
+          "equity_ret_21d": {
+            "train": {
+              "count": 1174,
+              "mean": 0.0018397608691606763,
+              "std": 0.17236197624378904,
+              "min": -0.3642803333035102,
+              "max": 0.6954082244613908,
+              "median": -0.010017891727607198
+            },
+            "holdout": {
+              "count": 802,
+              "mean": -0.0014416273573805228,
+              "std": 0.2869519563986726,
+              "min": -0.56120652457715,
+              "max": 1.788005932017024,
+              "median": -0.0326944939940329
+            },
+            "mean_diff_std": 0.013863297253718015
+          },
+          "equity_dd_252d": {
+            "train": {
+              "count": 944,
+              "mean": -0.44359193424156945,
+              "std": 0.2367221954135539,
+              "min": -0.7832044927918309,
+              "max": 0.0,
+              "median": -0.5170471008018427
+            },
+            "holdout": {
+              "count": 802,
+              "mean": -0.5743325523440252,
+              "std": 0.16620795464490645,
+              "min": -0.7995373128277208,
+              "max": 0.0,
+              "median": -0.603765663515308
+            },
+            "mean_diff_std": 0.6392344312080769
+          }
+        },
+        "y_cash_autocorr": {
+          "lag1": 0.9774433542421281,
+          "lag5": 0.8871742034827123,
+          "lag21": 0.5254079058672882
+        },
+        "y_cash_switches": 13,
+        "y_cash_total_valid": 1998
+      }
+    },
+    "Frente 6 - Universo e sele\u00e7\u00e3o": {
+      "status": "LIMPO",
+      "findings": [],
+      "evidencias": {
+        "canonical_tickers": 4489,
+        "scores_tickers": 4388,
+        "tickers_in_canonical_not_scores": 101,
+        "tickers_in_scores_not_canonical": 0,
+        "blacklisted_count": 4153,
+        "blacklisted_in_scores": 0,
+        "stale_tickers_calculated": 33,
+        "stale_in_scores": 0,
+        "tickers_with_large_gaps": 0
+      }
+    }
+  }
+}

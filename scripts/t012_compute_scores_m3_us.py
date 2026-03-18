@@ -58,15 +58,33 @@ def _load_blacklist(path: Path) -> set[str]:
     return tickers
 
 
-def _compute_stale_tickers(df: pd.DataFrame) -> set[str]:
-    # Regra deterministicamente global: olhar os ultimos 100 pregoes do historico.
+def _compute_stale_tickers_global_legacy(df: pd.DataFrame, window_days: int = 100, min_recent_days: int = 20) -> set[str]:
+    # Método legado (global): olhar os ultimos 100 pregoes do historico inteiro.
     all_dates = sorted(df["date"].dropna().unique().tolist())
-    last_100 = set(all_dates[-100:]) if len(all_dates) > 100 else set(all_dates)
-    tail = df[df["date"].isin(last_100)].copy()
+    last_n = set(all_dates[-window_days:]) if len(all_dates) > window_days else set(all_dates)
+    tail = df[df["date"].isin(last_n)].copy()
     obs = tail.groupby("ticker", as_index=False)["close_operational"].apply(lambda s: int(s.notna().sum()))
-    obs = obs.rename(columns={"close_operational": "obs_non_null_100d"})
-    stale = set(obs.loc[obs["obs_non_null_100d"] < 20, "ticker"].tolist())
+    obs = obs.rename(columns={"close_operational": "obs_non_null_window"})
+    stale = set(obs.loc[obs["obs_non_null_window"] < min_recent_days, "ticker"].tolist())
     return stale
+
+
+def _build_rolling_eligibility(
+    px_wide: pd.DataFrame,
+    window_days: int = 100,
+    min_recent_days: int = 20,
+) -> pd.DataFrame:
+    # Método correto para backtest: por dia D, usa apenas os ultimos "window_days"
+    # pregoes ate D para decidir se o ticker e stale naquele dia.
+    obs_window = px_wide.notna().rolling(window=window_days, min_periods=1).sum()
+    eligible = obs_window >= float(min_recent_days)
+
+    # Warmup: nos primeiros "window_days" pregoes, nao bloquear por stale.
+    row_idx = pd.Series(range(len(px_wide)), index=px_wide.index)
+    warmup_rows = row_idx < window_days
+    if warmup_rows.any():
+        eligible.loc[warmup_rows, :] = True
+    return eligible
 
 
 def _flatten_scores(scores_by_day: dict[pd.Timestamp, pd.DataFrame]) -> pd.DataFrame:
@@ -121,15 +139,38 @@ def main() -> int:
 
     blacklisted = _load_blacklist(blacklist_path)
     filtered = canonical[~canonical["ticker"].isin(blacklisted)].copy()
-    stale_tickers = _compute_stale_tickers(filtered)
-    filtered = filtered[~filtered["ticker"].isin(stale_tickers)].copy()
 
     px_wide = (
         filtered.sort_values(["date", "ticker"])
         .pivot_table(index="date", columns="ticker", values="close_operational", aggfunc="last")
         .sort_index()
     )
-    scores_by_day = compute_m3_scores(px_wide)
+
+    window_days = 100
+    min_recent_days = 20
+    eligible = _build_rolling_eligibility(px_wide, window_days=window_days, min_recent_days=min_recent_days)
+    px_wide_masked = px_wide.where(eligible)
+
+    # Gate de equivalencia operacional: no ultimo dia, rolling deve bater com o
+    # metodo global legado (mesmo comportamento no LIVE).
+    stale_legacy = _compute_stale_tickers_global_legacy(
+        filtered, window_days=window_days, min_recent_days=min_recent_days
+    )
+    # Comparacao de equivalencia no dominio do metodo legado:
+    # ele so considera tickers com ao menos 1 observacao no tail dos ultimos 100 pregoes.
+    all_dates_filtered = sorted(filtered["date"].dropna().unique().tolist())
+    legacy_last_n = set(all_dates_filtered[-window_days:]) if len(all_dates_filtered) > window_days else set(all_dates_filtered)
+    legacy_tail_tickers = set(filtered.loc[filtered["date"].isin(legacy_last_n), "ticker"].astype(str).tolist())
+
+    last_eligible = eligible.iloc[-1] if not eligible.empty else pd.Series(dtype="bool")
+    stale_rolling_last_day = set(last_eligible.index[last_eligible == False].tolist())
+    stale_rolling_last_day_legacy_domain = stale_rolling_last_day.intersection(legacy_tail_tickers)
+    gate_stale_last_day_matches_global = stale_rolling_last_day_legacy_domain == stale_legacy
+
+    stale_counts_per_day = (~eligible).sum(axis=1) if not eligible.empty else pd.Series(dtype="int64")
+    stale_counts_after_warmup = stale_counts_per_day.iloc[window_days:] if len(stale_counts_per_day) > window_days else pd.Series(dtype="int64")
+
+    scores_by_day = compute_m3_scores(px_wide_masked)
     flat = _flatten_scores(scores_by_day)
 
     for col in REQUIRED_OUTPUT_COLUMNS:
@@ -175,22 +216,35 @@ def main() -> int:
             "canonical_rows": int(len(canonical)),
             "canonical_tickers": int(canonical["ticker"].nunique()),
             "blacklisted_tickers_excluded": int(len(blacklisted)),
-            "stale_tickers_excluded": int(len(stale_tickers)),
-            "eligible_tickers_after_filters": int(filtered["ticker"].nunique()),
+            "stale_tickers_last_day_rolling": int(len(stale_rolling_last_day)),
+            "stale_tickers_last_day_rolling_legacy_domain": int(len(stale_rolling_last_day_legacy_domain)),
+            "stale_tickers_global_legacy": int(len(stale_legacy)),
+            "legacy_tail_tickers_count": int(len(legacy_tail_tickers)),
+            "eligible_tickers_after_filters_last_day": int((last_eligible == True).sum()) if not last_eligible.empty else 0,
             "scores_rows": int(len(flat)),
             "scores_dates": int(flat["date"].nunique()),
             "scores_tickers": int(flat["ticker"].nunique()),
             "median_tickers_per_scored_day": median_tickers,
+        },
+        "stale_filter": {
+            "method": "rolling_per_day",
+            "window_days": window_days,
+            "min_recent_days": min_recent_days,
+            "warmup_no_block_days": window_days,
+            "stale_per_day_after_warmup_min": int(stale_counts_after_warmup.min()) if not stale_counts_after_warmup.empty else 0,
+            "stale_per_day_after_warmup_median": float(stale_counts_after_warmup.median()) if not stale_counts_after_warmup.empty else 0.0,
+            "stale_per_day_after_warmup_max": int(stale_counts_after_warmup.max()) if not stale_counts_after_warmup.empty else 0,
         },
         "gates": {
             "required_columns_present": gate_required_columns,
             "zero_duplicates_date_ticker": gate_zero_duplicates,
             "rank_sequential_by_date": gate_rank_seq,
             "parity_window62_ddof0": gate_parity,
+            "stale_last_day_matches_global": gate_stale_last_day_matches_global,
         },
         "sample": {
             "head": flat.head(20).to_dict(orient="records"),
-            "tickers_excluded_stale_head": sorted(stale_tickers)[:20],
+            "stale_tickers_last_day_head": sorted(stale_rolling_last_day)[:20],
         },
         "output": {
             "scores_path": str(out_path),
@@ -208,6 +262,8 @@ def main() -> int:
         raise ValueError("Gate FAIL: m3_rank nao sequencial por date")
     if not gate_parity:
         raise ValueError("Gate FAIL: paridade com RENDA_OPS nao confirmada")
+    if not gate_stale_last_day_matches_global:
+        raise ValueError("Gate FAIL: stale rolling no ultimo dia diverge do metodo global legado")
 
     print("T-012 PASS")
     print(
