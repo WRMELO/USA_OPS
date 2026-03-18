@@ -12,6 +12,8 @@ import sys
 
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +26,7 @@ from backtest.run_backtest_variants_us import (
     BacktestConfig,
     Lot,
     _apply_split_adjustment,
+    _build_z_table,
     _band_from_z,
     _curve_metrics,
     _persist_points,
@@ -50,6 +53,7 @@ TRIGGER_CFG_PATH = ROOT / "config" / "ml_trigger_us.json"
 WINNER_PATH = ROOT / "config" / "winner_us.json"
 OUT_CURVE_PURE = ROOT / "backtest" / "results" / "curve_T027_C4_pure.csv"
 OUT_CURVE_TRIGGER = ROOT / "backtest" / "results" / "curve_T027_C4_trigger.csv"
+OUT_PLOT = ROOT / "backtest" / "results" / "plot_t027_c4_pure_vs_trigger.html"
 OUT_REPORT = ROOT / "data" / "features" / "t027_trigger_comparison_report.json"
 
 
@@ -78,6 +82,15 @@ def _annualized_sharpe(curve: pd.DataFrame) -> float:
     return float((mu / sigma) * np.sqrt(252.0))
 
 
+def _drawdown_series(curve: pd.DataFrame) -> pd.Series:
+    if curve.empty:
+        return pd.Series(dtype=float)
+    eq = pd.to_numeric(curve["equity"], errors="coerce")
+    running_max = eq.cummax().replace(0.0, np.nan)
+    dd = (eq / running_max) - 1.0
+    return dd.fillna(0.0)
+
+
 def _metrics_for_curve(curve: pd.DataFrame) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for split in ("TRAIN", "HOLDOUT", "GLOBAL"):
@@ -101,6 +114,54 @@ def _metrics_for_curve(curve: pd.DataFrame) -> dict[str, Any]:
             "days": int(len(sub)),
         }
     return out
+
+
+def _write_plotly_comparison(curve_pure: pd.DataFrame, curve_trigger: pd.DataFrame, out_path: Path) -> None:
+    p = curve_pure.copy()
+    t = curve_trigger.copy()
+    p["date"] = pd.to_datetime(p["date"], errors="coerce")
+    t["date"] = pd.to_datetime(t["date"], errors="coerce")
+
+    p_dd = _drawdown_series(p) * 100.0
+    t_dd = _drawdown_series(t) * 100.0
+
+    fig = make_subplots(
+        rows=2,
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.08,
+        subplot_titles=("Equity Base 100", "Drawdown (%)"),
+    )
+    fig.add_trace(
+        go.Scatter(x=p["date"], y=p["equity_base100"], mode="lines", name="C4 puro"),
+        row=1,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=t["date"], y=t["equity_base100"], mode="lines", name="C4 + trigger"),
+        row=1,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=p["date"], y=p_dd, mode="lines", name="DD C4 puro"),
+        row=2,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(x=t["date"], y=t_dd, mode="lines", name="DD C4 + trigger"),
+        row=2,
+        col=1,
+    )
+    fig.update_layout(
+        title="T-027v2: Comparação C4 puro vs C4 + ML Trigger",
+        height=900,
+        template="plotly_white",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    fig.update_yaxes(title_text="Base 100", row=1, col=1)
+    fig.update_yaxes(title_text="Drawdown (%)", row=2, col=1)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_html(str(out_path), include_plotlyjs="cdn")
 
 
 def _load_winner_cfg() -> BacktestConfig:
@@ -503,6 +564,9 @@ def _run_variant_with_trigger(
 
 def main() -> None:
     cfg = _load_winner_cfg()
+    winner = json.loads(WINNER_PATH.read_text(encoding="utf-8"))
+    winner_snap = winner["winner_config_snapshot"]
+    min_market_cap = float(winner_snap["min_market_cap"])
     canonical, macro, scores = load_inputs()
     blacklist = load_blacklist(ROOT / "config" / "blacklist_us.json")
     cash_log_daily = build_cash_log_daily(macro)
@@ -511,7 +575,7 @@ def main() -> None:
     scores_by_day, median_pre_filter, median_post_filter = apply_min_market_cap_filter(
         scores_by_day=scores_by_day,
         market_cap_wide=market_cap_wide,
-        min_market_cap=float(_load_winner_cfg().base_capital * 0 + 300_000_000.0),
+        min_market_cap=min_market_cap,
     )
 
     px_exec_wide = (
@@ -537,9 +601,7 @@ def main() -> None:
     ]:
         canonical[col] = pd.to_numeric(canonical[col], errors="coerce")
     i_wide = canonical.pivot_table(index="date", columns="ticker", values="i_value", aggfunc="first").sort_index()
-    z_wide = (
-        i_wide.sub(i_wide.mean(axis=1), axis=0).div(i_wide.std(axis=1, ddof=0).replace(0.0, np.nan), axis=0).fillna(0.0)
-    )
+    z_wide = _build_z_table(i_wide)
     any_rule = (
         (canonical["i_value"] > canonical["i_ucl"])
         | (canonical["i_value"] < canonical["i_lcl"])
@@ -588,6 +650,7 @@ def main() -> None:
         cash_signal_exec=signal_exec,
     )
     curve_trigger.to_csv(OUT_CURVE_TRIGGER, index=False)
+    _write_plotly_comparison(curve_pure, curve_trigger, OUT_PLOT)
 
     pure_metrics = _metrics_for_curve(curve_pure)
     trigger_metrics = _metrics_for_curve(curve_trigger)
@@ -599,7 +662,6 @@ def main() -> None:
         and trigger_metrics["HOLDOUT"]["mdd_pct"] >= pure_metrics["HOLDOUT"]["mdd_pct"]
     )
 
-    winner = json.loads(WINNER_PATH.read_text(encoding="utf-8"))
     winner_holdout = winner["holdout_metrics"]
     pure_holdout = pure_metrics["HOLDOUT"]
     gate_reconcile = (
@@ -639,12 +701,13 @@ def main() -> None:
             "paths": {
                 "curve_c4_pure": str(OUT_CURVE_PURE),
                 "curve_c4_trigger": str(OUT_CURVE_TRIGGER),
+                "plotly_comparison": str(OUT_PLOT),
                 "report": str(OUT_REPORT),
             },
             "sha256_outputs": {},
         },
         "config": {
-            "winner_snapshot": winner["winner_config_snapshot"],
+            "winner_snapshot": winner_snap,
             "trigger_selected_params": {"thr": trig_cfg.thr, "h_in": trig_cfg.h_in, "h_out": trig_cfg.h_out},
             "execution_rule": "cash_signal_{D-1} governa trades no dia D",
             "median_tickers_pre_market_cap_filter": median_pre_filter,
@@ -667,7 +730,7 @@ def main() -> None:
             "required_inputs_exist": all(
                 p.exists() for p in [WINNER_PATH, PRED_PATH, TRIGGER_CFG_PATH, ROOT / "backtest" / "results" / "curve_C4_K10.csv"]
             ),
-            "outputs_written": all(p.exists() for p in [OUT_CURVE_PURE, OUT_CURVE_TRIGGER]),
+            "outputs_written": all(p.exists() for p in [OUT_CURVE_PURE, OUT_CURVE_TRIGGER, OUT_PLOT]),
             "baseline_reconcile_with_winner_t024": gate_reconcile,
             "report_has_split_metrics": bool(
                 pure_metrics.get("TRAIN")
@@ -682,6 +745,7 @@ def main() -> None:
     report["outputs"]["sha256_outputs"] = {
         "curve_c4_pure": _sha256(OUT_CURVE_PURE),
         "curve_c4_trigger": _sha256(OUT_CURVE_TRIGGER),
+        "plotly_comparison": _sha256(OUT_PLOT),
     }
     OUT_REPORT.parent.mkdir(parents=True, exist_ok=True)
     OUT_REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
