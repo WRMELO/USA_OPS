@@ -1,13 +1,16 @@
 {
   "task_id": "T-016",
-  "generated_at": "2026-03-18T14:18:49.732692+00:00",
+  "generated_at": "2026-03-18T17:42:29.731788+00:00",
   "params": {
-    "top_n": 10,
-    "buffer_k": 15,
-    "rebalance_cadence": 1,
+    "top_n": 20,
+    "buffer_k": 10,
+    "rebalance_cadence": 10,
     "friction_one_way_bps": 2.5,
     "settlement_days": 1,
-    "base_capital": 100000.0
+    "base_capital": 100000.0,
+    "min_market_cap": 300000000.0,
+    "k_damp": 0.0,
+    "max_weight_cap": 1.0
   },
   "inputs": {
     "canonical_us": "data/ssot/canonical_us.parquet",
@@ -24,33 +27,46 @@
   "counts": {
     "tickers_px": 4489,
     "scores_dates": 1999,
+    "median_scored_tickers_pre_filter": 3166.0,
+    "median_scored_tickers_post_filter": 2090.0,
     "blacklist_size": 4153,
-    "events_defensive_rows": 7550,
-    "events_split_rows": 45,
+    "events_defensive_rows": 6739,
+    "events_split_rows": 21,
+    "events_concentration_trim_rows": 0,
     "events_split_overflow_guard_rows": 0
   },
   "metrics": {
     "C1": {
-      "cagr_full": -0.3384512347580778,
-      "mdd_full": -0.9969154064943367
+      "cagr_full": 0.31710274546044737,
+      "mdd_full": -0.5339416529261874
     },
     "C2": {
-      "cagr_full": -0.31753770273516113,
-      "mdd_full": -0.9954368805646964
+      "cagr_full": 0.31500952728111886,
+      "mdd_full": -0.5127594926835207
     },
     "C3": {
-      "cagr_full": 0.015502121097073607,
-      "mdd_full": -0.2091992636433161
+      "cagr_full": 0.0638944184417416,
+      "mdd_full": -0.12750997434996025
+    },
+    "C4": {
+      "cagr_full": 0.31500952728111886,
+      "mdd_full": -0.5127594926835207
     }
+  },
+  "anti_lookahead_notes": {
+    "scores_reference_day": "A selecao usa prev_scores (D-1 relativo ao dia de execucao).",
+    "market_cap_filter_alignment": "Filtro min_market_cap aplicado no mesmo date do score (D-1), sem acesso ao trade day."
   },
   "outputs": {
     "curve_c1_csv": "backtest/results/curve_C1.csv",
-    "curve_c2_csv": "backtest/results/curve_C2_K15.csv",
+    "curve_c2_csv": "backtest/results/curve_C2_K10.csv",
     "curve_c3_csv": "backtest/results/curve_C3.csv",
+    "curve_c4_csv": "backtest/results/curve_C4_K10.csv",
     "summary_csv": "backtest/results/summary_t015_variants.csv",
     "summary_json": "backtest/results/summary_t015_variants.json",
     "events_defensive_csv": "backtest/results/events_defensive_sells.csv",
     "events_split_csv": "backtest/results/events_split_adjustments.csv",
+    "events_concentration_trim_csv": "backtest/results/events_concentration_trims.csv",
     "report_json": "backtest/results/t016_backtest_report.json"
   },
   "gates": {
@@ -60,6 +76,7 @@
     "anti_lookahead_prev_day_scores": true,
     "split_events_file_written": true,
     "defensive_events_file_written": true,
+    "concentration_trim_file_written": true,
     "defensive_events_has_rows": true,
     "split_overflow_guard_zero": true,
     "outputs_written": true

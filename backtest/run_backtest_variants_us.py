@@ -29,6 +29,8 @@ class BacktestConfig:
     friction_one_way_bps: float
     settlement_days: int
     base_capital: float
+    k_damp: float
+    max_weight_cap: float
 
 
 @dataclass
@@ -52,6 +54,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--settlement-days", type=int, default=1)
     parser.add_argument("--base-capital", type=float, default=BASE_CAPITAL)
     parser.add_argument("--min-market-cap", type=float, default=MIN_MARKET_CAP_DEFAULT)
+    parser.add_argument("--k-damp", type=float, default=0.0)
+    parser.add_argument("--max-weight-cap", type=float, default=1.0)
     return parser.parse_args()
 
 
@@ -106,6 +110,7 @@ def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     canonical.loc[canonical["market_cap"] <= 0.0, "market_cap"] = np.nan
     canonical = canonical[needed].dropna(subset=["date", "ticker", "close_raw"]).sort_values(["date", "ticker"])
     macro = macro.dropna(subset=["date", "fed_funds_rate"]).sort_values("date")
+    scores["score_m3"] = pd.to_numeric(scores.get("score_m3"), errors="coerce")
     scores = scores.dropna(subset=["date", "ticker", "m3_rank"]).sort_values(["date", "m3_rank", "ticker"])
     return canonical, macro, scores
 
@@ -117,11 +122,12 @@ def build_cash_log_daily(macro: pd.DataFrame) -> pd.Series:
 
 def build_scores_by_day(scores: pd.DataFrame, blacklist: set[str]) -> dict[pd.Timestamp, pd.DataFrame]:
     out: dict[pd.Timestamp, pd.DataFrame] = {}
-    cols = ["ticker", "m3_rank"]
+    cols = ["ticker", "m3_rank", "score_m3"]
     for d, g in scores.groupby("date", sort=True):
         view = g[cols].copy()
         view = view[~view["ticker"].isin(blacklist)]
         view["m3_rank"] = pd.to_numeric(view["m3_rank"], errors="coerce")
+        view["score_m3"] = pd.to_numeric(view["score_m3"], errors="coerce")
         view = view.dropna(subset=["m3_rank"]).sort_values(["m3_rank", "ticker"]).set_index("ticker")
         out[d] = view
     return out
@@ -195,6 +201,91 @@ def _select_c2_target(
         if len(target) >= top_n:
             break
     return target[:top_n]
+
+
+def compute_target_weights(
+    scores_day: pd.DataFrame | None,
+    target_list: list[str],
+    k_damp: float,
+    max_weight_cap: float,
+) -> dict[str, float]:
+    target = [str(t) for t in target_list]
+    n = len(target)
+    if n == 0:
+        return {}
+    # Compatibility mode: no dampening, no cap => equal weights.
+    if k_damp <= 0.0 and max_weight_cap >= 1.0:
+        eq = 1.0 / float(n)
+        return {t: eq for t in target}
+
+    raw: dict[str, float] = {}
+    if scores_day is None or scores_day.empty:
+        eq = 1.0 / float(n)
+        raw = {t: eq for t in target}
+    elif k_damp <= 0.0:
+        eq = 1.0 / float(n)
+        raw = {t: eq for t in target}
+    else:
+        vals: dict[str, float] = {}
+        for t in target:
+            s = float(scores_day.at[t, "score_m3"]) if t in scores_day.index else np.nan
+            if not np.isfinite(s):
+                vals[t] = 0.0
+                continue
+            damp = float(np.sign(s) * np.log1p(abs(s) * float(k_damp)))
+            vals[t] = max(0.0, damp)
+        total = float(sum(vals.values()))
+        if total <= 0.0:
+            eq = 1.0 / float(n)
+            raw = {t: eq for t in target}
+        else:
+            raw = {t: float(v / total) for t, v in vals.items()}
+
+    cap = float(min(max(max_weight_cap, 0.0), 1.0))
+    if cap >= 1.0:
+        return raw
+    if cap <= 0.0:
+        eq = 1.0 / float(n)
+        return {t: eq for t in target}
+
+    # Iterative cap + redistribution.
+    w = raw.copy()
+    fixed: set[str] = set()
+    for _ in range(max(1, n * 2)):
+        over = [t for t in target if t not in fixed and w.get(t, 0.0) > cap + 1e-12]
+        if not over:
+            break
+        residual = 0.0
+        for t in over:
+            residual += float(w[t] - cap)
+            w[t] = cap
+            fixed.add(t)
+        free = [t for t in target if t not in fixed]
+        if not free:
+            break
+        free_total = float(sum(max(0.0, w.get(t, 0.0)) for t in free))
+        if free_total <= 0.0:
+            add = residual / float(len(free))
+            for t in free:
+                w[t] = float(w.get(t, 0.0) + add)
+        else:
+            for t in free:
+                share = max(0.0, w.get(t, 0.0)) / free_total
+                w[t] = float(w.get(t, 0.0) + residual * share)
+
+    # Normalize and final clamp.
+    for t in target:
+        w[t] = float(min(max(w.get(t, 0.0), 0.0), cap))
+    s = float(sum(w.values()))
+    if s <= 0.0:
+        eq = 1.0 / float(n)
+        return {t: eq for t in target}
+    w = {t: float(v / s) for t, v in w.items()}
+    # Keep exact simplex sum.
+    rem = 1.0 - float(sum(w.values()))
+    if target:
+        w[target[-1]] = float(max(0.0, w[target[-1]] + rem))
+    return w
 
 
 def _settlement_date(dates: list[pd.Timestamp], i: int, delay_days: int) -> pd.Timestamp:
@@ -421,7 +512,7 @@ def run_variant(
     scores_by_day: dict[pd.Timestamp, pd.DataFrame],
     cash_log_daily: pd.Series,
     cfg: BacktestConfig,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     friction = cfg.friction_one_way_bps / 10_000.0
     rebalance_cadence = max(int(cfg.rebalance_cadence), 1)
     trading_dates = list(px_exec_wide.index.intersection(cash_log_daily.index).sort_values())
@@ -447,6 +538,7 @@ def run_variant(
 
     events_def: list[dict[str, object]] = []
     events_split: list[dict[str, object]] = []
+    events_trim: list[dict[str, object]] = []
 
     for i, d in enumerate(trading_dates):
         matured = float(pending_cash.pop(d, 0.0))
@@ -556,7 +648,7 @@ def run_variant(
         if is_rebalance_day:
             if variant == "C1":
                 target = _select_top_n(prev_scores, top_n=cfg.top_n, quarantine=quarantine)
-            elif variant == "C2":
+            elif variant in {"C2", "C4"}:
                 target = _select_c2_target(prev_scores, held, cfg.top_n, cfg.buffer_k, quarantine=quarantine)
             else:  # C3
                 if (not initialized_c3) and prev_scores is not None and not prev_scores.empty:
@@ -598,16 +690,66 @@ def run_variant(
         else:
             target = sorted(list(held))
 
+        # Camada 2.5: trim de concentração (somente C4, antes das compras).
+        if is_rebalance_day and variant == "C4" and target:
+            equity_now_trim = cash_free + sum(pending_cash.values()) + lots_market_value(lots, price_row)
+            if equity_now_trim > 0 and cfg.max_weight_cap < 1.0:
+                cap_val = float(equity_now_trim * cfg.max_weight_cap)
+                shared = sorted(list(set(held).intersection(set(target))))
+                for tk in shared:
+                    current_val = ticker_value(lots, tk, price_row)
+                    if current_val <= cap_val + 1e-12:
+                        continue
+                    target_sell = max(0.0, current_val - cap_val)
+                    if target_sell <= 0:
+                        continue
+                    lots, proceeds, cost, sold_shares = sell_ticker_fifo(
+                        ticker=tk,
+                        target_value_to_sell=target_sell,
+                        lots=lots,
+                        price_row=price_row,
+                        friction=friction,
+                        trading_dates=trading_dates,
+                        i=i,
+                        settlement_days=cfg.settlement_days,
+                        pending_cash=pending_cash,
+                    )
+                    if sold_shares <= 0:
+                        continue
+                    total_cost += cost
+                    weight_before = (current_val / equity_now_trim) if equity_now_trim > 0 else 0.0
+                    events_trim.append(
+                        {
+                            "date": d,
+                            "variant": variant,
+                            "ticker": tk,
+                            "event": "concentration_trim",
+                            "weight_before": float(weight_before),
+                            "weight_cap": float(cfg.max_weight_cap),
+                            "value_sold_gross": float(target_sell),
+                            "proceeds_net": float(proceeds),
+                            "trade_cost": float(cost),
+                            "sold_shares": int(sold_shares),
+                            "settle_dt": _settlement_date(trading_dates, i, cfg.settlement_days),
+                        }
+                    )
+
         # Compras
         held = set(split_lots_by_ticker(lots).keys())
-        if is_rebalance_day and target and (variant in {"C1", "C2"} or (variant == "C3" and not held)):
+        if is_rebalance_day and target and (variant in {"C1", "C2", "C4"} or (variant == "C3" and not held)):
             target_weight = 1.0 / max(len(target), 1)
             equity_now = cash_free + sum(pending_cash.values()) + lots_market_value(lots, price_row)
+            c4_weights = (
+                compute_target_weights(prev_scores, target, cfg.k_damp, cfg.max_weight_cap)
+                if variant == "C4"
+                else {}
+            )
             for tk in target:
                 if tk in quarantine:
                     continue
                 current_val = ticker_value(lots, tk, price_row)
-                desired_val = max(0.0, (equity_now * target_weight) - current_val)
+                wt = float(c4_weights.get(tk, 0.0)) if variant == "C4" else target_weight
+                desired_val = max(0.0, (equity_now * wt) - current_val)
                 if desired_val <= 0:
                     continue
                 px = float(price_row.get(tk, np.nan))
@@ -702,7 +844,8 @@ def run_variant(
         curve["equity_base100"] = pd.Series(dtype="float64")
     events_def_df = pd.DataFrame(events_def)
     events_split_df = pd.DataFrame(events_split)
-    return curve, events_def_df, events_split_df
+    events_trim_df = pd.DataFrame(events_trim)
+    return curve, events_def_df, events_split_df, events_trim_df
 
 
 def summarize_curve(curve: pd.DataFrame) -> list[dict[str, float | str | int]]:
@@ -745,6 +888,8 @@ def main() -> None:
         friction_one_way_bps=float(args.friction_bps),
         settlement_days=int(args.settlement_days),
         base_capital=float(args.base_capital),
+        k_damp=float(args.k_damp),
+        max_weight_cap=float(args.max_weight_cap),
     )
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -765,10 +910,10 @@ def main() -> None:
         .ffill()
     )
     split_wide = canonical.pivot_table(index="date", columns="ticker", values="split_factor", aggfunc="first").sort_index()
-    split_prev_wide = split_wide.shift(1)
-    split_event_wide = split_wide / split_prev_wide
-    split_event_wide = split_event_wide.replace([np.inf, -np.inf], np.nan)
-    split_event_wide = split_event_wide.where((split_event_wide - 1.0).abs() > 1e-12)
+    split_changed = (split_wide / split_wide.shift(1)).replace([np.inf, -np.inf], np.nan)
+    has_split = (split_changed - 1.0).abs() > 1e-12
+    px_raw_wide = canonical.pivot_table(index="date", columns="ticker", values="close_raw", aggfunc="first").sort_index()
+    split_event_wide = (px_raw_wide.shift(1) / px_raw_wide).where(has_split)
 
     for col in ["i_value", "i_ucl", "i_lcl", "mr_value", "mr_ucl", "xbar_value", "xbar_ucl", "xbar_lcl", "r_value", "r_ucl"]:
         canonical[col] = pd.to_numeric(canonical[col], errors="coerce")
@@ -796,7 +941,8 @@ def main() -> None:
     all_summary: list[dict[str, float | str | int]] = []
     all_events_def: list[pd.DataFrame] = []
     all_events_split: list[pd.DataFrame] = []
-    variants: list[tuple[str, int | None]] = [("C1", None), ("C2", cfg.buffer_k), ("C3", None)]
+    all_events_trim: list[pd.DataFrame] = []
+    variants: list[tuple[str, int | None]] = [("C1", None), ("C2", cfg.buffer_k), ("C3", None), ("C4", cfg.buffer_k)]
 
     for variant, k in variants:
         cfg_local = BacktestConfig(
@@ -806,8 +952,10 @@ def main() -> None:
             friction_one_way_bps=cfg.friction_one_way_bps,
             settlement_days=cfg.settlement_days,
             base_capital=cfg.base_capital,
+            k_damp=cfg.k_damp,
+            max_weight_cap=cfg.max_weight_cap,
         )
-        curve, events_def, events_split = run_variant(
+        curve, events_def, events_split, events_trim = run_variant(
             variant=variant,
             px_exec_wide=px_exec_wide,
             split_event_wide=split_event_wide,
@@ -820,13 +968,15 @@ def main() -> None:
             cfg=cfg_local,
         )
         curves[variant] = curve
-        suffix = f"C2_K{cfg.buffer_k}" if variant == "C2" else variant
+        suffix = f"{variant}_K{cfg.buffer_k}" if variant in {"C2", "C4"} else variant
         curve.to_csv(OUT_DIR / f"curve_{suffix}.csv", index=False)
         all_summary.extend(summarize_curve(curve))
         if not events_def.empty:
             all_events_def.append(events_def)
         if not events_split.empty:
             all_events_split.append(events_split)
+        if not events_trim.empty:
+            all_events_trim.append(events_trim)
 
     summary_df = pd.DataFrame(all_summary).sort_values(["variant", "split"]).reset_index(drop=True)
     summary_csv = OUT_DIR / "summary_t015_variants.csv"
@@ -836,19 +986,23 @@ def main() -> None:
 
     events_def_df = pd.concat(all_events_def, ignore_index=True) if all_events_def else pd.DataFrame()
     events_split_df = pd.concat(all_events_split, ignore_index=True) if all_events_split else pd.DataFrame()
+    events_trim_df = pd.concat(all_events_trim, ignore_index=True) if all_events_trim else pd.DataFrame()
     events_def_csv = OUT_DIR / "events_defensive_sells.csv"
     events_split_csv = OUT_DIR / "events_split_adjustments.csv"
+    events_trim_csv = OUT_DIR / "events_concentration_trims.csv"
     events_def_df.to_csv(events_def_csv, index=False)
     events_split_df.to_csv(events_split_csv, index=False)
+    events_trim_df.to_csv(events_trim_csv, index=False)
 
     report_path = OUT_DIR / "t016_backtest_report.json"
     gates = {
         "required_inputs_exist": all(p.exists() for p in [IN_CANONICAL, IN_MACRO, IN_SCORES, IN_BLACKLIST]),
-        "curves_non_empty": all((not curves[v].empty) for v in ("C1", "C2", "C3")),
+        "curves_non_empty": all((not curves[v].empty) for v in ("C1", "C2", "C3", "C4")),
         "summary_non_empty": not summary_df.empty,
         "anti_lookahead_prev_day_scores": True,
         "split_events_file_written": events_split_csv.exists(),
         "defensive_events_file_written": events_def_csv.exists(),
+        "concentration_trim_file_written": events_trim_csv.exists(),
         "defensive_events_has_rows": not events_def_df.empty,
         "split_overflow_guard_zero": (
             True
@@ -861,10 +1015,12 @@ def main() -> None:
                 OUT_DIR / "curve_C1.csv",
                 OUT_DIR / f"curve_C2_K{cfg.buffer_k}.csv",
                 OUT_DIR / "curve_C3.csv",
+                OUT_DIR / f"curve_C4_K{cfg.buffer_k}.csv",
                 summary_csv,
                 summary_json,
                 events_def_csv,
                 events_split_csv,
+                events_trim_csv,
                 report_path,
             ]
         ),
@@ -881,6 +1037,8 @@ def main() -> None:
             "settlement_days": cfg.settlement_days,
             "base_capital": cfg.base_capital,
             "min_market_cap": float(args.min_market_cap),
+            "k_damp": float(cfg.k_damp),
+            "max_weight_cap": float(cfg.max_weight_cap),
         },
         "inputs": {
             "canonical_us": str(IN_CANONICAL.relative_to(ROOT)),
@@ -902,6 +1060,7 @@ def main() -> None:
             "blacklist_size": int(len(blacklist)),
             "events_defensive_rows": int(len(events_def_df)),
             "events_split_rows": int(len(events_split_df)),
+            "events_concentration_trim_rows": int(len(events_trim_df)),
             "events_split_overflow_guard_rows": (
                 0
                 if events_split_df.empty or "event" not in events_split_df.columns
@@ -913,7 +1072,7 @@ def main() -> None:
                 "cagr_full": float(_curve_metrics(curves[variant])[0]),
                 "mdd_full": float(_curve_metrics(curves[variant])[1]),
             }
-            for variant in ("C1", "C2", "C3")
+            for variant in ("C1", "C2", "C3", "C4")
         },
         "anti_lookahead_notes": {
             "scores_reference_day": "A selecao usa prev_scores (D-1 relativo ao dia de execucao).",
@@ -923,10 +1082,12 @@ def main() -> None:
             "curve_c1_csv": "backtest/results/curve_C1.csv",
             "curve_c2_csv": f"backtest/results/curve_C2_K{cfg.buffer_k}.csv",
             "curve_c3_csv": "backtest/results/curve_C3.csv",
+            "curve_c4_csv": f"backtest/results/curve_C4_K{cfg.buffer_k}.csv",
             "summary_csv": "backtest/results/summary_t015_variants.csv",
             "summary_json": "backtest/results/summary_t015_variants.json",
             "events_defensive_csv": "backtest/results/events_defensive_sells.csv",
             "events_split_csv": "backtest/results/events_split_adjustments.csv",
+            "events_concentration_trim_csv": "backtest/results/events_concentration_trims.csv",
             "report_json": "backtest/results/t016_backtest_report.json",
         },
         "gates": gates,
@@ -938,10 +1099,12 @@ def main() -> None:
             OUT_DIR / "curve_C1.csv",
             OUT_DIR / f"curve_C2_K{cfg.buffer_k}.csv",
             OUT_DIR / "curve_C3.csv",
+            OUT_DIR / f"curve_C4_K{cfg.buffer_k}.csv",
             summary_csv,
             summary_json,
             events_def_csv,
             events_split_csv,
+            events_trim_csv,
             report_path,
         ]
     )

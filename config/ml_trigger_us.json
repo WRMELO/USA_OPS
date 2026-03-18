@@ -1,0 +1,45 @@
+{
+  "task_id": "T-026",
+  "decision_ref": "D-002",
+  "selected_params": {
+    "thr": 0.22,
+    "h_in": 2,
+    "h_out": 1
+  },
+  "selection_rule": "TRAIN-only: sort by train_balanced_accuracy desc, train_transition_rate asc, train_f1_cash desc, thr asc, h_in asc, h_out asc",
+  "baseline_br": {
+    "thr": 0.22,
+    "h_in": 3,
+    "h_out": 2
+  },
+  "selected_metrics": {
+    "train": {
+      "balanced_accuracy": 0.9855644105644106,
+      "f1_cash": 0.9522058823529411,
+      "recall_cash": 0.9961538461538462,
+      "precision_cash": 0.9119718309859155,
+      "transition_rate": 0.012718600953895072,
+      "rows_valid_y_cash": 1259
+    },
+    "holdout": {
+      "balanced_accuracy": 0.411694729136164,
+      "f1_cash": 0.05204460966542751,
+      "recall_cash": 0.125,
+      "precision_cash": 0.03286384976525822,
+      "transition_rate": 0.04607046070460705,
+      "rows_valid_y_cash": 739
+    }
+  },
+  "baseline_metrics": {
+    "train": {
+      "balanced_accuracy": 0.9797162547162548,
+      "f1_cash": 0.9413919413919414,
+      "transition_rate": 0.00794912559618442
+    },
+    "holdout": {
+      "balanced_accuracy": 0.41037439866136793,
+      "f1_cash": 0.056338028169014086,
+      "transition_rate": 0.02710027100271003
+    }
+  }
+}

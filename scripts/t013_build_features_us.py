@@ -108,6 +108,58 @@ def _build_equity_proxy_features(scores: pd.DataFrame, canonical: pd.DataFrame, 
     return out
 
 
+def _build_stationary_macro_derivatives(out: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
+    """Build stationary macro derivatives from already shift(1) macro base."""
+    df = out.copy()
+
+    vix_level = pd.to_numeric(df["feature_vix_close_level"], errors="coerce")
+    usd_level = pd.to_numeric(df["feature_usd_index_broad_level"], errors="coerce")
+    ust10 = pd.to_numeric(df["feature_ust_10y_yield_level"], errors="coerce")
+    ust2 = pd.to_numeric(df["feature_ust_2y_yield_level"], errors="coerce")
+    ff = pd.to_numeric(df["feature_fed_funds_rate_level"], errors="coerce")
+    hy = pd.to_numeric(df["feature_hy_oas_level"], errors="coerce")
+    ig = pd.to_numeric(df["feature_ig_oas_level"], errors="coerce")
+
+    spread = ust10 - ust2
+    vix_ret_1d = vix_level.pct_change(1)
+    usd_ret_1d = usd_level.pct_change(1)
+
+    df["feature_ust_10y_2y_spread"] = spread
+    df["feature_ust_spread_delta_1d"] = spread.diff(1)
+    df["feature_ust_spread_delta_5d"] = spread.diff(5)
+    df["feature_vix_ret_1d"] = vix_ret_1d
+    df["feature_vix_ret_5d"] = vix_level.pct_change(5)
+    df["feature_vix_ret_21d"] = vix_level.pct_change(21)
+    df["feature_vix_vol_21d"] = vix_ret_1d.rolling(21, min_periods=21).std(ddof=0)
+    df["feature_ust_10y_delta_5d"] = ust10.diff(5)
+    df["feature_ust_2y_delta_5d"] = ust2.diff(5)
+    df["feature_fed_funds_rate_delta_5d"] = ff.diff(5)
+    df["feature_hy_oas_delta_5d"] = hy.diff(5)
+    df["feature_ig_oas_delta_5d"] = ig.diff(5)
+    df["feature_usd_index_broad_ret_5d"] = usd_level.pct_change(5)
+    df["feature_usd_index_broad_ret_21d"] = usd_level.pct_change(21)
+    df["feature_usd_index_broad_vol_21d"] = usd_ret_1d.rolling(21, min_periods=21).std(ddof=0)
+
+    added_cols = [
+        "feature_ust_10y_2y_spread",
+        "feature_ust_spread_delta_1d",
+        "feature_ust_spread_delta_5d",
+        "feature_vix_ret_1d",
+        "feature_vix_ret_5d",
+        "feature_vix_ret_21d",
+        "feature_vix_vol_21d",
+        "feature_ust_10y_delta_5d",
+        "feature_ust_2y_delta_5d",
+        "feature_fed_funds_rate_delta_5d",
+        "feature_hy_oas_delta_5d",
+        "feature_ig_oas_delta_5d",
+        "feature_usd_index_broad_ret_5d",
+        "feature_usd_index_broad_ret_21d",
+        "feature_usd_index_broad_vol_21d",
+    ]
+    return df, added_cols
+
+
 def main() -> int:
     args = parse_args()
     workspace = Path(args.workspace).resolve()
@@ -126,7 +178,24 @@ def main() -> int:
     macro["date"] = pd.to_datetime(macro["date"], errors="coerce").dt.normalize()
     macro = macro.dropna(subset=["date"]).drop_duplicates(subset=["date"], keep="last").sort_values("date").reset_index(drop=True)
 
-    macro_feature_cols = sorted([c for c in macro.columns if c.startswith("feature_") and c != "feature_timestamp_cutoff"])
+    macro_level_cols = sorted(
+        [
+            c
+            for c in macro.columns
+            if c.startswith("feature_")
+            and c != "feature_timestamp_cutoff"
+            and c.endswith("_level")
+        ]
+    )
+    macro_feature_cols = sorted(
+        [
+            c
+            for c in macro.columns
+            if c.startswith("feature_")
+            and c != "feature_timestamp_cutoff"
+            and not c.endswith("_level")
+        ]
+    )
     if not macro_feature_cols:
         raise RuntimeError("Input macro_features_us.parquet sem colunas feature_*")
 
@@ -138,7 +207,7 @@ def main() -> int:
     canonical["date"] = pd.to_datetime(canonical["date"], errors="coerce").dt.normalize()
     canonical = canonical.dropna(subset=["date"]).drop_duplicates(subset=["date", "ticker"], keep="last")
 
-    base = macro[["date", "feature_timestamp_cutoff"] + macro_feature_cols].copy()
+    base = macro[["date", "feature_timestamp_cutoff"] + macro_level_cols + macro_feature_cols].copy()
     base = base.sort_values("date").reset_index(drop=True)
     base_dates = pd.DatetimeIndex(base["date"])
 
@@ -151,6 +220,7 @@ def main() -> int:
     out["m3_frac_top_decile"] = m3_frac
     for col in eq.columns:
         out[col] = eq[col]
+    out, added_stationary_cols = _build_stationary_macro_derivatives(out)
 
     ff_level = pd.to_numeric(out["feature_fed_funds_rate_level"], errors="coerce")
     ff_daily = ((1.0 + (ff_level / 100.0)).pow(1.0 / 252.0) - 1.0).where((1.0 + (ff_level / 100.0)) > 0)
@@ -177,7 +247,9 @@ def main() -> int:
         out = out.drop(columns=["equity_ret_1d"])
     out = out.drop_duplicates(subset=["date"], keep="last").sort_values("date").reset_index(drop=True)
 
-    required_features = macro_feature_cols + non_macro_cols
+    required_features = macro_feature_cols + added_stationary_cols + non_macro_cols
+    # De-duplicate while preserving order.
+    required_features = list(dict.fromkeys(required_features))
     guard_payload = {
         "task_id": "T-013",
         "decision_ref": "D-002, D-009, D-010, D-012",
@@ -191,9 +263,13 @@ def main() -> int:
     if missing_guard_cols:
         raise RuntimeError(f"Feature guard FAIL: colunas ausentes {missing_guard_cols}")
 
+    # Export only approved features (no *_level in final dataset).
+    out = out[["date", "feature_timestamp_cutoff"] + required_features].copy()
     gate_no_dup_date = int(out.duplicated(subset=["date"]).sum()) == 0
     first_row = out.iloc[0] if not out.empty else pd.Series(dtype="object")
     gate_shift1_non_macro = bool(first_row[non_macro_cols].isna().all()) if not out.empty else False
+    level_features_in_guard = [c for c in required_features if c.endswith("_level")]
+    gate_no_level_features = len(level_features_in_guard) == 0
 
     null_rate = {c: float(pd.to_numeric(out[c], errors="coerce").isna().mean()) for c in required_features}
 
@@ -223,12 +299,16 @@ def main() -> int:
             "features_required_count": int(len(required_features)),
             "macro_feature_count": int(len(macro_feature_cols)),
             "non_macro_feature_count": int(len(non_macro_cols)),
+                "added_stationary_feature_count": int(len(added_stationary_cols)),
         },
         "gates": {
             "feature_guard_no_missing_columns": len(missing_guard_cols) == 0,
             "zero_duplicates_date": gate_no_dup_date,
             "shift1_non_macro_first_row_all_null": gate_shift1_non_macro,
+            "feature_guard_has_zero_level_features": gate_no_level_features,
         },
+        "added_stationary_features": added_stationary_cols,
+        "level_features_in_guard": level_features_in_guard,
         "null_rate_by_feature": null_rate,
         "sample": {
             "dataset_head": out.head(5).to_dict(orient="records"),
@@ -251,6 +331,8 @@ def main() -> int:
         raise RuntimeError("Gate FAIL: dataset com duplicatas por date")
     if not gate_shift1_non_macro:
         raise RuntimeError("Gate FAIL: primeira linha de features nao-macro nao esta toda nula apos shift(1)")
+    if not gate_no_level_features:
+        raise RuntimeError(f"Gate FAIL: feature_guard contém _level: {level_features_in_guard}")
 
     print("T-013 PASS")
     print(

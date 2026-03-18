@@ -1,0 +1,216 @@
+{
+  "task_id": "T-024",
+  "run_id": "T024-US-WINNER-C4-V1",
+  "decision_reference": {
+    "decision_date_utc": "2026-03-18T20:37:34+00:00",
+    "owner_decision": "Winner US oficial é C4 (TopN=20, Cad=10, K=10, cap=6%, k_damp=0.0, min_market_cap=300M)."
+  },
+  "status_note": "Declaração canônica criada para eliminar ambiguidade futura sobre winner US e destravar Phase 4.",
+  "winner_label": "US Winner (C4)",
+  "winner_factory": "US",
+  "winner_task_family": "T018_C4_ABLATION_PLUS_T021_T022",
+  "winner_pipeline_script": "backtest/run_backtest_variants_us.py",
+  "winner_curve_path": "backtest/results/curve_C4_K10.csv",
+  "winner_results_path": "backtest/results/t018_ablation_summary.json",
+  "winner_candidate_id": "C4_N20_Cad10_K10_kd0.0_cap0.06",
+  "winner_config_snapshot": {
+    "variant": "C4",
+    "top_n": 20,
+    "rebalance_cadence": 10,
+    "buffer_k": 10,
+    "k_damp": 0.0,
+    "max_weight_cap": 0.06,
+    "min_market_cap": 300000000.0,
+    "friction_one_way_bps": 2.5,
+    "settlement_days": 1,
+    "base_capital": 100000.0
+  },
+  "holdout_period": {
+    "start": "2023-01-02",
+    "end": "2026-03-16"
+  },
+  "holdout_metrics": {
+    "equity_final": 1379228.71,
+    "cagr_pct": 42.1353,
+    "mdd_pct": -40.1213,
+    "max_concentration_pct": 43.4723,
+    "avg_tickers": 18.4426,
+    "cost_total": 13475.27,
+    "defensive_days_pct": 65.586,
+    "defensive_sells_holdout": {
+      "sell_25": 137,
+      "sell_50": 127,
+      "sell_100": 370,
+      "total": 634
+    },
+    "baseline_c2_same_n_cad_k": {
+      "equity_final": 939059.19,
+      "cagr_pct": 28.198,
+      "mdd_pct": -51.2759,
+      "max_concentration_pct": 52.6253,
+      "avg_tickers": 17.7057,
+      "cost_total": 11103.78
+    }
+  },
+  "acid_test": {
+    "note": "Proxy broad index no FRED foi DJIA (não Russell 1000 direto), conforme T-022.",
+    "sp500_window": {
+      "name": "SP500",
+      "window": {
+        "peak_date": "2025-02-19",
+        "trough_date": "2025-04-08",
+        "recovery_or_end_date": "2025-08-13",
+        "dd_pct": -18.902207791150914,
+        "window_days": 126
+      },
+      "metrics_sp500": {
+        "return_total_pct": 5.247755995540482,
+        "cagr_pct": 11.143039587400327,
+        "mdd_pct": -18.902207791150914,
+        "days": 122
+      },
+      "metrics_r1000_proxy": {
+        "return_total_pct": 0.6603090151182212,
+        "cagr_pct": 1.3687159877958655,
+        "mdd_pct": -15.64503035005924,
+        "days": 122
+      },
+      "metrics_motor_c4": {
+        "return_total_pct": 36.19494650529342,
+        "cagr_pct": 89.28640763671487,
+        "mdd_pct": -22.568810065453782,
+        "days": 122
+      },
+      "metrics_motor_c2": {
+        "return_total_pct": 18.216587708088404,
+        "cagr_pct": 41.29364755870122,
+        "mdd_pct": -51.27594926835207,
+        "days": 122
+      }
+    },
+    "r1000_proxy_window": {
+      "name": "R1000_PROXY_DJIA",
+      "window": {
+        "peak_date": "2024-12-04",
+        "trough_date": "2025-04-08",
+        "recovery_or_end_date": "2025-08-22",
+        "dd_pct": -16.36922613477929,
+        "window_days": 188
+      },
+      "metrics_sp500": {
+        "return_total_pct": 6.250236178815705,
+        "cagr_pct": 8.91001000687468,
+        "mdd_pct": -18.902207791150914,
+        "days": 179
+      },
+      "metrics_r1000_proxy": {
+        "return_total_pct": 1.3722385282458394,
+        "cagr_pct": 1.9372576015973753,
+        "mdd_pct": -16.36922613477929,
+        "days": 179
+      },
+      "metrics_motor_c4": {
+        "return_total_pct": 23.877447859559766,
+        "cagr_pct": 35.18125150553646,
+        "mdd_pct": -40.12125218192375,
+        "days": 179
+      },
+      "metrics_motor_c2": {
+        "return_total_pct": 4.707953554466537,
+        "cagr_pct": 6.6910049666699,
+        "mdd_pct": -51.27594926835207,
+        "days": 179
+      }
+    },
+    "global_holdout_metrics": {
+      "c4": {
+        "cagr_pct": 42.135333181098275,
+        "mdd_pct": -40.12125218192375
+      },
+      "c2": {
+        "cagr_pct": 28.197970438327836,
+        "mdd_pct": -51.27594926835207
+      },
+      "scores_median_pre_filter": 3166.0,
+      "scores_median_post_filter": 2090.0
+    }
+  },
+  "concentration_summary": {
+    "top1_weight_median_pct": 6.294624362734756,
+    "top1_weight_p90_pct": 7.593698877790183,
+    "top1_ticker_distinct_count": 250,
+    "top1_streak_avg_days": 3.0166666666666666,
+    "top1_streak_p90_days": 7.0,
+    "trim_count": 317,
+    "avg_days_until_next_exceedance": 16.73542600896861,
+    "mdd_window": {
+      "start_date": "2024-12-26",
+      "trough_date": "2025-04-08",
+      "mdd_pct": -40.12125218192375,
+      "top5_negative_contributors": [
+        {
+          "ticker": "IONQ",
+          "delta_value": -50603.76,
+          "delta_pct_of_total": 17.608380270301613
+        },
+        {
+          "ticker": "KOD",
+          "delta_value": -49017.3,
+          "delta_pct_of_total": 17.05634637077275
+        },
+        {
+          "ticker": "UMAC",
+          "delta_value": -48919.06,
+          "delta_pct_of_total": 17.022162205845984
+        },
+        {
+          "ticker": "RKLB",
+          "delta_value": -48148.920000000006,
+          "delta_pct_of_total": 16.7541797875164
+        },
+        {
+          "ticker": "SOUN",
+          "delta_value": -44922.42,
+          "delta_pct_of_total": 15.631467978312333
+        }
+      ]
+    }
+  },
+  "evidence": {
+    "paths": [
+      "backtest/results/t018_ablation_summary.json",
+      "backtest/results/t021_concentration_report.json",
+      "backtest/results/acid_analysis_us.json",
+      "backtest/results/curve_C4_K10.csv",
+      "backtest/results/events_concentration_trims.csv",
+      "backtest/results/events_defensive_sells.csv"
+    ],
+    "sha256": {
+      "backtest/results/t018_ablation_summary.json": "4dec78a4cd0c8926e17c91e47ffe03b27a7ce924084898df63ee99ec92d1c309",
+      "backtest/results/t021_concentration_report.json": "556e64d58a0051b2a7383146680455b03a2ef6f2e132a7898a4d6d61fc090b12",
+      "backtest/results/acid_analysis_us.json": "aa275b1d27d644105a0f64605332f23fcad7f00e35bdf30bb3fb11ba462e3bab",
+      "backtest/results/curve_C4_K10.csv": "c3883ec64826b5885fd49a76a7d48ee682b61eb1a99ae84e63edb38378af82d0",
+      "backtest/results/events_concentration_trims.csv": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "backtest/results/events_defensive_sells.csv": "8187d44c974b238692c4f244fd7901c48de9f6c950b908ed61fe41bd5316008b"
+    }
+  },
+  "audits": {
+    "phase3_forensic": {
+      "gemini": "APROVADO",
+      "kimi": "APROVADO",
+      "decision_ref": "D-020"
+    }
+  },
+  "decisions": [
+    "D-002",
+    "D-016",
+    "D-018",
+    "D-019",
+    "D-020",
+    "D-021"
+  ],
+  "traceability": {
+    "supersedes_implicit_memory_only": true,
+    "notes": "A partir desta declaração, winner US deve ser lido deste JSON canônico."
+  }
+}

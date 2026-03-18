@@ -147,6 +147,7 @@ O Architect **deve** verificar, antes de produzir o JSON de task, se a orientaç
 ## 8) Corpus de referência
 
 Antes de iniciar qualquer fase, consultar:
+- `docs/CORPUS_FABRICA_US.md` — lições aprendidas da Fábrica US (Phases 0-3), divergências justificadas, lições cruzadas BR↔US
 - `docs/CORPUS_FABRICA_BR.md` — lições aprendidas da Fábrica BR
 - `docs/PLANO_USA_OPS.md` — plano de execução completo
 - `RENDA_OPS/docs/CORPUS_FABRICA_BR.md` — corpus original

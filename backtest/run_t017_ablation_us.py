@@ -75,10 +75,10 @@ def main() -> None:
         .ffill()
     )
     split_wide = canonical.pivot_table(index="date", columns="ticker", values="split_factor", aggfunc="first").sort_index()
-    split_prev_wide = split_wide.shift(1)
-    split_event_wide = split_wide / split_prev_wide
-    split_event_wide = split_event_wide.replace([np.inf, -np.inf], np.nan)
-    split_event_wide = split_event_wide.where((split_event_wide - 1.0).abs() > 1e-12)
+    split_changed = (split_wide / split_wide.shift(1)).replace([np.inf, -np.inf], np.nan)
+    has_split = (split_changed - 1.0).abs() > 1e-12
+    px_raw_wide = canonical.pivot_table(index="date", columns="ticker", values="close_raw", aggfunc="first").sort_index()
+    split_event_wide = (px_raw_wide.shift(1) / px_raw_wide).where(has_split)
 
     for col in [
         "i_value",
@@ -131,8 +131,10 @@ def main() -> None:
                     friction_one_way_bps=float(args.friction_bps),
                     settlement_days=int(args.settlement_days),
                     base_capital=float(args.base_capital),
+                    k_damp=0.0,
+                    max_weight_cap=1.0,
                 )
-                curve, _, events_split = run_variant(
+                curve, _, events_split, _ = run_variant(
                     variant=variant,
                     px_exec_wide=px_exec_wide,
                     split_event_wide=split_event_wide,
@@ -173,8 +175,10 @@ def main() -> None:
                     friction_one_way_bps=float(args.friction_bps),
                     settlement_days=int(args.settlement_days),
                     base_capital=float(args.base_capital),
+                    k_damp=0.0,
+                    max_weight_cap=1.0,
                 )
-                curve, _, events_split = run_variant(
+                curve, _, events_split, _ = run_variant(
                     variant="C2",
                     px_exec_wide=px_exec_wide,
                     split_event_wide=split_event_wide,
@@ -240,7 +244,7 @@ def main() -> None:
             "min_market_cap": float(args.min_market_cap),
         },
         "parity_notes": {
-            "split_factor_semantics": "US canonical usa split_factor cumulativo; no backtest usa-se split event-based derivado por sf_D/sf_{D-1} (D-015), alinhando comportamento operacional ao RENDA_OPS.",
+            "split_factor_semantics": "US canonical usa split_factor cumulativo; no backtest o ratio do split e derivado do preco raw (px_{D-1}/px_D) para preservar valor economico (D-015, D-019).",
             "cadence_extension": "Cadence e uma extensao controlada para ablar rotacao no US (D-002, D-014); nao faz parte do backtest padrao atual do RENDA_OPS.",
             "market_cap_filter": "Filtro min_market_cap e aplicado no date do score (D-1 relativo ao dia de execucao), preservando anti-lookahead.",
         },

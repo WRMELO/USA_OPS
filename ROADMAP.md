@@ -52,23 +52,24 @@
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
 | T-015 | Framework de backtest US | DONE | D-002 |
-| T-016 | Venda defensiva permanente | DONE | D-002 |
-| T-017 | Ablação TopN × Cadence × K | BACKLOG | D-002 |
-| T-018 | Backtest C1 (Top-N puro) | BACKLOG | D-002 |
-| T-019 | Backtest C2 (histerese K) | BACKLOG | D-002 |
-| T-020 | Backtest C3 (só defensiva) | BACKLOG | D-002 |
-| T-021 | Análise de concentração | BACKLOG | D-002 |
-| T-022 | Dual acid window | BACKLOG | D-002 |
-| T-023 | Auditoria forense Phase 3 | BACKLOG | D-002 |
-| T-024 | Declaração do winner US | BACKLOG | D-002 |
+| T-016 | Venda defensiva permanente | DONE | D-002, D-015 |
+| T-017 | Ablação TopN × Cadence × K (grade inicial, universo filtrado) | DONE | D-002, D-016, D-017 |
+| T-017-FIX2 | Ablação ampliada TopN=[10,15,20,25] × Cad=[5,10,21] × K=[10,15,20,30] | DONE | D-018 |
+| T-016-FIX2 | Corrigir split_event_wide: ratio derivado do preço raw (preserva valor econômico) | DONE | D-019, D-015 |
+| T-018 | Variante C4 (dampening + cap de concentração + trims) + ablação dedicada | DONE | D-019 |
+| T-021 | Análise de concentração + drawdown por ticker | DONE | D-002 |
+| T-022 | Dual acid window | DONE | D-002 |
+| T-023 | Auditoria forense Phase 3 | DONE | D-002, D-020 |
+| T-024 | Declaração do winner US | DONE | D-002, D-021 |
 
 ## Phase 4 — ML Trigger US
 
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
-| T-025 | XGBoost US | BACKLOG | D-002 |
-| T-026 | Ablação threshold + histerese | BACKLOG | D-002 |
-| T-027 | Integrar trigger no motor | BACKLOG | D-002 |
+| T-025 | XGBoost US (treino TRAIN-only, features v1 com _level) | DONE (SUPERSEDED by T-025v2) | D-002 |
+| T-026 | Ablação threshold + histerese (features v1) | DONE (SUPERSEDED by T-025v2) | D-002 |
+| T-025v2 | Retreinar XGBoost + ablação com features estacionárias (sem _level) | DONE | D-022 |
+| T-027 | Integrar trigger no motor — comparar C4 puro vs C4 + ML trigger | BACKLOG | D-002 |
 | T-028 | Auditoria forense Phase 4 | BACKLOG | D-002 |
 
 ## Phase 5 — Motor Operacional

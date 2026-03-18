@@ -1,0 +1,138 @@
+{
+  "task_id": "T-022",
+  "decision_ref": "D-002",
+  "params": {
+    "r1000_series_id": "DJIA",
+    "min_window_days": 126,
+    "cfg_c4": {
+      "top_n": 20,
+      "buffer_k": 10,
+      "rebalance_cadence": 10,
+      "friction_one_way_bps": 2.5,
+      "settlement_days": 1,
+      "base_capital": 100000.0,
+      "k_damp": 0.0,
+      "max_weight_cap": 0.06
+    },
+    "cfg_c2": {
+      "top_n": 20,
+      "buffer_k": 10,
+      "rebalance_cadence": 10,
+      "friction_one_way_bps": 2.5,
+      "settlement_days": 1,
+      "base_capital": 100000.0,
+      "k_damp": 0.0,
+      "max_weight_cap": 1.0
+    },
+    "min_market_cap": 300000000.0
+  },
+  "inputs": {
+    "paths": {
+      "canonical": "/home/wilson/USA_OPS/data/ssot/canonical_us.parquet",
+      "macro": "/home/wilson/USA_OPS/data/ssot/macro_us.parquet",
+      "scores": "/home/wilson/USA_OPS/data/features/scores_m3_us.parquet",
+      "blacklist": "/home/wilson/USA_OPS/config/blacklist_us.json",
+      "labels_us": "/home/wilson/USA_OPS/data/features/labels_us.parquet"
+    },
+    "bench_rows_holdout": 835,
+    "analysis_rows_holdout": 802,
+    "sha256_inputs": {
+      "script": "53b776049b92d61040b1894437fef7d47b9cd49e48d7b250df0b5fd0f04b7e6c",
+      "labels_us": "16a0ca44c531667c1b445d737bd2d80b24e98dbcdb9546463b9d08aa2f76e07b"
+    }
+  },
+  "windows": {
+    "sp500": {
+      "name": "SP500",
+      "window": {
+        "peak_date": "2025-02-19",
+        "trough_date": "2025-04-08",
+        "recovery_or_end_date": "2025-08-13",
+        "dd_pct": -18.902207791150914,
+        "window_days": 126
+      },
+      "metrics_sp500": {
+        "return_total_pct": 5.247755995540482,
+        "cagr_pct": 11.143039587400327,
+        "mdd_pct": -18.902207791150914,
+        "days": 122
+      },
+      "metrics_r1000_proxy": {
+        "return_total_pct": 0.6603090151182212,
+        "cagr_pct": 1.3687159877958655,
+        "mdd_pct": -15.64503035005924,
+        "days": 122
+      },
+      "metrics_motor_c4": {
+        "return_total_pct": 36.19494650529342,
+        "cagr_pct": 89.28640763671487,
+        "mdd_pct": -22.568810065453782,
+        "days": 122
+      },
+      "metrics_motor_c2": {
+        "return_total_pct": 18.216587708088404,
+        "cagr_pct": 41.29364755870122,
+        "mdd_pct": -51.27594926835207,
+        "days": 122
+      }
+    },
+    "r1000_proxy": {
+      "name": "R1000_PROXY_DJIA",
+      "window": {
+        "peak_date": "2024-12-04",
+        "trough_date": "2025-04-08",
+        "recovery_or_end_date": "2025-08-22",
+        "dd_pct": -16.36922613477929,
+        "window_days": 188
+      },
+      "metrics_sp500": {
+        "return_total_pct": 6.250236178815705,
+        "cagr_pct": 8.91001000687468,
+        "mdd_pct": -18.902207791150914,
+        "days": 179
+      },
+      "metrics_r1000_proxy": {
+        "return_total_pct": 1.3722385282458394,
+        "cagr_pct": 1.9372576015973753,
+        "mdd_pct": -16.36922613477929,
+        "days": 179
+      },
+      "metrics_motor_c4": {
+        "return_total_pct": 23.877447859559766,
+        "cagr_pct": 35.18125150553646,
+        "mdd_pct": -40.12125218192375,
+        "days": 179
+      },
+      "metrics_motor_c2": {
+        "return_total_pct": 4.707953554466537,
+        "cagr_pct": 6.6910049666699,
+        "mdd_pct": -51.27594926835207,
+        "days": 179
+      }
+    }
+  },
+  "global_holdout_metrics": {
+    "c4": {
+      "cagr_pct": 42.135333181098275,
+      "mdd_pct": -40.12125218192375
+    },
+    "c2": {
+      "cagr_pct": 28.197970438327836,
+      "mdd_pct": -51.27594926835207
+    },
+    "scores_median_pre_filter": 3166.0,
+    "scores_median_post_filter": 2090.0
+  },
+  "outputs": {
+    "acid_analysis_json": "/home/wilson/USA_OPS/backtest/results/acid_analysis_us.json",
+    "plot_sp500_html": "/home/wilson/USA_OPS/backtest/results/plot_t022_sp500_window.html",
+    "plot_r1000_html": "/home/wilson/USA_OPS/backtest/results/plot_t022_r1000_proxy_window.html"
+  },
+  "gates": {
+    "required_inputs_exist": true,
+    "series_sp500_non_empty": true,
+    "series_r1000_non_empty": true,
+    "acid_windows_found": true,
+    "outputs_written": true
+  }
+}

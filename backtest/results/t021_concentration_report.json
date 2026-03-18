@@ -1,0 +1,225 @@
+{
+  "task_id": "T-021",
+  "generated_at": "2026-03-18T19:27:42.767458+00:00",
+  "params": {
+    "variant": "C4",
+    "top_n": 20,
+    "rebalance_cadence": 10,
+    "buffer_k": 10,
+    "k_damp": 0.0,
+    "max_weight_cap": 0.06,
+    "friction_one_way_bps": 2.5,
+    "settlement_days": 1,
+    "base_capital": 100000.0,
+    "min_market_cap": 300000000.0
+  },
+  "inputs": {
+    "canonical_us": "/home/wilson/USA_OPS/data/ssot/canonical_us.parquet",
+    "macro_us": "/home/wilson/USA_OPS/data/ssot/macro_us.parquet",
+    "scores_m3_us": "/home/wilson/USA_OPS/data/features/scores_m3_us.parquet",
+    "blacklist_us": "/home/wilson/USA_OPS/config/blacklist_us.json",
+    "sha256_inputs": {
+      "canonical_us": "9ff72d743ee19361c598d4beeb4ac84b4b4834382bb833e5984a87294ca914d5",
+      "macro_us": "7fadc262cf4c2410b4e6f0f8c931fb4605118f9a2f82fa322d8db467fe07919f",
+      "scores_m3_us": "9958cfb73ef8bbf632ff1a6f531bf27182f3936b5f8919bc5536c8e77af9e1c2",
+      "blacklist_us": "0741c0abd5672f2c6551c86d35f24b1e18e6953c8ae553e93637d2e4853fc874"
+    }
+  },
+  "counts": {
+    "daily_rows": 2061,
+    "drawdown_decomposition_rows": 798,
+    "events_split_rows": 7,
+    "events_trim_rows": 317,
+    "median_scored_tickers_pre_filter": 3166.0,
+    "median_scored_tickers_post_filter": 2090.0
+  },
+  "mdd": {
+    "start_date": "2024-12-26",
+    "trough_date": "2025-04-08",
+    "mdd_pct": -40.12125218192375,
+    "top5_negative_contributors": [
+      {
+        "ticker": "IONQ",
+        "delta_value": -50603.76,
+        "delta_pct_of_total": 17.608380270301613
+      },
+      {
+        "ticker": "KOD",
+        "delta_value": -49017.3,
+        "delta_pct_of_total": 17.05634637077275
+      },
+      {
+        "ticker": "UMAC",
+        "delta_value": -48919.06,
+        "delta_pct_of_total": 17.022162205845984
+      },
+      {
+        "ticker": "RKLB",
+        "delta_value": -48148.920000000006,
+        "delta_pct_of_total": 16.7541797875164
+      },
+      {
+        "ticker": "SOUN",
+        "delta_value": -44922.42,
+        "delta_pct_of_total": 15.631467978312333
+      }
+    ],
+    "top5_positive_contributors": [
+      {
+        "ticker": "ALHC",
+        "delta_value": 27022.7,
+        "delta_pct_of_total": -9.40297672604327
+      },
+      {
+        "ticker": "CNL",
+        "delta_value": 26070.69,
+        "delta_pct_of_total": -9.071709758902294
+      },
+      {
+        "ticker": "TMC",
+        "delta_value": 25500.420000000002,
+        "delta_pct_of_total": -8.87327527465162
+      },
+      {
+        "ticker": "OPCH",
+        "delta_value": 24887.61,
+        "delta_pct_of_total": -8.660038323218693
+      },
+      {
+        "ticker": "RGC",
+        "delta_value": 23504.0,
+        "delta_pct_of_total": -8.178589295996366
+      }
+    ]
+  },
+  "concentration": {
+    "top1_weight_median_pct": 6.294624362734756,
+    "top1_weight_p90_pct": 7.593698877790183,
+    "top1_ticker_distinct_count": 250,
+    "top1_streak_avg_days": 3.0166666666666666,
+    "top1_streak_p90_days": 7.0
+  },
+  "trim_effectiveness": {
+    "total_trims": 317,
+    "weight_before_mean_pct": 6.983196294942506,
+    "weight_before_p90_pct": 7.89972206122972,
+    "trims_per_month": {
+      "2018-05": 3,
+      "2018-06": 4,
+      "2018-07": 2,
+      "2018-08": 5,
+      "2018-09": 2,
+      "2018-10": 3,
+      "2018-11": 1,
+      "2019-01": 2,
+      "2019-02": 4,
+      "2019-03": 1,
+      "2019-04": 2,
+      "2019-05": 2,
+      "2019-06": 1,
+      "2019-07": 3,
+      "2019-09": 3,
+      "2019-10": 1,
+      "2019-11": 1,
+      "2019-12": 3,
+      "2020-01": 4,
+      "2020-02": 3,
+      "2020-04": 5,
+      "2020-05": 3,
+      "2020-06": 4,
+      "2020-07": 7,
+      "2020-08": 9,
+      "2020-09": 5,
+      "2020-10": 7,
+      "2020-11": 5,
+      "2020-12": 7,
+      "2021-01": 5,
+      "2021-02": 7,
+      "2021-03": 4,
+      "2021-04": 5,
+      "2021-05": 3,
+      "2021-06": 2,
+      "2021-07": 2,
+      "2021-08": 5,
+      "2021-09": 5,
+      "2021-10": 4,
+      "2021-11": 3,
+      "2022-01": 1,
+      "2022-03": 1,
+      "2022-04": 5,
+      "2022-05": 2,
+      "2022-06": 1,
+      "2022-07": 2,
+      "2022-08": 2,
+      "2022-09": 2,
+      "2022-10": 4,
+      "2022-11": 6,
+      "2022-12": 2,
+      "2023-01": 3,
+      "2023-02": 1,
+      "2023-03": 2,
+      "2023-04": 1,
+      "2023-06": 4,
+      "2023-07": 4,
+      "2023-08": 3,
+      "2023-09": 1,
+      "2023-10": 4,
+      "2023-11": 2,
+      "2023-12": 2,
+      "2024-01": 3,
+      "2024-02": 4,
+      "2024-03": 4,
+      "2024-04": 6,
+      "2024-05": 4,
+      "2024-06": 3,
+      "2024-07": 5,
+      "2024-08": 6,
+      "2024-09": 4,
+      "2024-10": 5,
+      "2024-11": 5,
+      "2024-12": 6,
+      "2025-02": 3,
+      "2025-03": 2,
+      "2025-04": 1,
+      "2025-05": 3,
+      "2025-06": 6,
+      "2025-07": 3,
+      "2025-08": 3,
+      "2025-09": 8,
+      "2025-10": 5,
+      "2025-11": 5,
+      "2025-12": 9,
+      "2026-01": 5,
+      "2026-02": 2,
+      "2026-03": 5
+    },
+    "avg_days_until_next_exceedance": 16.73542600896861
+  },
+  "equivalence_gate": {
+    "max_abs_diff": {
+      "equity": 0.0,
+      "cash_free": 0.0,
+      "cash_pending": 0.0,
+      "n_tickers": 0.0,
+      "max_concentration": 0.0,
+      "cost_total_cum": 0.0
+    },
+    "is_exact_match": true
+  },
+  "outputs": {
+    "daily_concentration_csv": "backtest/results/t021_daily_concentration.csv",
+    "drawdown_decomposition_csv": "backtest/results/t021_drawdown_decomposition.csv",
+    "plot_top1_weight_html": "backtest/results/plot_t021_top1_weight_timeseries.html",
+    "plot_mdd_contributors_html": "backtest/results/plot_t021_mdd_top_contributors.html",
+    "plot_heatmap_html": "backtest/results/plot_t021_heatmap_top50.html",
+    "plot_streak_hist_html": "backtest/results/plot_t021_top1_streak_hist.html",
+    "report_json": "backtest/results/t021_concentration_report.json"
+  },
+  "gates": {
+    "required_inputs_exist": true,
+    "instrumented_curve_equivalent_official": true,
+    "daily_concentration_non_empty": true,
+    "drawdown_decomposition_non_empty": true,
+    "outputs_written": true
+  }
+}

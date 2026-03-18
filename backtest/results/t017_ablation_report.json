@@ -1,20 +1,15 @@
 {
   "task_id": "T-017",
-  "generated_at": "2026-03-18T15:05:33.552730+00:00",
+  "generated_at": "2026-03-18T17:43:31.937262+00:00",
   "params": {
     "topn_grid": [
-      5,
       10
     ],
     "cadence_grid": [
-      1,
-      2,
-      5
+      10
     ],
     "k_grid": [
-      10,
-      15,
-      20
+      10
     ],
     "friction_one_way_bps": 2.5,
     "settlement_days": 1,
@@ -22,7 +17,7 @@
     "min_market_cap": 300000000.0
   },
   "parity_notes": {
-    "split_factor_semantics": "US canonical usa split_factor cumulativo; no backtest usa-se split event-based derivado por sf_D/sf_{D-1} (D-015), alinhando comportamento operacional ao RENDA_OPS.",
+    "split_factor_semantics": "US canonical usa split_factor cumulativo; no backtest o ratio do split e derivado do preco raw (px_{D-1}/px_D) para preservar valor economico (D-015, D-019).",
     "cadence_extension": "Cadence e uma extensao controlada para ablar rotacao no US (D-002, D-014); nao faz parte do backtest padrao atual do RENDA_OPS.",
     "market_cap_filter": "Filtro min_market_cap e aplicado no date do score (D-1 relativo ao dia de execucao), preservando anti-lookahead."
   },
@@ -39,9 +34,9 @@
     }
   },
   "counts": {
-    "combos_expected": 30,
-    "combos_executed": 30,
-    "summary_rows": 60,
+    "combos_expected": 3,
+    "combos_executed": 3,
+    "summary_rows": 6,
     "median_scored_tickers_pre_filter": 3166.0,
     "median_scored_tickers_post_filter": 2090.0
   },
@@ -54,102 +49,32 @@
     {
       "variant": "C2",
       "top_n": 10,
-      "rebalance_cadence": 5,
-      "buffer_k": 15,
-      "equity_final": 3999031.6506085386,
-      "cagr_full": 0.5698899727846802,
-      "mdd_full": -0.7465351591780229,
-      "split_events": 15
-    },
-    {
-      "variant": "C1",
-      "top_n": 10,
-      "rebalance_cadence": 5,
-      "buffer_k": "",
-      "equity_final": 3926300.8023754265,
-      "cagr_full": 0.5663707409278818,
-      "mdd_full": -0.7157231842721663,
-      "split_events": 13
-    },
-    {
-      "variant": "C2",
-      "top_n": 10,
-      "rebalance_cadence": 5,
+      "rebalance_cadence": 10,
       "buffer_k": 10,
-      "equity_final": 3654316.4615570465,
-      "cagr_full": 0.552681850473036,
-      "mdd_full": -0.719489202110472,
-      "split_events": 12
-    },
-    {
-      "variant": "C2",
-      "top_n": 5,
-      "rebalance_cadence": 5,
-      "buffer_k": 15,
-      "equity_final": 3143149.963347947,
-      "cagr_full": 0.5243368566645226,
-      "mdd_full": -0.783500400251711,
-      "split_events": 9
-    },
-    {
-      "variant": "C2",
-      "top_n": 10,
-      "rebalance_cadence": 5,
-      "buffer_k": 20,
-      "equity_final": 2962243.488004633,
-      "cagr_full": 0.513328356352212,
-      "mdd_full": -0.7552350121818717,
-      "split_events": 16
-    },
-    {
-      "variant": "C2",
-      "top_n": 5,
-      "rebalance_cadence": 5,
-      "buffer_k": 20,
-      "equity_final": 2021804.9015607524,
-      "cagr_full": 0.4442777299070475,
-      "mdd_full": -0.8337608478971736,
+      "equity_final": 1371103.8651193269,
+      "cagr_full": 0.37729650138150816,
+      "mdd_full": -0.6031356501311396,
       "split_events": 7
     },
     {
       "variant": "C1",
-      "top_n": 5,
-      "rebalance_cadence": 5,
+      "top_n": 10,
+      "rebalance_cadence": 10,
       "buffer_k": "",
-      "equity_final": 1477732.0351250824,
-      "cagr_full": 0.3899665243442134,
-      "mdd_full": -0.851896975915589,
-      "split_events": 8
+      "equity_final": 1118287.380619412,
+      "cagr_full": 0.34339712157372526,
+      "mdd_full": -0.6084477288172143,
+      "split_events": 7
     },
     {
-      "variant": "C1",
+      "variant": "C3",
       "top_n": 10,
-      "rebalance_cadence": 2,
+      "rebalance_cadence": 10,
       "buffer_k": "",
-      "equity_final": 1348257.6932480792,
-      "cagr_full": 0.37446973031826625,
-      "mdd_full": -0.7194793141803975,
-      "split_events": 15
-    },
-    {
-      "variant": "C2",
-      "top_n": 10,
-      "rebalance_cadence": 1,
-      "buffer_k": 15,
-      "equity_final": 1337034.5305645454,
-      "cagr_full": 0.3730656497223157,
-      "mdd_full": -0.7408541380430353,
-      "split_events": 27
-    },
-    {
-      "variant": "C2",
-      "top_n": 10,
-      "rebalance_cadence": 1,
-      "buffer_k": 20,
-      "equity_final": 1296582.772305744,
-      "cagr_full": 0.36791754580927427,
-      "mdd_full": -0.7605098948259832,
-      "split_events": 31
+      "equity_final": 173217.23105160132,
+      "cagr_full": 0.06947273644643026,
+      "mdd_full": -0.19075794134663515,
+      "split_events": 1
     }
   ],
   "gates": {
