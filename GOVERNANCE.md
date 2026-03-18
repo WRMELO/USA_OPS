@@ -104,9 +104,38 @@ Após auditoria forense dual (Gemini + Kimi) com PASS, os arquivos do motor ser�
 1. Tag git (`v1.0.0-motor-us`)
 2. Pre-commit hook bloqueando alterações sem flag `MOTOR_OVERRIDE=1`
 
-## 7) Gate de paridade metodológica com RENDA_OPS (D-009)
+## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.
+
+### 7.1) Barreira 1 — Checklist obrigatório na orientação do CTO (D-012)
+
+Toda orientação Modo 2 do CTO para o Architect que contenha **qualquer** threshold, gate numérico, filtro, critério de aprovação ou mecanismo de pipeline **deve** incluir a seção `parity_cto_check`:
+
+```json
+"parity_cto_check": [
+  {
+    "item": "<nome do threshold/gate/filtro>",
+    "exists_in_renda_ops": "sim/não",
+    "renda_ops_reference": "<path ou 'n/a'>",
+    "if_not_exists_justification": "<justificativa ou 'n/a'>",
+    "requires_owner_approval": true/false
+  }
+]
+```
+
+- Se `exists_in_renda_ops = não` e `requires_owner_approval = true`: o CTO deve **sinalizar explicitamente ao Owner** antes de o Architect receber a orientação.
+- Se o CTO omitir a seção `parity_cto_check` em uma orientação que contenha critérios numéricos, o Architect **deve** rejeitar (ver §7.2).
+
+**Motivação**: o CTO violou o D-009 duas vezes (outlier_rate na T-008v2, median_tickers na T-012), introduzindo thresholds sem correspondência no RENDA_OPS. Esta barreira força a declaração explícita na origem.
+
+### 7.2) Barreira 2 — Rejeição obrigatória pelo Architect (D-012)
+
+O Architect **deve** verificar, antes de produzir o JSON de task, se a orientação do CTO contém thresholds, gates ou filtros numéricos. Se contiver:
+
+1. Verificar presença da seção `parity_cto_check` na orientação.
+2. Se **ausente**: devolver ao CTO com `FAIL — parity_cto_check ausente (D-012)` antes de produzir qualquer JSON.
+3. Se **presente**: validar cada item contra o RENDA_OPS. Se `exists_in_renda_ops = não` e `requires_owner_approval = true`, confirmar que o Owner foi consultado.
 
 **Checklist obrigatório no JSON de task (campo `parity_check`):**
 1. Mecanismo existe no RENDA_OPS? (sim/não, com path de referência)

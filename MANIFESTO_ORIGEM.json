@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "workspace": "/home/wilson/USA_OPS",
-  "generated_at": "2026-03-17T11:19:38+00:00",
+  "generated_at": "2026-03-17T22:15:48+00:00",
   "files": [
     {
       "path": "lib/engine.py",
@@ -223,6 +223,12 @@
       "path": "data/ssot/t011v2_macro_report.json",
       "transform": "new",
       "local_sha256": "1c9d420d84a514325627eca9585c609c0e368673fdaf7c7ed130837d5a42882e",
+      "origin": null
+    },
+    {
+      "path": "scripts/t012_compute_scores_m3_us.py",
+      "transform": "new",
+      "local_sha256": "90ef17add57ce418e4d66bd74cb1ca28c456f33c3e8fe8463e883e8f1184f2d4",
       "origin": null
     }
   ]
