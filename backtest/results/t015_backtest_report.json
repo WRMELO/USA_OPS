@@ -1,0 +1,44 @@
+{
+  "task_id": "T-015",
+  "generated_at": "2026-03-18T12:06:57.138910+00:00",
+  "params": {
+    "top_n": 10,
+    "buffer_k": 15,
+    "friction_one_way_bps": 2.5,
+    "settlement_days": 1,
+    "base_capital": 100000.0
+  },
+  "inputs": {
+    "canonical_us": "data/ssot/canonical_us.parquet",
+    "macro_us": "data/ssot/macro_us.parquet",
+    "scores_m3_us": "data/features/scores_m3_us.parquet",
+    "blacklist_us": "config/blacklist_us.json",
+    "sha256_inputs": {
+      "canonical_us": "9ff72d743ee19361c598d4beeb4ac84b4b4834382bb833e5984a87294ca914d5",
+      "macro_us": "7fadc262cf4c2410b4e6f0f8c931fb4605118f9a2f82fa322d8db467fe07919f",
+      "scores_m3_us": "9958cfb73ef8bbf632ff1a6f531bf27182f3936b5f8919bc5536c8e77af9e1c2",
+      "blacklist_us": "0741c0abd5672f2c6551c86d35f24b1e18e6953c8ae553e93637d2e4853fc874"
+    }
+  },
+  "counts": {
+    "dates_intersection": 2061,
+    "tickers_px": 4489,
+    "scores_dates": 1999,
+    "blacklist_size": 4153
+  },
+  "outputs": {
+    "curve_c1_csv": "backtest/results/curve_C1.csv",
+    "curve_c2_csv": "backtest/results/curve_C2_K15.csv",
+    "curve_c3_csv": "backtest/results/curve_C3.csv",
+    "summary_csv": "backtest/results/summary_t015_variants.csv",
+    "summary_json": "backtest/results/summary_t015_variants.json",
+    "report_json": "backtest/results/t015_backtest_report.json"
+  },
+  "gates": {
+    "required_inputs_exist": true,
+    "curves_non_empty": true,
+    "summary_non_empty": true,
+    "anti_lookahead_prev_day_scores": true,
+    "outputs_written": true
+  }
+}

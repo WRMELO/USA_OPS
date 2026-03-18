@@ -51,8 +51,8 @@
 
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
-| T-015 | Framework de backtest US | BACKLOG | D-002 |
-| T-016 | Venda defensiva permanente | BACKLOG | D-002 |
+| T-015 | Framework de backtest US | DONE | D-002 |
+| T-016 | Venda defensiva permanente | DONE | D-002 |
 | T-017 | Ablação TopN × Cadence × K | BACKLOG | D-002 |
 | T-018 | Backtest C1 (Top-N puro) | BACKLOG | D-002 |
 | T-019 | Backtest C2 (histerese K) | BACKLOG | D-002 |
