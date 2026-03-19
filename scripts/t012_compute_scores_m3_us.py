@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,8 +40,14 @@ def _norm_ticker(value: Any) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="T-012: Compute daily US M3 scores.")
     parser.add_argument("--workspace", required=True)
-    parser.add_argument("--canonical-path", default="data/ssot/canonical_us.parquet")
-    parser.add_argument("--blacklist-path", default="config/blacklist_us.json")
+    parser.add_argument(
+        "--canonical-path",
+        default=os.getenv("USA_OPS_CANONICAL_PATH", "data/ssot/canonical_us.parquet"),
+    )
+    parser.add_argument(
+        "--blacklist-path",
+        default=os.getenv("USA_OPS_BLACKLIST_PATH", "config/blacklist_us.json"),
+    )
     parser.add_argument("--out-path", default="data/features/scores_m3_us.parquet")
     parser.add_argument("--report-path", default="data/features/t012_scores_report.json")
     return parser.parse_args()

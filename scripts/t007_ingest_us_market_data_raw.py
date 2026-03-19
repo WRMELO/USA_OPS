@@ -20,10 +20,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--workspace", default=".", help="Workspace root")
     parser.add_argument("--start-date", default="2018-01-01", help="Inclusive start date (YYYY-MM-DD)")
     parser.add_argument("--end-date", default=None, help="Inclusive end date (YYYY-MM-DD), default=today UTC")
+    parser.add_argument(
+        "--tickers-parquet",
+        default=None,
+        help="Opcional: parquet contendo coluna de tickers para restringir ingestão (ex.: data/ssot/canonical_us.parquet)",
+    )
+    parser.add_argument("--tickers-column", default="ticker", help="Coluna de tickers no parquet informado em --tickers-parquet")
+    parser.add_argument(
+        "--tickers-file",
+        default=None,
+        help="Opcional: arquivo texto/CSV (1 ticker por linha) para restringir ingestão",
+    )
     parser.add_argument("--chunk-size", type=int, default=100, help="Tickers per chunk")
     parser.add_argument("--timeout-seconds", type=float, default=20.0, help="Polygon request timeout")
     parser.add_argument("--max-retries", type=int, default=5, help="Retries per endpoint")
     parser.add_argument("--max-workers", type=int, default=10, help="Parallel workers per chunk")
+    parser.add_argument("--out-path", default="data/ssot/us_market_data_raw.parquet", help="Path de saída parquet (relativo ao workspace)")
+    parser.add_argument("--report-path", default="data/ssot/t007_ingestion_report.json", help="Path de report JSON (relativo ao workspace)")
+    parser.add_argument("--failures-path", default="data/ssot/t007_failures.json", help="Path de failures JSON (relativo ao workspace)")
     return parser.parse_args()
 
 
@@ -133,26 +147,43 @@ def main() -> int:
     if not api_key:
         raise RuntimeError("POLYGON_API_KEY ausente no ambiente/.env.")
 
-    index_path = workspace / "data/ssot/index_compositions.parquet"
-    if not index_path.exists():
-        raise FileNotFoundError(f"Arquivo não encontrado: {index_path}")
-
     start_dt = pd.Timestamp(args.start_date).date()
     end_dt = pd.Timestamp(args.end_date).date() if args.end_date else datetime.now(tz=UTC).date()
     if end_dt < start_dt:
         raise ValueError("end-date não pode ser menor que start-date.")
 
-    universe_df = read_parquet(index_path)
-    tickers = sorted({str(t).strip().upper() for t in universe_df["ticker"].dropna().tolist() if str(t).strip()})
+    tickers: list[str]
+    if args.tickers_parquet:
+        tpath = workspace / str(args.tickers_parquet)
+        if not tpath.exists():
+            raise FileNotFoundError(f"tickers-parquet não encontrado: {tpath}")
+        df = read_parquet(tpath)
+        if str(args.tickers_column) not in df.columns:
+            raise ValueError(f"tickers-column '{args.tickers_column}' ausente em {tpath}")
+        tickers = sorted({str(t).strip().upper() for t in df[str(args.tickers_column)].dropna().tolist() if str(t).strip()})
+    elif args.tickers_file:
+        fpath = workspace / str(args.tickers_file)
+        if not fpath.exists():
+            raise FileNotFoundError(f"tickers-file não encontrado: {fpath}")
+        lines = [ln.strip().split(",")[0].strip().upper() for ln in fpath.read_text(encoding="utf-8").splitlines()]
+        tickers = sorted({t for t in lines if t and not t.startswith("#")})
+    else:
+        index_path = workspace / "data/ssot/index_compositions.parquet"
+        if not index_path.exists():
+            raise FileNotFoundError(f"Arquivo não encontrado: {index_path}")
+        universe_df = read_parquet(index_path)
+        tickers = sorted({str(t).strip().upper() for t in universe_df["ticker"].dropna().tolist() if str(t).strip()})
+
     total_tickers = len(tickers)
     if total_tickers == 0:
         raise RuntimeError("Universo vazio em index_compositions.parquet.")
 
-    chunk_dir = workspace / "data/ssot/tmp_t007_chunks"
+    # Resume seguro: o cache deve ser segregado por intervalo [start_dt, end_dt].
+    chunk_dir = workspace / "data/ssot/tmp_t007_chunks" / f"{start_dt.isoformat()}_{end_dt.isoformat()}"
     chunk_dir.mkdir(parents=True, exist_ok=True)
-    failures_path = workspace / "data/ssot/t007_failures.json"
-    report_path = workspace / "data/ssot/t007_ingestion_report.json"
-    out_path = workspace / "data/ssot/us_market_data_raw.parquet"
+    failures_path = workspace / str(args.failures_path)
+    report_path = workspace / str(args.report_path)
+    out_path = workspace / str(args.out_path)
 
     started = time.time()
     failures: list[dict[str, Any]] = []

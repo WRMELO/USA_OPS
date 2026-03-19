@@ -67,3 +67,7 @@
 - feat: T-030 — painel diário HTML (USD/NYSE) com Plotly (252 pregões + Base100) + resumo DFC/Balanço mínimo (ref: D-024)
 - feat: T-031 — servidor/lançador (porta 8788) + catch-up automático de pregões NYSE + atalho Desktop (ref: D-024)
 - feat: T-032 — duplo-caixa US (T+1) no painel + salvamento de boletim (data/real) via lançador (ref: D-024)
+
+## 2026-03-19
+
+- feat: T-034 — blindagem do motor + operational_window + ingestão incremental diária (ref: D-025, D-026). Artefatos: `data/ssot/operational_window.parquet`, `data/ssot/operational_market_data_raw.parquet`, `pipeline/00_incremental_ingest.py`, `pipeline/rebuild_operational_window.py`, `.git/hooks/pre-commit`, `tools/pre_commit_motor_guard.sh`, `tools/install_git_hooks.sh`, `docs/OPERACAO_DADOS.md`, `docs/T034_REEXECUCAO_E_HIGIENE.md`. Tag: `v1.0.0-motor-us`

@@ -74,6 +74,19 @@ CTO orienta → Architect planeja → Owner autoriza → Executor implementa →
 - Dados em `data/` são regeneráveis e excluídos do git via `.gitignore`.
 - SSOT (Single Source of Truth) vive em `data/ssot/`.
 
+#### 6.2.1 Dois parquets, dois propósitos (D-026)
+
+| Artefato | Conteúdo | Propósito | Atualização |
+|----------|----------|-----------|-------------|
+| `data/ssot/canonical_us.parquet` | Todo o histórico desde 2018, todos os ~9.130 tickers (incluindo deslistados) | Anti-survivorship bias, backtest, auditoria forense, recálculo de scores | Semanal (reconciliação) ou sob demanda |
+| `data/ssot/operational_window.parquet` | Últimos ~504 pregões, apenas tickers do universo operacional (~4.000-4.500 que passam no filtro de qualidade + market_cap >= 300M) | Pipeline diário: scoring, decisão, painel | Diária (ingestão incremental: date_max+1 até D-1) |
+
+**Regras:**
+- O pipeline diário (`run_daily.py`) opera exclusivamente sobre `operational_window.parquet`.
+- `canonical_us.parquet` é read-only para o pipeline diário.
+- Reconciliação semanal: regenerar `operational_window` a partir do `canonical` atualizado.
+- Recuperação de gaps: se o pipeline falhar num dia, no dia seguinte a ingestão incremental busca todos os dias faltantes automaticamente (date_max+1 até D-1).
+
 ### 6.3 Ambiente
 
 - Python via `.venv/` local ao workspace.
@@ -85,6 +98,8 @@ CTO orienta → Architect planeja → Owner autoriza → Executor implementa →
 - Orquestrador: `pipeline/run_daily.py`.
 - Cada etapa deve ser idempotente para o mesmo dia.
 - Logs em `logs/` (excluídos do git).
+- Modo padrão (sem `--full`): opera sobre `operational_window.parquet`, ingestão incremental somente dos dias faltantes e tickers operacionais (~4.500). Tempo alvo: < 2 min.
+- Modo full (`--full`): atualiza `canonical_us.parquet` com universo completo (~9.130 tickers), depois regenera `operational_window`. Uso semanal ou sob demanda.
 
 ### 6.5 Mercado US — Especificidades
 

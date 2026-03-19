@@ -86,6 +86,6 @@
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
 | T-033 | Auditoria forense final | DONE | D-025 |
-| T-034 | Blindagem (tag + hook) | BACKLOG | D-025 |
+| T-034 | Blindagem (tag + hook) + operational_window + ingestão incremental | DONE | D-025, D-026 |
 | T-035 | Dry-run (5 dias) | CANCELLED | D-025 |
 | T-036 | Operação real (BTG Internacional) | CANCELLED | D-025 |

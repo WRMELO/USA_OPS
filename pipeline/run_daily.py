@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import logging
+import os
 import sys
 import traceback
 from collections.abc import Callable
@@ -52,8 +53,8 @@ def run(
 ) -> dict:
     run_date = target_date or date.today()
     logger = setup_logging(run_date)
-    logger.info("=== USA_OPS daily pipeline started (date=%s, mode=%s) ===", run_date, "FULL" if full else "DRY-RUN")
-    total_steps = 12
+    logger.info("=== USA_OPS daily pipeline started (date=%s, mode=%s) ===", run_date, "FULL" if full else "DAILY")
+    total_steps = 13 if full else 9
 
     def _step(n: int, label: str) -> None:
         logger.info(label)
@@ -71,22 +72,35 @@ def run(
             _step(3, "Step 03: Ingest reference/index US...")
             _load_step("03_ingest_reference_us").run(end_date=run_date)
 
-        _step(4, "Step 04: Build canonical US...")
-        _load_step("04_build_canonical").run(end_date=run_date)
+            _step(4, "Step 04: Build canonical US...")
+            _load_step("04_build_canonical").run(end_date=run_date)
 
-        _step(5, "Step 05: Build macro expanded features...")
+            _step(5, "Step 05: Rebuild operational window (D-026)...")
+            _load_step("rebuild_operational_window").run(end_date=run_date)
+            base_n = 6
+        else:
+            _step(1, "Step 00: Incremental ingest + rebuild operational window (D-026)...")
+            _load_step("00_incremental_ingest").run(target_date=run_date)
+            base_n = 2
+
+        # A partir daqui, opera sobre a janela operacional (não toca no SSOT full).
+        os.environ["USA_OPS_CANONICAL_PATH"] = "data/ssot/operational_window.parquet"
+        os.environ["USA_OPS_RAW_PATH"] = "data/ssot/operational_market_data_raw.parquet"
+        os.environ["USA_OPS_BLACKLIST_PATH"] = "data/ssot/blacklist_window_us.json"
+
+        _step(base_n, "Step 05: Build macro expanded features...")
         _load_step("05_build_macro_expanded").run(end_date=run_date)
 
-        _step(6, "Step 06: Compute M3-US scores...")
+        _step(base_n + 1, "Step 06: Compute M3-US scores...")
         _load_step("06_compute_scores").run(end_date=run_date)
 
-        _step(7, "Step 07: Build feature dataset US...")
+        _step(base_n + 2, "Step 07: Build feature dataset US...")
         _load_step("07_build_features").run(end_date=run_date)
 
-        _step(8, "Step 08: Predict (stub sem ML trigger)...")
+        _step(base_n + 3, "Step 08: Predict (stub sem ML trigger)...")
         _load_step("08_predict").run(end_date=run_date)
 
-        _step(9, "Step 09: Decide carteira C4 pura...")
+        _step(base_n + 4, "Step 09: Decide carteira C4 pura...")
         decision = _load_step("09_decide").run(target_date=run_date)
         logger.info(
             "Decision: action=%s n_tickers=%s",
@@ -94,15 +108,15 @@ def run(
             len(decision.get("portfolio", [])),
         )
 
-        _step(10, "Step 10: Extend winner curve...")
+        _step(base_n + 5, "Step 10: Extend winner curve...")
         _load_step("10_extend_curve").run(target_date=run_date)
 
-        _step(11, "Step 11: Reconcile metrics...")
+        _step(base_n + 6, "Step 11: Reconcile metrics...")
         recon = _load_step("11_reconcile_metrics").run()
         if recon.get("status") != "PASS":
             logger.warning("Metrics reconciliation FAIL — check logs/metrics_reconciliation.json")
 
-        _step(12, "Step 12: Build minimal daily panel...")
+        _step(base_n + 7, "Step 12: Build minimal daily panel...")
         panel_path = _load_step("painel_diario").run(target_date=run_date)
         logger.info("Daily panel generated at: %s", panel_path)
 
@@ -126,3 +140,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+test_guard_line

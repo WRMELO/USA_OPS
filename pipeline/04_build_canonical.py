@@ -16,11 +16,14 @@ def run(end_date: date | None = None) -> dict:
         str(ROOT / "scripts" / "t008_quality_spc_and_blacklist_v2.py"),
         "--workspace",
         str(ROOT),
+        "--out-blacklist",
+        "data/ssot/blacklist_us.json",
+        "--out-report",
+        "data/ssot/t008v2_quality_report.json",
         "--chunk-size",
         "250",
         "--max-workers",
         "10",
-        "--resume",
     ]
     subprocess.run(cmd_008, check=True, cwd=str(ROOT))
 

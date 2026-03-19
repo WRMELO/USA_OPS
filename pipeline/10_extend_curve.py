@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -9,6 +10,12 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
+
+def _canonical_path() -> Path:
+    env = os.getenv("USA_OPS_CANONICAL_PATH", "").strip()
+    if env:
+        return (ROOT / env).resolve() if not os.path.isabs(env) else Path(env).resolve()
+    return ROOT / "data" / "ssot" / "canonical_us.parquet"
 
 
 def _load_last_decision(target_date: date) -> dict:
@@ -40,7 +47,7 @@ def run(target_date: date | None = None) -> pd.DataFrame:
     target_ts = pd.Timestamp(target_date).normalize()
 
     winner_curve_path = ROOT / "backtest" / "results" / "curve_C4_K10.csv"
-    canonical_path = ROOT / "data" / "ssot" / "canonical_us.parquet"
+    canonical_path = _canonical_path()
     out_path = ROOT / "data" / "daily" / "winner_curve_us.parquet"
     if not winner_curve_path.exists():
         raise FileNotFoundError(f"Input ausente: {winner_curve_path}")

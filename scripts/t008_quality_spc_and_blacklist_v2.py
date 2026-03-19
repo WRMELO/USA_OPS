@@ -29,6 +29,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--chunk-size", type=int, default=200, help="Tickers por chunk")
     parser.add_argument("--max-workers", type=int, default=8, help="Workers por chunk")
     parser.add_argument("--resume", action="store_true", help="Pular chunks existentes")
+    parser.add_argument("--raw-path", default="data/ssot/us_market_data_raw.parquet")
+    parser.add_argument("--ref-path", default="data/ssot/ticker_reference_us.parquet")
+    parser.add_argument("--out-parquet", default="data/ssot/us_universe_operational.parquet")
+    parser.add_argument("--out-blacklist", default="config/blacklist_us.json")
+    parser.add_argument("--out-report", default="data/ssot/t008v2_quality_report.json")
+    parser.add_argument("--tmp-dir", default="data/ssot/tmp_t008_chunks")
     return parser.parse_args()
 
 
@@ -218,12 +224,12 @@ def main() -> int:
 
     load_dotenv(workspace / ".env")
 
-    raw_path = workspace / "data/ssot/us_market_data_raw.parquet"
-    ref_path = workspace / "data/ssot/ticker_reference_us.parquet"
-    out_parquet = workspace / "data/ssot/us_universe_operational.parquet"
-    out_blacklist = workspace / "config/blacklist_us.json"
-    out_report = workspace / "data/ssot/t008v2_quality_report.json"
-    tmp_dir = workspace / "data/ssot/tmp_t008_chunks"
+    raw_path = workspace / str(args.raw_path)
+    ref_path = workspace / str(args.ref_path)
+    out_parquet = workspace / str(args.out_parquet)
+    out_blacklist = workspace / str(args.out_blacklist)
+    out_report = workspace / str(args.out_report)
+    tmp_dir = workspace / str(args.tmp_dir)
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
     if not raw_path.exists():
@@ -419,9 +425,6 @@ def main() -> int:
         "blacklist_top_reasons": pd.Series([x["reason"] for x in blacklist_entries]).value_counts().head(20).to_dict(),
     }
     write_json(report, out_report, indent=2)
-
-    changelog_line = "- fix: T-008v2-FIX — remover outlier_rate da blacklist SOFT (SOFT apenas history_days<252) e alinhar SPEC ao RENDA_OPS (ref: D-009)"
-    upsert_changelog_line(workspace / "CHANGELOG.md", changelog_line, datetime.now(tz=UTC).date().isoformat())
 
     if duplicates_output != 0:
         print("[T-008v2] FAIL lógico: duplicatas no output final.")

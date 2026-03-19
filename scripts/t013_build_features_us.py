@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -21,7 +22,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--workspace", required=True)
     parser.add_argument("--in-macro-features", default="data/features/macro_features_us.parquet")
     parser.add_argument("--in-scores", default="data/features/scores_m3_us.parquet")
-    parser.add_argument("--in-canonical", default="data/ssot/canonical_us.parquet")
+    parser.add_argument(
+        "--in-canonical",
+        default=os.getenv("USA_OPS_CANONICAL_PATH", "data/ssot/canonical_us.parquet"),
+    )
     parser.add_argument("--out-dataset", default="data/features/dataset_us.parquet")
     parser.add_argument("--out-feature-guard", default="config/feature_guard_us.json")
     parser.add_argument("--out-report", default="data/features/t013_features_report.json")
@@ -253,7 +257,6 @@ def main() -> int:
     guard_payload = {
         "task_id": "T-013",
         "decision_ref": "D-002, D-009, D-010, D-012",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
         "features_required": required_features,
     }
     out_guard.parent.mkdir(parents=True, exist_ok=True)

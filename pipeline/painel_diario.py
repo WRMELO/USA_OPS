@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,12 @@ import plotly.graph_objects as go
 ROOT = Path(__file__).resolve().parents[1]
 NYSE_SESSION_TEXT = "NYSE 09:30-16:00 ET (rodar pos-fechamento)"
 WINDOW_DAYS = 252
+
+def _raw_path() -> Path:
+    env = os.getenv("USA_OPS_RAW_PATH", "").strip()
+    if env:
+        return (ROOT / env).resolve() if not os.path.isabs(env) else Path(env).resolve()
+    return ROOT / "data" / "ssot" / "us_market_data_raw.parquet"
 
 
 def _load_json(path: Path) -> dict:
@@ -174,7 +181,7 @@ def _defensive_table(decision: dict) -> str:
 
 
 def _events_summary(target_day: date, selected_tickers: list[str]) -> dict:
-    path = ROOT / "data" / "ssot" / "us_market_data_raw.parquet"
+    path = _raw_path()
     if not path.exists():
         return {}
     try:
