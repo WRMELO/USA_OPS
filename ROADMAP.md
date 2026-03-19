@@ -77,8 +77,8 @@
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
 | T-029 | Pipeline steps 01–12 | DONE | D-024 |
-| T-030 | Painel diário HTML (USD, NYSE) | BACKLOG | D-001 |
-| T-031 | Servidor/lançador (porta 8788) | BACKLOG | D-001 |
+| T-030 | Painel diário HTML (USD, NYSE) | DONE | D-024 |
+| T-031 | Servidor/lançador (porta 8788) | DONE | D-024 |
 | T-032 | Duplo-caixa (T+1) | BACKLOG | D-001 |
 
 ## Phase 6 — Blindagem e Operação
