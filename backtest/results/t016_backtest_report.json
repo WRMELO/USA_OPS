@@ -1,6 +1,6 @@
 {
   "task_id": "T-016",
-  "generated_at": "2026-03-18T17:42:29.731788+00:00",
+  "generated_at": "2026-03-19T08:09:34.964286+00:00",
   "params": {
     "top_n": 20,
     "buffer_k": 10,
@@ -10,7 +10,7 @@
     "base_capital": 100000.0,
     "min_market_cap": 300000000.0,
     "k_damp": 0.0,
-    "max_weight_cap": 1.0
+    "max_weight_cap": 0.06
   },
   "inputs": {
     "canonical_us": "data/ssot/canonical_us.parquet",
@@ -19,9 +19,9 @@
     "blacklist_us": "config/blacklist_us.json",
     "sha256_inputs": {
       "canonical_us": "9ff72d743ee19361c598d4beeb4ac84b4b4834382bb833e5984a87294ca914d5",
-      "macro_us": "7fadc262cf4c2410b4e6f0f8c931fb4605118f9a2f82fa322d8db467fe07919f",
+      "macro_us": "55123d3e9eb706af39a66fb071325a6bacb0c65097f1d5e06083f5a778c923a8",
       "scores_m3_us": "9958cfb73ef8bbf632ff1a6f531bf27182f3936b5f8919bc5536c8e77af9e1c2",
-      "blacklist_us": "0741c0abd5672f2c6551c86d35f24b1e18e6953c8ae553e93637d2e4853fc874"
+      "blacklist_us": "e37c77f6b448f1586b09afbb5a72bce2a58f37e74a3a4c788713bc7a8bc0c68b"
     }
   },
   "counts": {
@@ -29,10 +29,10 @@
     "scores_dates": 1999,
     "median_scored_tickers_pre_filter": 3166.0,
     "median_scored_tickers_post_filter": 2090.0,
-    "blacklist_size": 4153,
-    "events_defensive_rows": 6739,
+    "blacklist_size": 3391,
+    "events_defensive_rows": 6893,
     "events_split_rows": 21,
-    "events_concentration_trim_rows": 0,
+    "events_concentration_trim_rows": 317,
     "events_split_overflow_guard_rows": 0
   },
   "metrics": {
@@ -49,8 +49,8 @@
       "mdd_full": -0.12750997434996025
     },
     "C4": {
-      "cagr_full": 0.31500952728111886,
-      "mdd_full": -0.5127594926835207
+      "cagr_full": 0.3782918334505614,
+      "mdd_full": -0.4012125218192375
     }
   },
   "anti_lookahead_notes": {

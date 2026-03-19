@@ -66,3 +66,4 @@
 - feat: T-029 — pipeline operacional US (steps 01–12) + orquestrador `pipeline/run_daily.py` (ref: D-024)
 - feat: T-030 — painel diário HTML (USD/NYSE) com Plotly (252 pregões + Base100) + resumo DFC/Balanço mínimo (ref: D-024)
 - feat: T-031 — servidor/lançador (porta 8788) + catch-up automático de pregões NYSE + atalho Desktop (ref: D-024)
+- feat: T-032 — duplo-caixa US (T+1) no painel + salvamento de boletim (data/real) via lançador (ref: D-024)

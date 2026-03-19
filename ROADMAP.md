@@ -79,13 +79,13 @@
 | T-029 | Pipeline steps 01–12 | DONE | D-024 |
 | T-030 | Painel diário HTML (USD, NYSE) | DONE | D-024 |
 | T-031 | Servidor/lançador (porta 8788) | DONE | D-024 |
-| T-032 | Duplo-caixa (T+1) | BACKLOG | D-001 |
+| T-032 | Duplo-caixa (T+1) | DONE | D-024 |
 
 ## Phase 6 — Blindagem e Operação
 
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
-| T-033 | Auditoria forense final | BACKLOG | D-002 |
-| T-034 | Blindagem (tag + hook) | BACKLOG | D-002 |
-| T-035 | Dry-run (5 dias) | BACKLOG | D-001 |
-| T-036 | Operação real (BTG Internacional) | BACKLOG | D-001 |
+| T-033 | Auditoria forense final | DONE | D-025 |
+| T-034 | Blindagem (tag + hook) | BACKLOG | D-025 |
+| T-035 | Dry-run (5 dias) | CANCELLED | D-025 |
+| T-036 | Operação real (BTG Internacional) | CANCELLED | D-025 |

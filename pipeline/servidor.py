@@ -207,6 +207,43 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
 
             self._respond_html("<h3>Rota nao encontrada.</h3>", code=404)
 
+        def do_POST(self) -> None:  # noqa: N802
+            parsed = urlparse(self.path)
+            path = parsed.path
+            today = self._today()
+            if path != "/salvar":
+                self._respond_json({"ok": False, "error": "Rota nao encontrada"}, code=404)
+                return
+
+            length = int(self.headers.get("Content-Length", "0"))
+            body = self.rfile.read(length)
+            try:
+                payload = json.loads(body)
+            except Exception:
+                self._respond_json({"ok": False, "error": "Payload JSON invalido"}, code=400)
+                return
+
+            payload_date = str(payload.get("date", "")).strip()
+            try:
+                save_day = date.fromisoformat(payload_date)
+            except ValueError:
+                self._respond_json({"ok": False, "error": "Campo 'date' invalido"}, code=400)
+                return
+
+            # Bloqueia salvamento de paineis historicos.
+            if save_day != today:
+                self._respond_json(
+                    {"ok": False, "error": "Somente o painel do dia atual pode salvar boletim."},
+                    code=403,
+                )
+                return
+
+            real_dir = ROOT / "data" / "real"
+            real_dir.mkdir(parents=True, exist_ok=True)
+            out_path = real_dir / f"{save_day.isoformat()}.json"
+            out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            self._respond_json({"ok": True, "path": str(out_path.relative_to(ROOT))}, code=200)
+
         def _render_home(self, today: date) -> str:
             hist = _list_existing_panels()
             items = [

@@ -1,10 +1,11 @@
-"""Step 12 - painel diario HTML (T-030)."""
+"""Step 12 - painel diario HTML com duplo-caixa T+1 (T-032)."""
 from __future__ import annotations
 
 import argparse
 import json
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -18,6 +19,24 @@ def _load_json(path: Path) -> dict:
     if not path.exists():
         return {}
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _safe_float(v: Any, default: float = 0.0) -> float:
+    try:
+        if v is None:
+            return default
+        return float(v)
+    except Exception:
+        return default
+
+
+def _safe_int(v: Any, default: int = 0) -> int:
+    try:
+        if v is None:
+            return default
+        return int(v)
+    except Exception:
+        return default
 
 
 def _fmt_usd(value: float | int | None) -> str:
@@ -193,6 +212,90 @@ def _events_summary(target_day: date, selected_tickers: list[str]) -> dict:
     return {"dividend_events": div_events, "split_events": split_events}
 
 
+def _list_real_files_upto(max_day: date) -> list[Path]:
+    real_dir = ROOT / "data" / "real"
+    if not real_dir.exists():
+        return []
+    files: list[tuple[date, Path]] = []
+    for p in real_dir.glob("*.json"):
+        try:
+            d = date.fromisoformat(p.stem)
+            if d <= max_day:
+                files.append((d, p))
+        except Exception:
+            continue
+    files.sort(key=lambda x: x[0])
+    return [p for _, p in files]
+
+
+def _load_latest_real_before(ref_day: date) -> tuple[date | None, dict[str, Any] | None]:
+    files = _list_real_files_upto(ref_day)
+    if not files:
+        return None, None
+    p = files[-1]
+    return date.fromisoformat(p.stem), _load_json(p)
+
+
+def _extract_ops_for_prefill(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for op in payload.get("operations", []):
+        typ = str(op.get("type", "")).upper().strip()
+        if typ not in {"COMPRA", "VENDA"}:
+            continue
+        rows.append(
+            {
+                "type": typ,
+                "ticker": str(op.get("ticker", "")).upper().strip(),
+                "qtd": _safe_int(op.get("qtd"), 0),
+                "preco": _safe_float(op.get("preco"), 0.0),
+            }
+        )
+    return rows
+
+
+def _extract_cash_movements(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], float, float]:
+    rows: list[dict[str, Any]] = []
+    aporte = 0.0
+    retirada = 0.0
+    for mv in payload.get("cash_movements", []):
+        typ = str(mv.get("type", "")).upper().strip()
+        val = _safe_float(mv.get("value", mv.get("valor", 0.0)), 0.0)
+        desc = str(mv.get("desc", mv.get("description", ""))).strip()
+        if typ:
+            rows.append({"type": typ, "value": val, "desc": desc})
+        if typ in {"APORTE", "DEPOSITO", "DIVIDENDO", "JCP", "BONUS"}:
+            aporte += val
+        elif typ in {"RETIRADA", "SAQUE"}:
+            retirada += val
+    return rows, aporte, retirada
+
+
+def _extract_transfer_rows(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], float]:
+    rows: list[dict[str, Any]] = []
+    total = 0.0
+    for tr in payload.get("cash_transfers", []):
+        val = _safe_float(tr.get("value", tr.get("valor", 0.0)), 0.0)
+        note = str(tr.get("note", tr.get("ref", "Transferencia C->L"))).strip()
+        rows.append({"value": val, "note": note})
+        total += val
+    return rows, total
+
+
+def _calc_cash_balances(
+    prev_free: float,
+    prev_acc: float,
+    buy: float,
+    sell: float,
+    aporte: float,
+    retirada: float,
+    transfer: float,
+) -> tuple[float, float]:
+    # Regra T+1 US: transferencias C->L no D geralmente liquidam o saldo contabil de D-1.
+    free = prev_free + transfer + aporte - retirada - buy
+    acc = prev_acc + sell - transfer
+    return free, acc
+
+
 def run(target_date: date | None = None) -> str:
     if target_date is None:
         target_date = datetime.now(tz=UTC).date()
@@ -208,6 +311,9 @@ def run(target_date: date | None = None) -> str:
     recon = _load_json(recon_path)
     curve = _load_curve(curve_path)
     window = _window_curve(curve, target_ts)
+    current_real = _load_json(ROOT / "data" / "real" / f"{target_date.isoformat()}.json")
+    d1_real_day, d1_real = _load_latest_real_before(target_date - timedelta(days=1))
+    d1_real = d1_real or {}
 
     base_plot_html, dd_plot_html, ret_plot_html = _build_plot_blocks(window)
 
@@ -233,6 +339,37 @@ def run(target_date: date | None = None) -> str:
     cfg = decision.get("winner_config_snapshot", {})
     selected_tickers = [str(x).upper().strip() for x in decision.get("selected_tickers", []) if str(x).strip()]
     events = _events_summary(target_day=target_date, selected_tickers=selected_tickers)
+    prev_free = _safe_float(d1_real.get("cash_free", d1_real.get("cash_balance", 0.0)), 0.0)
+    prev_acc = _safe_float(d1_real.get("cash_accounting", d1_real.get("caixa_liquidando", 0.0)), 0.0)
+
+    ops_prefill = _extract_ops_for_prefill(current_real)
+    cash_rows, aporte_prefill, retirada_prefill = _extract_cash_movements(current_real)
+    transfer_rows, transfer_prefill = _extract_transfer_rows(current_real)
+    if not transfer_rows:
+        transfer_prefill = prev_acc
+        transfer_rows = [{"value": transfer_prefill, "note": "Transferencia T+1 C->L (padrao)"}]
+    buy_prefill = sum(
+        _safe_int(op.get("qtd"), 0) * _safe_float(op.get("preco"), 0.0) for op in ops_prefill if op.get("type") == "COMPRA"
+    )
+    sell_prefill = sum(
+        _safe_int(op.get("qtd"), 0) * _safe_float(op.get("preco"), 0.0) for op in ops_prefill if op.get("type") == "VENDA"
+    )
+    free_calc, acc_calc = _calc_cash_balances(
+        prev_free=prev_free,
+        prev_acc=prev_acc,
+        buy=buy_prefill,
+        sell=sell_prefill,
+        aporte=aporte_prefill,
+        retirada=retirada_prefill,
+        transfer=transfer_prefill,
+    )
+    carteira_d1 = _safe_float(curve_last.get("equity"), 0.0)
+    total_ativo = carteira_d1 + free_calc + acc_calc
+
+    ops_prefill_json = json.dumps(ops_prefill, ensure_ascii=False)
+    cash_prefill_json = json.dumps(cash_rows, ensure_ascii=False)
+    transfer_prefill_json = json.dumps(transfer_rows, ensure_ascii=False)
+    snapshot_prefill_json = json.dumps(decision.get("portfolio", []), ensure_ascii=False)
 
     html = f"""<!doctype html>
 <html lang="pt-BR">
@@ -251,6 +388,19 @@ def run(target_date: date | None = None) -> str:
     .ok {{ color: #065f46; font-weight: 700; }}
     .fail {{ color: #991b1b; font-weight: 700; }}
     .small {{ font-size: 13px; }}
+    .row-grid {{ display: grid; grid-template-columns: 130px 120px 120px 120px 40px; gap: 8px; margin-bottom: 8px; }}
+    .row-grid-3 {{ display: grid; grid-template-columns: 160px 140px 1fr 40px; gap: 8px; margin-bottom: 8px; }}
+    .row-grid-2 {{ display: grid; grid-template-columns: 160px 140px 1fr 40px; gap: 8px; margin-bottom: 8px; }}
+    input, select {{ padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }}
+    button {{ padding: 8px 12px; border: 0; border-radius: 6px; cursor: pointer; }}
+    .btn-primary {{ background: #1d4ed8; color: #fff; }}
+    .btn-secondary {{ background: #e5e7eb; color: #111827; }}
+    .cash-grid {{ display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 12px; }}
+    .cash-panel {{ border: 1px solid #d1d5db; border-radius: 8px; padding: 10px; background: #fafcff; }}
+    .cash-row {{ display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }}
+    .save-msg {{ margin-left: 8px; font-size: 13px; }}
+    .save-ok {{ color: #166534; }}
+    .save-err {{ color: #991b1b; }}
   </style>
 </head>
 <body>
@@ -310,6 +460,282 @@ def run(target_date: date | None = None) -> str:
     <p><b>Dividend events:</b> {events.get("dividend_events", "N/A")} | <b>Split events:</b> {events.get("split_events", "N/A")}</p>
     <p class="small muted">Secao informativa. Curva operacional permanece conforme Step 10.</p>
   </div>
+
+  <div class="card">
+    <h2>Duplo-Caixa US (T+1)</h2>
+    <p class="small muted">
+      Regra normativa US T+1: por padrao, o Caixa Contabil de D-1 liquida em D via transferencia Contabil -> Livre.
+      D-1 real carregado de: {d1_real_day.isoformat() if d1_real_day else "N/A"}.
+    </p>
+
+    <h3>Operacoes do dia</h3>
+    <div id="opsRows"></div>
+    <button class="btn-secondary" onclick="addOp()">+ Operacao</button>
+
+    <h3 style="margin-top:12px;">Movimentos extraordinarios de caixa</h3>
+    <div id="cashRows"></div>
+    <button class="btn-secondary" onclick="addCash()">+ Movimento</button>
+
+    <h3 style="margin-top:12px;">Transferencias Contabil -> Livre</h3>
+    <div id="transferRows"></div>
+    <button class="btn-secondary" onclick="addTransfer()">+ Transferencia</button>
+
+    <div class="cash-grid" style="margin-top:12px;">
+      <div class="cash-panel">
+        <h3>Balanço simplificado (D)</h3>
+        <div class="cash-row"><span>Carteira (proxy equity)</span><strong id="bal_carteira">{_fmt_usd(carteira_d1)}</strong></div>
+        <div class="cash-row"><span>Caixa Livre (D)</span><strong id="bal_free">{_fmt_usd(free_calc)}</strong></div>
+        <div class="cash-row"><span>Caixa Contabil (D)</span><strong id="bal_acc">{_fmt_usd(acc_calc)}</strong></div>
+        <div class="cash-row"><span><b>Total do Ativo</b></span><strong id="bal_total">{_fmt_usd(total_ativo)}</strong></div>
+      </div>
+      <div class="cash-panel">
+        <h3>DFC simplificado (D)</h3>
+        <div class="cash-row"><span>Caixa Livre anterior</span><strong id="dfc_free_open">{_fmt_usd(prev_free)}</strong></div>
+        <div class="cash-row"><span>Caixa Contabil anterior</span><strong id="dfc_acc_open">{_fmt_usd(prev_acc)}</strong></div>
+        <div class="cash-row"><span>Compras do dia</span><strong id="dfc_buy">{_fmt_usd(buy_prefill)}</strong></div>
+        <div class="cash-row"><span>Vendas do dia</span><strong id="dfc_sell">{_fmt_usd(sell_prefill)}</strong></div>
+        <div class="cash-row"><span>Aportes/Retiradas</span><strong id="dfc_mov">{_fmt_usd(aporte_prefill - retirada_prefill)}</strong></div>
+        <div class="cash-row"><span>Transferencias C->L</span><strong id="dfc_transfer">{_fmt_usd(transfer_prefill)}</strong></div>
+      </div>
+    </div>
+
+    <p style="margin-top:10px;">
+      <label>Caixa liquido real (informado):</label>
+      <input id="cash_real_input" type="number" step="0.01" min="0" value="{_safe_float(current_real.get('caixa_liquido_real'), 0.0)}" />
+    </p>
+    <p>
+      <button class="btn-primary" onclick="saveBoletim()">Salvar boletim</button>
+      <span id="save_msg" class="save-msg"></span>
+    </p>
+  </div>
+
+<script>
+const TARGET_DATE = "{target_date.isoformat()}";
+const DECISION_DATE = "{decision.get('target_date', target_date.isoformat())}";
+const PREV_FREE = {prev_free};
+const PREV_ACC = {prev_acc};
+const CARTEIRA_D1 = {carteira_d1};
+const OPS_PREFILL = {ops_prefill_json};
+const CASH_PREFILL = {cash_prefill_json};
+const TRANSFER_PREFILL = {transfer_prefill_json};
+const SNAPSHOT_PREFILL = {snapshot_prefill_json};
+
+let opIdx = 0;
+let cashIdx = 0;
+let trIdx = 0;
+
+function usd(v) {{
+  const n = Number(v || 0);
+  return `USD ${{n.toLocaleString(undefined, {{minimumFractionDigits:2, maximumFractionDigits:2}})}}`;
+}}
+function num(id) {{
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  const v = Number(el.value);
+  return Number.isFinite(v) ? v : 0;
+}}
+function removeRow(id) {{
+  const el = document.getElementById(id);
+  if (el) el.remove();
+  recalc();
+}}
+function addOp(pref = null) {{
+  const i = opIdx++;
+  const box = document.getElementById("opsRows");
+  const typ = pref?.type || "COMPRA";
+  const tk = pref?.ticker || "";
+  const qtd = pref?.qtd || 0;
+  const px = pref?.preco || 0;
+  const row = document.createElement("div");
+  row.className = "row-grid";
+  row.id = `op_${{i}}`;
+  row.innerHTML = `
+    <select id="op_type_${{i}}" onchange="recalc()">
+      <option value="COMPRA" ${{typ==='COMPRA'?'selected':''}}>COMPRA</option>
+      <option value="VENDA" ${{typ==='VENDA'?'selected':''}}>VENDA</option>
+    </select>
+    <input id="op_ticker_${{i}}" value="${{tk}}" placeholder="Ticker" />
+    <input id="op_qtd_${{i}}" type="number" min="0" step="1" value="${{qtd}}" onchange="recalc()" />
+    <input id="op_px_${{i}}" type="number" min="0" step="0.01" value="${{px}}" onchange="recalc()" />
+    <button onclick="removeRow('op_${{i}}')">x</button>
+  `;
+  box.appendChild(row);
+}}
+function addCash(pref = null) {{
+  const i = cashIdx++;
+  const box = document.getElementById("cashRows");
+  const typ = pref?.type || "APORTE";
+  const val = pref?.value || 0;
+  const desc = pref?.desc || "";
+  const row = document.createElement("div");
+  row.className = "row-grid-3";
+  row.id = `cash_${{i}}`;
+  row.innerHTML = `
+    <select id="cash_type_${{i}}" onchange="recalc()">
+      <option value="APORTE" ${{typ==='APORTE'?'selected':''}}>APORTE</option>
+      <option value="RETIRADA" ${{typ==='RETIRADA'?'selected':''}}>RETIRADA</option>
+      <option value="DIVIDENDO" ${{typ==='DIVIDENDO'?'selected':''}}>DIVIDENDO</option>
+      <option value="JCP" ${{typ==='JCP'?'selected':''}}>JCP</option>
+      <option value="DEPOSITO" ${{typ==='DEPOSITO'?'selected':''}}>DEPOSITO</option>
+      <option value="SAQUE" ${{typ==='SAQUE'?'selected':''}}>SAQUE</option>
+    </select>
+    <input id="cash_val_${{i}}" type="number" min="0" step="0.01" value="${{val}}" onchange="recalc()" />
+    <input id="cash_desc_${{i}}" value="${{desc}}" placeholder="Descricao" />
+    <button onclick="removeRow('cash_${{i}}')">x</button>
+  `;
+  box.appendChild(row);
+}}
+function addTransfer(pref = null) {{
+  const i = trIdx++;
+  const box = document.getElementById("transferRows");
+  const val = pref?.value || 0;
+  const note = pref?.note || "Transferencia C->L";
+  const row = document.createElement("div");
+  row.className = "row-grid-2";
+  row.id = `tr_${{i}}`;
+  row.innerHTML = `
+    <input value="TRANSFERENCIA_C2L" disabled />
+    <input id="tr_val_${{i}}" type="number" min="0" step="0.01" value="${{val}}" onchange="recalc()" />
+    <input id="tr_note_${{i}}" value="${{note}}" placeholder="Observacao" />
+    <button onclick="removeRow('tr_${{i}}')">x</button>
+  `;
+  box.appendChild(row);
+}}
+function collectOps() {{
+  const rows = [];
+  for (let i = 0; i < opIdx; i++) {{
+    const row = document.getElementById(`op_${{i}}`);
+    if (!row) continue;
+    rows.push({{
+      type: document.getElementById(`op_type_${{i}}`).value,
+      ticker: (document.getElementById(`op_ticker_${{i}}`).value || '').toUpperCase().trim(),
+      qtd: Number(document.getElementById(`op_qtd_${{i}}`).value || 0),
+      preco: Number(document.getElementById(`op_px_${{i}}`).value || 0),
+    }});
+  }}
+  return rows.filter(r => r.ticker && r.qtd > 0 && r.preco >= 0);
+}}
+function collectCash() {{
+  const rows = [];
+  for (let i = 0; i < cashIdx; i++) {{
+    const row = document.getElementById(`cash_${{i}}`);
+    if (!row) continue;
+    rows.push({{
+      type: document.getElementById(`cash_type_${{i}}`).value,
+      value: Number(document.getElementById(`cash_val_${{i}}`).value || 0),
+      desc: document.getElementById(`cash_desc_${{i}}`).value || '',
+    }});
+  }}
+  return rows.filter(r => r.value > 0);
+}}
+function collectTransfers() {{
+  const rows = [];
+  for (let i = 0; i < trIdx; i++) {{
+    const row = document.getElementById(`tr_${{i}}`);
+    if (!row) continue;
+    rows.push({{
+      type: "TRANSFERENCIA_C2L",
+      value: Number(document.getElementById(`tr_val_${{i}}`).value || 0),
+      note: document.getElementById(`tr_note_${{i}}`).value || '',
+    }});
+  }}
+  return rows.filter(r => r.value > 0);
+}}
+function recalc() {{
+  const ops = collectOps();
+  const cash = collectCash();
+  const trs = collectTransfers();
+  let buy = 0, sell = 0, aporte = 0, retirada = 0, transfer = 0;
+  for (const op of ops) {{
+    const val = (Number(op.qtd) || 0) * (Number(op.preco) || 0);
+    if (op.type === "COMPRA") buy += val;
+    if (op.type === "VENDA") sell += val;
+  }}
+  for (const mv of cash) {{
+    if (["APORTE","DEPOSITO","DIVIDENDO","JCP","BONUS"].includes(mv.type)) aporte += Number(mv.value)||0;
+    if (["RETIRADA","SAQUE"].includes(mv.type)) retirada += Number(mv.value)||0;
+  }}
+  for (const t of trs) transfer += Number(t.value)||0;
+  const free = PREV_FREE + transfer + aporte - retirada - buy;
+  const acc = PREV_ACC + sell - transfer;
+  const total = CARTEIRA_D1 + free + acc;
+  document.getElementById("bal_free").innerText = usd(free);
+  document.getElementById("bal_acc").innerText = usd(acc);
+  document.getElementById("bal_total").innerText = usd(total);
+  document.getElementById("dfc_buy").innerText = usd(buy);
+  document.getElementById("dfc_sell").innerText = usd(sell);
+  document.getElementById("dfc_mov").innerText = usd(aporte - retirada);
+  document.getElementById("dfc_transfer").innerText = usd(transfer);
+}}
+function buildPayload() {{
+  const operations = collectOps();
+  const cash_movements = collectCash();
+  const cash_transfers = collectTransfers();
+  let buy = 0, sell = 0, aporte = 0, retirada = 0, transfer = 0;
+  for (const op of operations) {{
+    const val = (Number(op.qtd) || 0) * (Number(op.preco) || 0);
+    if (op.type === "COMPRA") buy += val;
+    if (op.type === "VENDA") sell += val;
+  }}
+  for (const mv of cash_movements) {{
+    if (["APORTE","DEPOSITO","DIVIDENDO","JCP","BONUS"].includes(mv.type)) aporte += Number(mv.value)||0;
+    if (["RETIRADA","SAQUE"].includes(mv.type)) retirada += Number(mv.value)||0;
+  }}
+  for (const tr of cash_transfers) transfer += Number(tr.value)||0;
+  const cash_free = PREV_FREE + transfer + aporte - retirada - buy;
+  const cash_accounting = PREV_ACC + sell - transfer;
+  return {{
+    date: TARGET_DATE,
+    reference_decision: DECISION_DATE,
+    operations,
+    cash_movements,
+    cash_transfers,
+    cash_free,
+    cash_accounting,
+    cash_balance: cash_free,
+    caixa_liquidando: cash_accounting,
+    caixa_liquido_real: Number(document.getElementById("cash_real_input").value || 0),
+    positions_snapshot: SNAPSHOT_PREFILL,
+  }};
+}}
+async function saveBoletim() {{
+  const msg = document.getElementById("save_msg");
+  msg.className = "save-msg";
+  msg.innerText = "Salvando...";
+  const payload = buildPayload();
+  try {{
+    const resp = await fetch("/salvar", {{
+      method: "POST",
+      headers: {{ "Content-Type": "application/json" }},
+      body: JSON.stringify(payload),
+    }});
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {{
+      msg.className = "save-msg save-err";
+      msg.innerText = "Erro: " + (data.error || `HTTP ${{resp.status}}`);
+      return;
+    }}
+    msg.className = "save-msg save-ok";
+    msg.innerText = "Salvo em " + (data.path || "data/real");
+  }} catch (_err) {{
+    // Fallback offline: baixar JSON localmente.
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {{type: "application/json"}});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${{TARGET_DATE}}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    msg.className = "save-msg save-ok";
+    msg.innerText = "Servidor indisponivel; JSON baixado localmente.";
+  }}
+}}
+for (const op of OPS_PREFILL) addOp(op);
+for (const mv of CASH_PREFILL) addCash(mv);
+for (const tr of TRANSFER_PREFILL) addTransfer(tr);
+if (OPS_PREFILL.length === 0) addOp();
+recalc();
+</script>
 </body>
 </html>
 """
