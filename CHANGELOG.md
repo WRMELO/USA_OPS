@@ -63,3 +63,4 @@
 - feat: T-025v2 — retreinar ML trigger US com features estacionárias (sem _level) + report consolidado (ref: D-022)
 - feat: T-027 — comparar C4 puro vs C4+ML trigger (histerese em y_proba_cash) + report consolidado (ref: D-023)
 - fix: T-027v2 — corrigir reconciliação do baseline (z_wide 1:1) + adicionar Plotly comparação C4 puro vs C4+trigger (ref: D-023)
+- feat: T-029 — pipeline operacional US (steps 01–12) + orquestrador `pipeline/run_daily.py` (ref: D-024)

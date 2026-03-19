@@ -69,14 +69,14 @@
 | T-025 | XGBoost US (treino TRAIN-only, features v1 com _level) | DONE (SUPERSEDED by T-025v2) | D-002 |
 | T-026 | Ablação threshold + histerese (features v1) | DONE (SUPERSEDED by T-025v2) | D-002 |
 | T-025v2 | Retreinar XGBoost + ablação com features estacionárias (sem _level) | DONE | D-022 |
-| T-027 | Integrar trigger no motor — comparar C4 puro vs C4 + ML trigger | BACKLOG | D-002 |
-| T-028 | Auditoria forense Phase 4 | BACKLOG | D-002 |
+| T-027 | Integrar trigger no motor — comparar C4 puro vs C4 + ML trigger | DONE | D-002, D-023 |
+| T-028 | Auditoria forense Phase 4 (Gemini + Kimi) | DONE | D-002 |
 
 ## Phase 5 — Motor Operacional
 
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
-| T-029 | Pipeline steps 01–12 | BACKLOG | D-001 |
+| T-029 | Pipeline steps 01–12 | DONE | D-024 |
 | T-030 | Painel diário HTML (USD, NYSE) | BACKLOG | D-001 |
 | T-031 | Servidor/lançador (porta 8788) | BACKLOG | D-001 |
 | T-032 | Duplo-caixa (T+1) | BACKLOG | D-001 |
