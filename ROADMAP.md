@@ -89,3 +89,4 @@
 | T-034 | Blindagem (tag + hook) + operational_window + ingestão incremental | DONE | D-025, D-026 |
 | T-035 | Dry-run (5 dias) | CANCELLED | D-025 |
 | T-036 | Operação real (BTG Internacional) | CANCELLED | D-025 |
+| T-037 | Painel US no formato BR (reescrita completa) | DONE | D-027 |

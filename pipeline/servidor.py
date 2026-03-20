@@ -239,10 +239,16 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 return
 
             real_dir = ROOT / "data" / "real"
+            cycle_dir = ROOT / "data" / "cycles" / save_day.isoformat()
             real_dir.mkdir(parents=True, exist_ok=True)
-            out_path = real_dir / f"{save_day.isoformat()}.json"
-            out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-            self._respond_json({"ok": True, "path": str(out_path.relative_to(ROOT))}, code=200)
+            cycle_dir.mkdir(parents=True, exist_ok=True)
+            out_real = real_dir / f"{save_day.isoformat()}.json"
+            out_cycle = cycle_dir / "boletim_preenchido.json"
+            content = json.dumps(payload, ensure_ascii=False, indent=2)
+            out_real.write_text(content, encoding="utf-8")
+            out_cycle.write_text(content, encoding="utf-8")
+            paths = [str(out_cycle.relative_to(ROOT)), str(out_real.relative_to(ROOT))]
+            self._respond_json({"ok": True, "paths": paths}, code=200)
 
         def _render_home(self, today: date) -> str:
             hist = _list_existing_panels()

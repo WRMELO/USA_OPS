@@ -71,3 +71,8 @@
 ## 2026-03-19
 
 - feat: T-034 — blindagem do motor + operational_window + ingestão incremental diária (ref: D-025, D-026). Artefatos: `data/ssot/operational_window.parquet`, `data/ssot/operational_market_data_raw.parquet`, `pipeline/00_incremental_ingest.py`, `pipeline/rebuild_operational_window.py`, `.git/hooks/pre-commit`, `tools/pre_commit_motor_guard.sh`, `tools/install_git_hooks.sh`, `docs/OPERACAO_DADOS.md`, `docs/T034_REEXECUCAO_E_HIGIENE.md`. Tag: `v1.0.0-motor-us`
+- feat: T-037 — painel diário US reescrito no formato exato do painel BR (RENDA_OPS): CSS/JS/estrutura idêntica, adaptações US (USD, NYSE, T+1, Top-20, Drawdown%, Base1 sem CDI), seções adicionadas (Carteira Comprada, Carteira Atual D-1, Top-20, Card de Venda, Duplo-Caixa + Balanço + DFC), seções removidas (Resumo, Reconciliação, Proventos), servidor `/salvar` retornando `paths[]`. Artefatos: `pipeline/painel_diario.py`, `pipeline/servidor.py`, `data/daily/painel_2026-03-19.html`, `data/cycles/2026-03-19/painel.html` (ref: D-027)
+
+## 2026-03-20
+
+- fix: D-028 — corrigir fórmula de Patrimônio Inicial no Balanço Simplificado: eliminar CAIXA_ORIGINAL (valor de mercado dinâmico), usar Aportes acumulados - Retiradas acumuladas (capital líquido injetado). Label renomeado para "Capital Líquido Aportado". Artefatos: `pipeline/painel_diario.py` (ref: D-028)

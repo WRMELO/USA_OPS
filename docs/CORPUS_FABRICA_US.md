@@ -1,7 +1,7 @@
 # CORPUS DE CONHECIMENTO — Fábrica US (USA_OPS)
 
-> Ref: D-022 | Data: 2026-03-18
-> Consolidação de toda a experiência acumulada no desenvolvimento da Fábrica US (winner C4), Phases 0-3.
+> Ref: D-022, D-027 | Data: 2026-03-19 (atualizado)
+> Consolidação de toda a experiência acumulada no desenvolvimento da Fábrica US (winner C4), Phases 0-6.
 > Complementar ao `docs/CORPUS_FABRICA_BR.md` (Fábrica BR, RENDA_OPS).
 
 ---
@@ -13,8 +13,8 @@
 **Winner**: C4 — Score-weighted com cap de concentração (TopN=20, Cad=10, K=10, cap=6%, k_damp=0.0)
 **Mercado**: US equities (Russell 1000 + S&P SmallCap 600, excluindo tickers com BDR na B3)
 **Moeda**: USD
-**Período de desenvolvimento**: 2026-03-07 a 2026-03-18
-**Status**: Winner declarado (Phase 3 concluída), aguardando Phase 4 (ML Trigger)
+**Período de desenvolvimento**: 2026-03-07 a 2026-03-19
+**Status**: Operacional — motor C4 puro rodando em produção (Pipeline diário + painel BR-format)
 
 ### Métricas do winner (C4, HOLDOUT 2023-01-02 a 2026-03-16)
 
@@ -53,8 +53,11 @@
 | Phase 1 v2 — Dados (APROVADA) | Universo histórico Polygon + SPC Shewhart real | T-006v2 a T-011v2 | D-007, D-008, D-009 | Pipeline de dados auditado e aprovado |
 | Phase 2 — Motor M3 + Features | Scoring M3, features, labels | T-012 a T-014 | D-010, D-011, D-012, D-013 | Dataset rotulado com anti-lookahead |
 | Phase 3 — Backtest | Framework, ablação, concentração, acid window | T-015 a T-024 | D-014 a D-021 | **Winner C4 declarado** |
+| Phase 4 — ML Trigger | XGBoost US, ablação threshold, integração no motor | T-025 a T-028 | D-022, D-023 | **ML trigger não agrega** — motor C4 puro mantido |
+| Phase 5 — Motor Operacional | Pipeline diário, painel HTML, servidor, duplo-caixa | T-029 a T-032 | D-024 | Pipeline 12 steps + painel + servidor na porta 8788 |
+| Phase 6 — Blindagem e Operação | Auditoria final, blindagem, operational_window, painel BR-format | T-033 a T-037 | D-025, D-026, D-027 | **Operação real iniciada 19/03/2026** |
 
-**Total**: 21 decisões, 30+ tasks (incluindo FIXes), 6 auditorias forenses (Gemini+Kimi em Phase 1, Phase 2 e Phase 3)
+**Total**: 27 decisões, 37 tasks (incluindo FIXes e v2s), 8 auditorias forenses
 
 ---
 
@@ -134,6 +137,81 @@ backtest/
 | Split factor | Event-based (NaN exceto no dia do split) | Cumulativo no pipeline, event-based derivado no backtest | Polygon vs BRAPI semântica diferente |
 | Dados OHLCV | BRAPI (adjusted implícito) | Polygon (adjusted=False) | Controle explícito |
 | SPC | Idêntico | Idêntico | Paridade metodológica obrigatória (D-009) |
+
+### 3.6 ML Trigger US (Phase 4 — resultado: NÃO AGREGA)
+
+| Aspecto | Tentativa 1 (T-025/T-026) | Tentativa 2 (T-025v2) | Decisão |
+|---------|---------------------------|----------------------|---------|
+| Features | 7 _level (yields/rates absolutos) | Estacionárias (spreads, deltas, retornos multi-janela) | D-022 |
+| Problema | Drift estrutural: Fed Funds 1.58→5.08 | proba_max 0.89 mas recall 12.5% em crises | D-023 |
+| Resultado | balanced_accuracy=0.50 (aleatório) | 243/502 alarmes falsos em 2023-24, 7/56 crises detectadas | Motor puro mantido |
+
+**Lição definitiva**: ML trigger com y_cash (drawdown SP500) não agrega ao motor C4 puro. CAGR -7.43 p.p. com trigger ativo (T-027v2). Motor C4 puro é o winner operacional.
+
+### 3.7 Arquitetura Operacional (Phase 5-6)
+
+```
+pipeline/
+├── run_daily.py               → Orquestrador (steps 00-12, ou 01-12 com --full)
+├── 00_incremental_ingest.py   → Ingestão incremental + rebuild operational_window
+├── rebuild_operational_window.py → Bootstrap window de 504 pregões a partir do canonical
+├── 01_ingest_macro.py         → FRED (VIX, rates, spreads)
+├── 02_ingest_prices_us.py     → Polygon OHLCV
+├── 03_ingest_reference_us.py  → Reference data
+├── 04_build_canonical.py      → SSOT canônico
+├── 05_build_macro_expanded.py → Macro features
+├── 06_compute_scores.py       → M3 scoring (usa USA_OPS_CANONICAL_PATH)
+├── 07_build_features.py       → Feature engineering
+├── 08_predict.py              → Stub (motor puro, sem ML)
+├── 09_decide.py               → Decisão C4 (usa USA_OPS_CANONICAL_PATH)
+├── 10_extend_curve.py         → Equity curve
+├── 11_reconcile_metrics.py    → Reconciliação
+├── painel_diario.py           → Painel HTML (formato BR, 1273 linhas)
+└── servidor.py                → HTTP na porta 8788, /salvar → paths[]
+```
+
+**Dados operacionais**:
+
+```
+data/
+├── ssot/
+│   ├── operational_window.parquet       → Janela 504 pregões (~1973 tickers)
+│   └── operational_market_data_raw.parquet → Raw incremental
+├── daily/
+│   ├── decision_{date}.json             → Decisão C4 do dia
+│   ├── painel_{date}.html               → Painel diário
+│   └── winner_curve_us.parquet          → Equity curve
+├── real/
+│   └── {date}.json                      → Payload manual (operações, caixa)
+└── cycles/
+    └── {date}/
+        ├── painel.html                  → Cópia do painel
+        └── boletim_preenchido.json      → Backup do payload
+```
+
+**Variáveis de ambiente críticas** (setadas por `run_daily.py`):
+
+| Variável | Valor | Impacto se ausente |
+|----------|-------|-------------------|
+| `USA_OPS_CANONICAL_PATH` | `data/ssot/operational_window.parquet` | Scoring/decisão usa canonical completo (4489 tickers) → tickers fantasma |
+| `USA_OPS_RAW_PATH` | `data/ssot/operational_market_data_raw.parquet` | Ingestão não encontra raw correto |
+| `USA_OPS_BLACKLIST_PATH` | `data/ssot/blacklist_window_us.json` | Blacklist desatualizada |
+
+### 3.8 Painel Diário (formato BR)
+
+O painel (`pipeline/painel_diario.py`, T-037/D-027) replica fielmente a estrutura visual do RENDA_OPS:
+
+| Seção | Conteúdo | Adaptação US |
+|-------|----------|-------------|
+| Carteira Comprada | Posições registradas via boletim | USD formatting |
+| Carteira Atual (D-1) | Posições × preço D-1 | USD, NYSE |
+| Top-20 para compra | Ranking M3 filtrado por market_cap | Top-20 (vs Top-10 BR) |
+| Card de Venda | Sugestões defensivas (SPC) | Idêntico ao BR |
+| Gráfico Equity 252 | Equity + Drawdown (%) | Drawdown (%) substitui P(Caixa) do BR |
+| Gráfico Base 1 | Série real acumulada | Sem CDI benchmark |
+| Duplo-Caixa T+1 | Caixa Contábil + Caixa Livre | T+1 (vs D+2 BR) |
+| Balanço Simplificado | Patrimônio = Posições + Caixa | USD |
+| DFC Simplificado | Fluxo de caixa do dia | USD |
 | Scoring M3 | Idêntico (log-retorno, janela 62, ddof=0) | Idêntico | Paridade metodológica |
 
 ---
@@ -167,6 +245,26 @@ backtest/
 | L-US-16 | **stale_tickers com filtro rolling por dia** elimina lookahead no backtest | D-013: filtro global causava exclusão retroativa de 7 tickers; corrigido em ambas as fábricas |
 | L-US-17 | **Rebalance cadence > 1** reduz custos e melhora estabilidade | T-017: cadência 10 dias é o sweet spot entre rotação e custos |
 
+### 4.3 Lições Phase 4 (ML Trigger)
+
+| # | Lição | Evidência |
+|---|-------|-----------|
+| L-US-18 | **Features estacionárias são obrigatórias para ML cross-regime** — yields absolutos sofrem drift estrutural | D-022: Fed Funds 1.58→5.08 entre TRAIN/HOLDOUT; modelo com _level teve balanced_accuracy=0.50 |
+| L-US-19 | **Se ML não agregar, manter motor puro — mas testar antes de descartar** | D-023: Owner insistiu em T-027 formal para ter evidência numérica documentada; CAGR -7.43 p.p. comprovou |
+| L-US-20 | **Retreinar com features melhores antes de desistir** — a lição de "não forçar" é para quando se esgotaram tentativas | D-022: Owner corretamente insistiu em tentar features estacionárias antes de descartar ML |
+| L-US-21 | **Recall baixo em crises é mais danoso que alarmes falsos em bull market** | T-025v2: 12.5% recall em drawdowns vs 48% false alarm rate em bull → trigger pior que inútil |
+
+### 4.4 Lições Phase 5-6 (Motor Operacional)
+
+| # | Lição | Evidência |
+|---|-------|-----------|
+| L-US-22 | **Separar canonical (pesquisa) de operational_window (operação)** evita ingestão massiva diária | D-026: --full levava >8 min para 9.135 tickers; operational_window com 504 pregões resolve em <2 min |
+| L-US-23 | **Variáveis de ambiente para canonical_path são armadilhas** — se ausentes, pipeline usa dados errados silenciosamente | Bug 19/03: decision gerado sem USA_OPS_CANONICAL_PATH produziu 12 tickers fantasma; zeros no painel |
+| L-US-24 | **Painel BR-format como padrão cross-factory** garante experiência consistente para o Owner | D-027: Owner demandou formato idêntico ao BR; reescrita completa (764→1273 linhas) resolveu |
+| L-US-25 | **Blindagem do motor (tag + pre-commit hook) é essencial antes de operar** | T-034: tag v1.0.0-motor-us + hook que bloqueia alterações em lib/engine.py sem MOTOR_OVERRIDE=1 |
+| L-US-26 | **Primeiro decision de um pipeline novo precisa forçar REBALANCE** — HOLD sem previous_holdings herda lixo ou cai em fallback imprevisível | Bug 19/03: decision_2026-03-18 era HOLD sem previous_holdings; fallback day_scores.head(20) pegou tickers errados |
+| L-US-27 | **Endpoint /salvar deve retornar lista de paths salvos** — paridade com BR e rastreabilidade | T-037: servidor.py adaptado para salvar em data/cycles/ e data/real/ e retornar paths[] |
+
 ---
 
 ## 5. Lessons Learned — O que deu errado
@@ -191,6 +289,16 @@ backtest/
 | E-US-09 | stale_tickers com lookahead (filtro global em vez de rolling) | Herdado do RENDA_OPS (06_compute_scores.py, linha 54) | 7 tickers excluídos retroativamente; impacto 0.28% | D-013 |
 | E-US-10 | gate outputs_written checado antes de todos os outputs serem escritos | Ordem de operações no script | Script falhava com gate FAIL apesar de sucesso lógico | T-021, T-016 |
 
+### 5.2b Erros técnicos Phase 4-6
+
+| # | Erro | Causa raiz | Impacto | Ref |
+|---|------|-----------|---------|-----|
+| E-US-11 | ML trigger com features _level (yields absolutos) teve drift catastrófico | Features não-estacionárias dominaram feature importance (Fed Funds 14.8%) | balanced_accuracy=0.50 — modelo cego | D-022 |
+| E-US-12 | ML trigger v2 com alarmes falsos massivos (243/502 dias em bull market) | Label y_cash baseado em drawdown SP500 é raro (56/756 dias HOLDOUT) | Trigger inútil: detecta 12.5% das crises e gera 48% de alarmes falsos | D-023 |
+| E-US-13 | 12 tickers fantasma no decision por ausência de USA_OPS_CANONICAL_PATH | Decision gerado fora do pipeline (sem env vars), usou canonical completo | Top-20 contaminado: 12 tickers com M3=0 e preço=$0 no painel | Bug 19/03 |
+| E-US-14 | decision_2026-03-18 gerado antes do rebuild da operational_window | Pipeline executado parcialmente; decision gravado com dados stale | decision HOLD herdou tickers fantasma para o dia seguinte | Bug 19/03 |
+| E-US-15 | Painel original US (T-030) divergia significativamente do painel BR | Reescrita parcial sem paridade visual; seções faltantes | Owner demandou reescrita completa (T-037) | D-027 |
+
 ### 5.3 Padrões de falha recorrentes
 
 | Padrão | Descrição | Ocorrências | Mitigação implementada |
@@ -199,6 +307,8 @@ backtest/
 | **CTO inventa thresholds** | CTO introduz gates/filtros sem correspondência no modelo BR | E-US-02 | D-012 (parity_cto_check obrigatório + rejeição pelo Architect) |
 | **Snapshot como universo histórico** | Usar composição atual para simular o passado | E-US-01 | D-007 (universo histórico real via API datada) |
 | **Gate order-of-operations** | Verificar existência de arquivo antes de escrevê-lo | E-US-10 | Padrão: escrever outputs → depois checar gate → depois salvar report |
+| **Env var silenciosamente ignorada** | Pipeline usa default (canonical completo) quando env var ausente; nenhum erro visível | E-US-13, E-US-14 | Tornar USA_OPS_CANONICAL_PATH obrigatório no 09_decide ou validar tamanho do dataset |
+| **Decision HOLD sem previous_holdings** | Primeiro decision de pipeline novo assume HOLD (por day_idx % cadence) e fallback para day_scores.head(N) com dados errados | E-US-14 | Forçar REBALANCE quando nenhum decision anterior existe |
 
 ---
 
@@ -217,6 +327,10 @@ Cada divergência abaixo foi explicitamente aprovada pelo Owner e registrada no 
 | Proxy DJIA para acid test Russell 1000 | Séries FRED Russell 1000 indisponíveis (404); DJIA plausível como stress test | T-022 |
 | Settlement T+1 (não D+2) | Regulação SEC para equities US | D-002 |
 | Cash remuneration Fed Funds (não CDI) | Banco central relevante | D-002 |
+| Motor C4 puro (sem ML trigger) | ML trigger não agrega (CAGR -7.43 p.p.); BR usa XGBoost | D-023, T-027v2 |
+| Painel com Drawdown (%) no subplot | BR usa P(Caixa); US não tem benchmark de caixa comparável | D-027 |
+| Painel com Base 1 sem CDI benchmark | BR plota CDI como referência; US não tem equivalente direto | D-027 |
+| Operational_window separado do canonical | BR usa canonical direto; US precisa de janela operacional (~2000 tickers) | D-026 |
 
 ---
 
@@ -227,6 +341,9 @@ Cada divergência abaixo foi explicitamente aprovada pelo Owner e registrada no 
 | DT-001 | Converter split_factor para event-based no pipeline (T-008) | D-015 | Baixa (fix no backtest já resolve) |
 | DT-002 | Proxy DJIA no acid test — substituir por Russell 1000 quando FRED disponibilizar | T-022 | Baixa (informativo) |
 | DT-003 | Validação de entrada para dados manuais (operação futura) | L-BR-E-04 | Média (Phase 5) |
+| DT-004 | Tornar `USA_OPS_CANONICAL_PATH` obrigatório (não silenciosamente usar default) | E-US-13 | Alta — causa tickers fantasma se ausente |
+| DT-005 | Forçar REBALANCE no primeiro decision quando não existem previous_holdings | E-US-14 | Alta — HOLD sem histórico herda lixo |
+| DT-006 | Reconciliação semanal canonical↔operational_window (D-026 previu mas não implementou) | D-026 | Média |
 
 ---
 
@@ -257,6 +374,20 @@ Cada divergência abaixo foi explicitamente aprovada pelo Owner e registrada no 
 | Acid window | `backtest/run_t022_dual_acid_window_us.py` | Stress test dual benchmark |
 | Winner US | `config/winner_us.json` | Declaração canônica C4 |
 
+### 8.3 Componentes Operacionais (Phase 5-6)
+
+| Componente | Artefato | Função |
+|-----------|---------|--------|
+| Orquestrador diário | `pipeline/run_daily.py` | Steps 00-12 com env vars para canonical |
+| Ingestão incremental | `pipeline/00_incremental_ingest.py` | Busca dias faltantes + rebuild window |
+| Rebuild operational window | `pipeline/rebuild_operational_window.py` | Bootstrap 504 pregões a partir do canonical |
+| Decisão C4 | `pipeline/09_decide.py` | Seleção C4 com histerese + market_cap filter |
+| Painel diário (formato BR) | `pipeline/painel_diario.py` | HTML interativo, 1273 linhas, reescrita T-037 |
+| Servidor HTTP | `pipeline/servidor.py` | Porta 8788, /salvar → paths[], catch-up automático |
+| Atalho Desktop | `USA_OPS.desktop` | Lança servidor + abre browser |
+| Pre-commit guard | `tools/pre_commit_motor_guard.sh` | Bloqueia edição de motor sem MOTOR_OVERRIDE=1 |
+| Blindagem (tag git) | `v1.0.0-motor-us` | Snapshot imutável do motor |
+
 ---
 
 ## 9. Lições Cruzadas BR ↔ US
@@ -285,23 +416,50 @@ Cada divergência abaixo foi explicitamente aprovada pelo Owner e registrada no 
 | Market cap filter dinâmico (D-016) | Possivelmente (filtro de liquidez) | Pendente avaliação |
 | Cap de concentração per ticker (T-018) | Possivelmente (concentração BR <= 18%) | Pendente avaliação |
 | Ablação ampla com grid expandido (D-018) | Sim (BR fez grid mais estreito) | Pendente avaliação |
+| Painel formato BR padronizado cross-factory (D-027) | Já é o padrão no BR | BR é a referência |
+| Env var obrigatória para canonical_path (E-US-13) | Verificar se BR tem risco similar | Pendente avaliação |
 
 ---
 
-## 10. Checklist para Phase 4+ (ML Trigger US)
+## 10. Checklist de Phases
 
-Antes de iniciar a Phase 4, verificar:
+### Phase 4 (ML Trigger US) — CONCLUÍDA
 
 - [x] Winner US declarado formalmente (`config/winner_us.json`)
 - [x] Auditoria forense Phase 3 PASS (Gemini + Kimi)
 - [x] Corpus US consolidado (este documento)
-- [ ] Dataset rotulado disponível (`data/features/dataset_us_labeled.parquet`)
-- [ ] Features anti-lookahead verificadas (shift(1) em todas)
-- [ ] TRAIN/HOLDOUT split definido (2018-2022 / 2023-2026)
-- [ ] Walk-forward estrito: treinar só no TRAIN, avaliar no HOLDOUT
-- [ ] Comparar motor puro (C4 winner) vs motor + ML trigger
-- [ ] Se ML não agregar: manter motor puro (lição LL-PH10-007 do BR)
-- [ ] Auditoria forense Phase 4 antes de avançar para Phase 5
+- [x] Dataset rotulado disponível (`data/features/dataset_us_labeled.parquet`)
+- [x] Features anti-lookahead verificadas (shift(1) em todas)
+- [x] TRAIN/HOLDOUT split definido (2018-2022 / 2023-2026)
+- [x] Walk-forward estrito: treinar só no TRAIN, avaliar no HOLDOUT
+- [x] Comparar motor puro (C4 winner) vs motor + ML trigger — **ML não agrega** (T-027v2, D-023)
+- [x] ML não agrega: manter motor puro (lição LL-PH10-007 do BR confirmada)
+- [x] Auditoria forense Phase 4 PASS (Gemini + Kimi, T-028)
+
+### Phase 5 (Motor Operacional) — CONCLUÍDA
+
+- [x] Pipeline diário steps 01-12 (`pipeline/run_daily.py`, T-029)
+- [x] Painel diário HTML USD/NYSE (T-030, reescrito em T-037)
+- [x] Servidor/lançador porta 8788 (T-031)
+- [x] Duplo-caixa T+1 no painel (T-032)
+- [x] Atalho Desktop funcional
+
+### Phase 6 (Blindagem e Operação) — CONCLUÍDA
+
+- [x] Auditoria forense final PASS (T-033, Gemini + Kimi)
+- [x] Blindagem: tag v1.0.0-motor-us + pre-commit hook (T-034)
+- [x] Operational window + ingestão incremental (T-034, D-026)
+- [x] Painel reescrito no formato BR (T-037, D-027)
+- [x] Operação real iniciada 19/03/2026, capital USD 179.099,69 (D-025)
+- [x] Bug dos decisions contaminados diagnosticado e corrigido (19/03/2026)
+
+### Operação contínua — Checklist diário
+
+- [ ] Verificar que o servidor inicia sem erros
+- [ ] Confirmar que o pipeline completou (painel gerado para o dia)
+- [ ] Verificar que o Top-20 não tem preços zerados
+- [ ] Preencher operações no boletim e salvar
+- [ ] Conferir Balanço e DFC após salvar
 
 ---
 
@@ -310,12 +468,15 @@ Antes de iniciar a Phase 4, verificar:
 | Documento | Path | Conteúdo |
 |-----------|------|----------|
 | Corpus BR | `docs/CORPUS_FABRICA_BR.md` | Experiência completa da Fábrica BR |
+| Corpus US | este documento | Experiência completa da Fábrica US (Phases 0-6) |
 | Plano US | `docs/PLANO_USA_OPS.md` | Plano de execução completo |
 | SPEC Pipeline US | `docs/SPEC_PIPELINE_US.md` | Schemas, fontes, riscos |
+| Handoff Phase 4 | `docs/HANDOFF_PHASE4.md` | Documento de continuidade (histórico) |
+| Operação de dados | `docs/OPERACAO_DADOS.md` | Guia de ingestão incremental e operational_window |
 | Winner US | `config/winner_us.json` | Declaração canônica C4 |
 | Winner BR | `RENDA_OPS/config/winner.json` | Declaração canônica C060X |
 | GOVERNANCE.md | `GOVERNANCE.md` | Regras vigentes |
-| DECISION_LOG.md | `DECISION_LOG.md` | 21 decisões com contexto |
+| DECISION_LOG.md | `DECISION_LOG.md` | 27 decisões com contexto |
 | CHANGELOG.md | `CHANGELOG.md` | Histórico técnico completo |
-| ROADMAP.md | `ROADMAP.md` | Mapa de execução + backlog |
+| ROADMAP.md | `ROADMAP.md` | Mapa de execução (T-001 a T-037) |
 | MANIFESTO_ORIGEM.json | `MANIFESTO_ORIGEM.json` | Proveniência e SHA256 |
