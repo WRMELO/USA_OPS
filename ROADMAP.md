@@ -90,3 +90,4 @@
 | T-035 | Dry-run (5 dias) | CANCELLED | D-025 |
 | T-036 | Operação real (BTG Internacional) | CANCELLED | D-025 |
 | T-037 | Painel US no formato BR (reescrita completa) | DONE | D-027 |
+| T-038 | Separar Top-20 informativo da carteira ativa | DONE | D-029 |
