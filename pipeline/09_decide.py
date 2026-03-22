@@ -140,6 +140,17 @@ def run(target_date: date | None = None) -> dict:
     day_scores = day_scores.sort_values(["m3_rank", "ticker"]).reset_index(drop=True)
     if day_scores.empty:
         raise RuntimeError(f"Sem tickers elegíveis por min_market_cap em {prev_dt.date()}.")
+    top20_info_df = day_scores.head(top_n)[["ticker", "m3_rank", "score_m3"]].copy()
+    top20_by_score: list[dict[str, object]] = []
+    for _, row in top20_info_df.iterrows():
+        score = pd.to_numeric(row.get("score_m3"), errors="coerce")
+        top20_by_score.append(
+            {
+                "ticker": str(row["ticker"]),
+                "m3_rank": int(float(row["m3_rank"])),
+                "score_m3": float(score) if pd.notna(score) else None,
+            }
+        )
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     prev_decisions = sorted(OUT_DIR.glob("decision_*.json"))
@@ -188,6 +199,7 @@ def run(target_date: date | None = None) -> dict:
         "action": action,
         "is_rebalance_day": bool(is_rebalance_day),
         "selected_tickers": selected,
+        "top20_by_score": top20_by_score,
         "target_weights": weights,
         "portfolio": [{"ticker": t, "target_weight": float(weights[t])} for t in selected],
         "defensive_actions": defensive_actions,

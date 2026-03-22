@@ -76,3 +76,7 @@
 ## 2026-03-20
 
 - fix: D-028 — corrigir fórmula de Patrimônio Inicial no Balanço Simplificado: eliminar CAIXA_ORIGINAL (valor de mercado dinâmico), usar Aportes acumulados - Retiradas acumuladas (capital líquido injetado). Label renomeado para "Capital Líquido Aportado". Artefatos: `pipeline/painel_diario.py` (ref: D-028)
+
+## 2026-03-22
+
+- fix: T-038 — separar Top-20 informativo (top20_by_score) da carteira ativa no decision JSON e no painel. Artefatos: `pipeline/09_decide.py`, `pipeline/painel_diario.py` (ref: D-029)

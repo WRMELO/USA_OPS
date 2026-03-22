@@ -709,18 +709,25 @@ def build_painel(exec_day: date) -> Path:
     report_html, ctx, warnings = _build_tables_and_cards(exec_day)
     d1 = get_d_minus_1(exec_day)
 
-    top20 = decision.get("portfolio", [])
-    top_tickers = [str(x.get("ticker", "")).upper().strip() for x in top20 if str(x.get("ticker", "")).strip()]
+    portfolio_active = decision.get("portfolio", [])
+    top20_info = decision.get("top20_by_score", [])
+    use_top20_info = bool(top20_info)
+    source_rows = top20_info if use_top20_info else portfolio_active
+    top_tickers = [str(x.get("ticker", "")).upper().strip() for x in source_rows if str(x.get("ticker", "")).strip()]
     prices_top = get_latest_prices(top_tickers, as_of_day=d1)
     score_map = _load_score_map(d1)
 
     rows_info_top = []
-    for p in top20[:20]:
+    for p in source_rows[:20]:
         t = str(p.get("ticker", "")).upper().strip()
+        if use_top20_info:
+            score = _safe_float(p.get("score_m3"), 0.0)
+        else:
+            score = _safe_float(score_map.get(t, 0.0), 0.0)
         rows_info_top.append(
             "<tr>"
             f"<td>{t}</td>"
-            f"<td style='text-align:right'>{_safe_float(score_map.get(t, 0.0), 0.0):.4f}</td>"
+            f"<td style='text-align:right'>{score:.4f}</td>"
             f"<td style='text-align:right'>{_fmt_money(_safe_float(prices_top.get(t, 0.0), 0.0))}</td>"
             "</tr>"
         )
@@ -742,8 +749,12 @@ def build_painel(exec_day: date) -> Path:
         rows_sell.append("<tr><td colspan='4'>Nenhuma venda sugerida para D-1.</td></tr>")
 
     action_rows: list[dict[str, Any]] = []
-    for b in top_tickers[:20]:
-        action_rows.append({"type": "COMPRA", "ticker": b, "qtd": 0, "preco": _safe_float(prices_top.get(b, 0.0), 0.0)})
+    action_tickers = [
+        str(x.get("ticker", "")).upper().strip() for x in portfolio_active if str(x.get("ticker", "")).strip()
+    ]
+    action_prices = get_latest_prices(action_tickers, as_of_day=d1)
+    for b in action_tickers[:20]:
+        action_rows.append({"type": "COMPRA", "ticker": b, "qtd": 0, "preco": _safe_float(action_prices.get(b, 0.0), 0.0)})
 
     warnings_html = ""
     if warnings:
