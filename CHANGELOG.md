@@ -80,3 +80,7 @@
 ## 2026-03-22
 
 - fix: T-038 — separar Top-20 informativo (top20_by_score) da carteira ativa no decision JSON e no painel. Artefatos: `pipeline/09_decide.py`, `pipeline/painel_diario.py` (ref: D-029)
+
+## 2026-03-26
+
+- fix: T-039 — mover venda defensiva do step 09 para o painel usando carteira real (`build_lot_ledger`) e eliminar sugestões fantasmas para posições zeradas. Artefatos: `pipeline/09_decide.py`, `pipeline/painel_diario.py` (ref: D-033, D-032)

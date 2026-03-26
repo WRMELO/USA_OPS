@@ -40,51 +40,6 @@ def _select_c2_target(scores_day: pd.DataFrame, holdings: set[str], top_n: int, 
     return target[:top_n]
 
 
-def _compute_defensive_actions(canonical_day: pd.DataFrame, holdings: list[str]) -> list[dict]:
-    if canonical_day.empty or not holdings:
-        return []
-    subset = canonical_day[canonical_day["ticker"].isin(holdings)].copy()
-    actions: list[dict] = []
-    for _, row in subset.iterrows():
-        iv = float(pd.to_numeric(row.get("i_value"), errors="coerce"))
-        iu = float(pd.to_numeric(row.get("i_ucl"), errors="coerce"))
-        il = float(pd.to_numeric(row.get("i_lcl"), errors="coerce"))
-        mv = float(pd.to_numeric(row.get("mr_value"), errors="coerce"))
-        mu = float(pd.to_numeric(row.get("mr_ucl"), errors="coerce"))
-        xv = float(pd.to_numeric(row.get("xbar_value"), errors="coerce"))
-        xu = float(pd.to_numeric(row.get("xbar_ucl"), errors="coerce"))
-        xl = float(pd.to_numeric(row.get("xbar_lcl"), errors="coerce"))
-        rv = float(pd.to_numeric(row.get("r_value"), errors="coerce"))
-        ru = float(pd.to_numeric(row.get("r_ucl"), errors="coerce"))
-
-        any_rule = bool(
-            (np.isfinite(iv) and np.isfinite(iu) and iv > iu)
-            or (np.isfinite(iv) and np.isfinite(il) and iv < il)
-            or (np.isfinite(mv) and np.isfinite(mu) and mv > mu)
-            or (np.isfinite(xv) and np.isfinite(xu) and xv > xu)
-            or (np.isfinite(xv) and np.isfinite(xl) and xv < xl)
-            or (np.isfinite(rv) and np.isfinite(ru) and rv > ru)
-        )
-        if not any_rule:
-            continue
-        score = 4
-        sell_pct = 0.25
-        if (np.isfinite(iv) and np.isfinite(il) and iv < il) or (np.isfinite(mv) and np.isfinite(mu) and mv > mu):
-            score = 5
-            sell_pct = 0.50
-        if np.isfinite(iv) and np.isfinite(il) and iv < (il - abs(il) * 0.2):
-            score = 6
-            sell_pct = 1.0
-        actions.append(
-            {
-                "ticker": str(row["ticker"]),
-                "score": int(score),
-                "sell_pct": float(sell_pct),
-            }
-        )
-    return sorted(actions, key=lambda x: (-x["score"], x["ticker"]))[:5]
-
-
 def run(target_date: date | None = None) -> dict:
     winner = _load_winner()
     cfg = winner["winner_config_snapshot"]
@@ -111,16 +66,6 @@ def run(target_date: date | None = None) -> dict:
             "date",
             "ticker",
             "market_cap",
-            "i_value",
-            "i_ucl",
-            "i_lcl",
-            "mr_value",
-            "mr_ucl",
-            "xbar_value",
-            "xbar_ucl",
-            "xbar_lcl",
-            "r_value",
-            "r_ucl",
         ],
     ).copy()
     canonical["date"] = pd.to_datetime(canonical["date"], errors="coerce").dt.normalize()
@@ -181,13 +126,8 @@ def run(target_date: date | None = None) -> dict:
     if s > 0:
         weights = {k: float(v / s) for k, v in weights.items()}
 
-    defensive_actions = _compute_defensive_actions(
-        canonical_day=canonical[canonical["date"] == prev_dt].copy(),
-        holdings=selected,
-    )
+    defensive_actions: list[dict] = []
     action = "REBALANCE" if is_rebalance_day else "HOLD"
-    if defensive_actions:
-        action = "DEFENSIVE_SELL"
 
     payload = {
         "task_id": "T-029",

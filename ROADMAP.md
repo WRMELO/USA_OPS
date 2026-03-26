@@ -91,3 +91,4 @@
 | T-036 | Operação real (BTG Internacional) | CANCELLED | D-025 |
 | T-037 | Painel US no formato BR (reescrita completa) | DONE | D-027 |
 | T-038 | Separar Top-20 informativo da carteira ativa | DONE | D-029 |
+| T-039 | Mover venda defensiva do step 09 para painel (carteira real) | DONE | D-033 |

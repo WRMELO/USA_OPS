@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -10,12 +9,6 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-
-def _canonical_path() -> Path:
-    env = os.getenv("USA_OPS_CANONICAL_PATH", "").strip()
-    if env:
-        return (ROOT / env).resolve() if not os.path.isabs(env) else Path(env).resolve()
-    return ROOT / "data" / "ssot" / "canonical_us.parquet"
 
 
 def _load_last_decision(target_date: date) -> dict:
@@ -47,12 +40,12 @@ def run(target_date: date | None = None) -> pd.DataFrame:
     target_ts = pd.Timestamp(target_date).normalize()
 
     winner_curve_path = ROOT / "backtest" / "results" / "curve_C4_K10.csv"
-    canonical_path = _canonical_path()
+    opw_path = ROOT / "data" / "ssot" / "operational_window.parquet"
     out_path = ROOT / "data" / "daily" / "winner_curve_us.parquet"
     if not winner_curve_path.exists():
         raise FileNotFoundError(f"Input ausente: {winner_curve_path}")
-    if not canonical_path.exists():
-        raise FileNotFoundError(f"Input ausente: {canonical_path}")
+    if not opw_path.exists():
+        raise FileNotFoundError(f"Input ausente: {opw_path}")
 
     base = pd.read_csv(winner_curve_path)
     base["date"] = pd.to_datetime(base["date"], errors="coerce").dt.normalize()
@@ -73,18 +66,33 @@ def run(target_date: date | None = None) -> pd.DataFrame:
     if target_ts <= last_dt:
         return curve
 
-    canonical = pd.read_parquet(canonical_path, columns=["date", "ticker", "close_raw"]).copy()
+    canonical = pd.read_parquet(
+        ROOT / "data" / "ssot" / "operational_window.parquet",
+        columns=["date", "ticker", "close_raw"],
+    ).copy()
     canonical["date"] = pd.to_datetime(canonical["date"], errors="coerce").dt.normalize()
     canonical["ticker"] = canonical["ticker"].astype(str).str.upper().str.strip()
     canonical["close_raw"] = pd.to_numeric(canonical["close_raw"], errors="coerce")
     canonical = canonical.dropna(subset=["date", "ticker", "close_raw"])
 
+    trading_days = sorted(canonical["date"].unique())
+
+    def _resolve_trading_day(ref: pd.Timestamp, direction: str = "le") -> pd.Timestamp | None:
+        if direction == "le":
+            cands = [d for d in trading_days if d <= ref]
+            return cands[-1] if cands else None
+        cands = [d for d in trading_days if d >= ref]
+        return cands[0] if cands else None
+
+    prev_td = _resolve_trading_day(last_dt, "le")
+    now_td = _resolve_trading_day(target_ts, "le")
+
     decision = _load_last_decision(target_date=target_date)
     weights = {str(k).upper().strip(): float(v) for k, v in decision.get("target_weights", {}).items() if float(v) > 0}
-    if not weights:
+    if not weights or prev_td is None or now_td is None or prev_td == now_td:
         ret = 0.0
     else:
-        ret = _portfolio_return(canonical=canonical, day_prev=last_dt, day_now=target_ts, weights=weights)
+        ret = _portfolio_return(canonical=canonical, day_prev=prev_td, day_now=now_td, weights=weights)
 
     last_equity = float(curve["equity"].iloc[-1])
     equity_new = float(last_equity * (1.0 + ret))

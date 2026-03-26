@@ -538,25 +538,110 @@ def _load_score_map(as_of_day: date) -> dict[str, float]:
     return {str(r["ticker"]): float(r["score_m3"]) for _, r in df.iterrows()}
 
 
-def _build_sell_suggestions(decision: dict[str, Any] | None, prices_d1: dict[str, float]) -> list[dict[str, Any]]:
-    if not decision:
+def _load_spc_snapshot(as_of_day: date, holdings_qty: dict[str, int]) -> pd.DataFrame:
+    held = sorted([t for t, q in holdings_qty.items() if int(q) > 0])
+    if not held:
+        return pd.DataFrame()
+    path = ROOT / "data" / "ssot" / "operational_window.parquet"
+    if not path.exists():
+        return pd.DataFrame()
+    df = pd.read_parquet(
+        path,
+        columns=[
+            "date",
+            "ticker",
+            "i_value",
+            "i_ucl",
+            "i_lcl",
+            "mr_value",
+            "mr_ucl",
+            "xbar_value",
+            "xbar_ucl",
+            "xbar_lcl",
+            "r_value",
+            "r_ucl",
+        ],
+    ).copy()
+    if df.empty:
+        return pd.DataFrame()
+    df["date"] = pd.to_datetime(df["date"], errors="coerce").dt.normalize()
+    df["ticker"] = df["ticker"].astype(str).str.upper().str.strip()
+    day_df = df[(df["date"] == pd.Timestamp(as_of_day)) & (df["ticker"].isin(held))].copy()
+    if day_df.empty:
+        return pd.DataFrame()
+    return day_df
+
+
+def _compute_defensive_actions_from_holdings(spc_day: pd.DataFrame, holdings_qty: dict[str, int]) -> list[dict[str, Any]]:
+    if spc_day.empty:
         return []
-    actions = decision.get("defensive_actions", [])
+    actions: list[dict[str, Any]] = []
+    for _, row in spc_day.iterrows():
+        tk = str(row.get("ticker", "")).upper().strip()
+        qtd = int(holdings_qty.get(tk, 0))
+        if not tk or qtd <= 0:
+            continue
+        iv = _safe_float(pd.to_numeric(row.get("i_value"), errors="coerce"), float("nan"))
+        iu = _safe_float(pd.to_numeric(row.get("i_ucl"), errors="coerce"), float("nan"))
+        il = _safe_float(pd.to_numeric(row.get("i_lcl"), errors="coerce"), float("nan"))
+        mv = _safe_float(pd.to_numeric(row.get("mr_value"), errors="coerce"), float("nan"))
+        mu = _safe_float(pd.to_numeric(row.get("mr_ucl"), errors="coerce"), float("nan"))
+        xv = _safe_float(pd.to_numeric(row.get("xbar_value"), errors="coerce"), float("nan"))
+        xu = _safe_float(pd.to_numeric(row.get("xbar_ucl"), errors="coerce"), float("nan"))
+        xl = _safe_float(pd.to_numeric(row.get("xbar_lcl"), errors="coerce"), float("nan"))
+        rv = _safe_float(pd.to_numeric(row.get("r_value"), errors="coerce"), float("nan"))
+        ru = _safe_float(pd.to_numeric(row.get("r_ucl"), errors="coerce"), float("nan"))
+
+        any_rule = bool(
+            (math.isfinite(iv) and math.isfinite(iu) and iv > iu)
+            or (math.isfinite(iv) and math.isfinite(il) and iv < il)
+            or (math.isfinite(mv) and math.isfinite(mu) and mv > mu)
+            or (math.isfinite(xv) and math.isfinite(xu) and xv > xu)
+            or (math.isfinite(xv) and math.isfinite(xl) and xv < xl)
+            or (math.isfinite(rv) and math.isfinite(ru) and rv > ru)
+        )
+        if not any_rule:
+            continue
+
+        score = 4
+        sell_pct = 25.0
+        if (math.isfinite(iv) and math.isfinite(il) and iv < il) or (math.isfinite(mv) and math.isfinite(mu) and mv > mu):
+            score = 5
+            sell_pct = 50.0
+        if math.isfinite(iv) and math.isfinite(il) and iv < (il - abs(il) * 0.2):
+            score = 6
+            sell_pct = 100.0
+        actions.append(
+            {
+                "ticker": tk,
+                "score": score,
+                "sell_pct": sell_pct,
+                "qtd": qtd,
+            }
+        )
+
+    return sorted(actions, key=lambda x: (-int(x["score"]), str(x["ticker"])))[:5]
+
+
+def _build_sell_suggestions(
+    holdings_qty: dict[str, int],
+    prices_d1: dict[str, float],
+    as_of_day: date,
+) -> list[dict[str, Any]]:
+    spc_day = _load_spc_snapshot(as_of_day=as_of_day, holdings_qty=holdings_qty)
+    actions = _compute_defensive_actions_from_holdings(spc_day=spc_day, holdings_qty=holdings_qty)
     out: list[dict[str, Any]] = []
     for item in actions:
         tk = str(item.get("ticker", "")).upper().strip()
+        score = int(item.get("score", 0))
         if not tk:
             continue
-        sell_pct = _safe_float(item.get("sell_pct", 0.0), 0.0)
-        if sell_pct <= 1.0:
-            sell_pct *= 100.0
-        reason = str(item.get("reason", "")).strip() or "Acao defensiva do motor."
         out.append(
             {
                 "ticker": tk,
-                "sell_pct": sell_pct,
+                "sell_pct": _safe_float(item.get("sell_pct", 0.0), 0.0),
                 "close_d1": _safe_float(prices_d1.get(tk, 0.0), 0.0),
-                "reason": reason,
+                "reason": f"DEFESA SPC: score={score} (venda parcial por severidade).",
             }
         )
     return out
@@ -734,7 +819,11 @@ def build_painel(exec_day: date) -> Path:
     if not rows_info_top:
         rows_info_top.append("<tr><td colspan='3'>Top-20 indisponivel (sem decisao).</td></tr>")
 
-    sell_suggestions = _build_sell_suggestions(decision=decision, prices_d1={**ctx["prices_d1"], **prices_top})
+    sell_suggestions = _build_sell_suggestions(
+        holdings_qty=ctx["holdings_qty"],
+        prices_d1={**ctx["prices_d1"], **prices_top},
+        as_of_day=d1,
+    )
     rows_sell = []
     for s in sell_suggestions:
         rows_sell.append(
