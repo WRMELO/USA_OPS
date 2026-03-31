@@ -109,6 +109,20 @@ def get_d_minus_1(exec_day: date) -> date:
     return max(prev) if prev else exec_day
 
 
+def _resolve_to_trading_day(civil_day: date) -> date:
+    """Resolve uma data civil para o último pregão real <= civil_day (D-038)."""
+    path = ROOT / "data" / "ssot" / "operational_window.parquet"
+    if not path.exists():
+        return civil_day
+    df = pd.read_parquet(path, columns=["date"])
+    if df.empty:
+        return civil_day
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    days = sorted(set(df["date"].dt.date.dropna().tolist()))
+    cands = [d for d in days if d <= civil_day]
+    return cands[-1] if cands else civil_day
+
+
 def get_latest_prices(tickers: list[str], as_of_day: date) -> dict[str, float]:
     prices: dict[str, float] = {}
     if not tickers:
@@ -379,6 +393,7 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
             ref_day = date.fromisoformat(ref_raw) if ref_raw else exec_day
         except Exception:
             ref_day = exec_day
+        ref_day = _resolve_to_trading_day(ref_day)
         if ref_day > as_of_day:
             continue
         snapshot = payload.get("positions_snapshot", [])
@@ -790,7 +805,11 @@ def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[s
 
 def build_painel(exec_day: date) -> Path:
     decision = _read_json(ROOT / "data" / "daily" / f"decision_{exec_day.isoformat()}.json")
-    decision_date = str(decision.get("target_date", exec_day.isoformat()))
+    decision_date_raw = str(decision.get("target_date", exec_day.isoformat()))
+    try:
+        decision_date = _resolve_to_trading_day(date.fromisoformat(decision_date_raw)).isoformat()
+    except Exception:
+        decision_date = decision_date_raw
     report_html, ctx, warnings = _build_tables_and_cards(exec_day)
     d1 = get_d_minus_1(exec_day)
 
