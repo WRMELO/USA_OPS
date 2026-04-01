@@ -223,11 +223,11 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 self._respond_json({"ok": False, "error": "Payload JSON invalido"}, code=400)
                 return
 
-            payload_date = str(payload.get("date", "")).strip()
+            payload_date = str(payload.get("exec_day", payload.get("date", ""))).strip()
             try:
                 save_day = date.fromisoformat(payload_date)
             except ValueError:
-                self._respond_json({"ok": False, "error": "Campo 'date' invalido"}, code=400)
+                self._respond_json({"ok": False, "error": "Campo 'exec_day/date' invalido"}, code=400)
                 return
 
             # Bloqueia salvamento de paineis historicos.
@@ -242,7 +242,15 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
             cycle_dir = ROOT / "data" / "cycles" / save_day.isoformat()
             real_dir.mkdir(parents=True, exist_ok=True)
             cycle_dir.mkdir(parents=True, exist_ok=True)
-            out_real = real_dir / f"{save_day.isoformat()}.json"
+            market_day_raw = str(payload.get("market_day", "")).strip()
+            if market_day_raw:
+                try:
+                    market_day = date.fromisoformat(market_day_raw)
+                except ValueError:
+                    market_day = save_day
+            else:
+                market_day = save_day
+            out_real = real_dir / f"{market_day.isoformat()}.json"
             out_cycle = cycle_dir / "boletim_preenchido.json"
             content = json.dumps(payload, ensure_ascii=False, indent=2)
             out_real.write_text(content, encoding="utf-8")

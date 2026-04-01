@@ -84,3 +84,7 @@
 ## 2026-03-26
 
 - fix: T-039 — mover venda defensiva do step 09 para o painel usando carteira real (`build_lot_ledger`) e eliminar sugestões fantasmas para posições zeradas. Artefatos: `pipeline/09_decide.py`, `pipeline/painel_diario.py` (ref: D-033, D-032)
+
+## 2026-04-01
+
+- 2026-04-01 | T-040 | feat: desacoplar semântica temporal nos artefatos operacionais (exec_day, market_day, trade_day) — D-040, R-022. Toca painel_diario.py (blindado). MOTOR_OVERRIDE.

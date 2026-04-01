@@ -123,6 +123,22 @@ def _resolve_to_trading_day(civil_day: date) -> date:
     return cands[-1] if cands else civil_day
 
 
+def _resolve_trade_day(civil_day: date) -> date:
+    """Resolve uma data civil para o próximo pregão real >= civil_day."""
+    path = ROOT / "data" / "ssot" / "operational_window.parquet"
+    if not path.exists():
+        return civil_day
+    df = pd.read_parquet(path, columns=["date"])
+    if df.empty:
+        return civil_day
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    days = sorted(set(df["date"].dt.date.dropna().tolist()))
+    if civil_day in days:
+        return civil_day
+    cands = [d for d in days if d > civil_day]
+    return cands[0] if cands else civil_day
+
+
 def get_latest_prices(tickers: list[str], as_of_day: date) -> dict[str, float]:
     prices: dict[str, float] = {}
     if not tickers:
@@ -384,11 +400,16 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
 
     for p in sorted(real_dir.glob("*.json")):
         try:
-            exec_day = date.fromisoformat(p.stem)
+            file_day = date.fromisoformat(p.stem)
         except Exception:
             continue
         payload = _read_json(p)
-        ref_raw = str(payload.get("reference_decision", "")).strip()
+        exec_raw = str(payload.get("exec_day", payload.get("date", ""))).strip()
+        try:
+            exec_day = date.fromisoformat(exec_raw) if exec_raw else file_day
+        except Exception:
+            exec_day = file_day
+        ref_raw = str(payload.get("market_day", payload.get("reference_decision", ""))).strip()
         try:
             ref_day = date.fromisoformat(ref_raw) if ref_raw else exec_day
         except Exception:
@@ -805,13 +826,10 @@ def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[s
 
 def build_painel(exec_day: date) -> Path:
     decision = _read_json(ROOT / "data" / "daily" / f"decision_{exec_day.isoformat()}.json")
-    decision_date_raw = str(decision.get("target_date", exec_day.isoformat()))
-    try:
-        decision_date = _resolve_to_trading_day(date.fromisoformat(decision_date_raw)).isoformat()
-    except Exception:
-        decision_date = decision_date_raw
     report_html, ctx, warnings = _build_tables_and_cards(exec_day)
     d1 = get_d_minus_1(exec_day)
+    trade_day = _resolve_trade_day(exec_day)
+    decision_date = d1.isoformat()
 
     portfolio_active = decision.get("portfolio", [])
     top20_info = decision.get("top20_by_score", [])
@@ -876,14 +894,14 @@ def build_painel(exec_day: date) -> Path:
     cycle_dir = ROOT / "data" / "cycles" / exec_day.isoformat()
     cycle_dir.mkdir(parents=True, exist_ok=True)
     out_cycle = cycle_dir / "painel.html"
-    out_daily = ROOT / "data" / "daily" / f"painel_{exec_day.isoformat()}.html"
+    out_daily = ROOT / "data" / "daily" / f"painel_{d1.isoformat()}.html"
     out_daily.parent.mkdir(parents=True, exist_ok=True)
 
     html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Painel Diario - {_fmt_date_br(exec_day)}</title>
+<title>Painel Diario - Mercado: {_fmt_date_br(d1)} | Execucao: {_fmt_date_br(exec_day)}</title>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <style>
 body {{ font-family: Segoe UI, Tahoma, sans-serif; background:#f5f7fb; color:#1f2937; margin:0; }}
@@ -933,7 +951,7 @@ input, select {{ width:100%; padding:6px; border:1px solid #cbd5e1; border-radiu
 </head>
 <body>
   <div class="wrap">
-    <h1>Painel Diario - {_fmt_date_br(exec_day)}</h1>
+    <h1>Painel Diario - Mercado: {_fmt_date_br(d1)} | Execucao: {_fmt_date_br(exec_day)}</h1>
     <div class="sub">Documento unico: Relatorio + Boletim | D-1 de mercado: {ctx["d1_br"]}</div>
 
     <div class="block">
@@ -1039,6 +1057,8 @@ input, select {{ width:100%; padding:6px; border:1px solid #cbd5e1; border-radiu
 
 <script>
 const EXEC_DATE = "{exec_day.isoformat()}";
+const MARKET_DAY = "{d1.isoformat()}";
+const TRADE_DAY = "{trade_day.isoformat()}";
 const DECISION_DATE = "{decision_date}";
 const PREV_FREE = {ctx["cash_free_prev"]};
 const PREV_ACC = {ctx["cash_accounting_prev"]};
@@ -1322,6 +1342,9 @@ function savePanel() {{
   const payload = {{
     date: EXEC_DATE,
     reference_decision: DECISION_DATE,
+    exec_day: EXEC_DATE,
+    market_day: MARKET_DAY,
+    trade_day: TRADE_DAY,
     operations: ops,
     cash_movements: cashMovements,
     cash_transfers: cashTransfers,
