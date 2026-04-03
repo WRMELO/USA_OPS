@@ -88,3 +88,16 @@
 ## 2026-04-01
 
 - 2026-04-01 | T-040 | feat: desacoplar semântica temporal nos artefatos operacionais (exec_day, market_day, trade_day) — D-040, R-022. Toca painel_diario.py (blindado). MOTOR_OVERRIDE.
+
+## 2026-04-02
+
+- 2026-04-02 | T-041 | fix: resiliência FRED no step 05 — fallback para macro_us existente + gate D-2 (D-041, paridade D-027 BR)
+- 2026-04-02 | T-042 | fix: rebalance por contagem relativa de pregões desde último rebalance, com fallback bootstrap e persistência em last_rebalance.json (D-043, R-018, D-032). Toca 09_decide.py (blindado). MOTOR_OVERRIDE.
+- 2026-04-02 | T-042r | fix: cura documental do rebalance relativo após validação do Auditor; decision_2026-04-02.json e last_rebalance.json alinhados ao estado operacional. Artefatos: data/daily/decision_2026-04-02.json, data/daily/last_rebalance.json (ref: D-043).
+- 2026-04-02 | T-043 | feat: parâmetro dry_run em run() de 09_decide.py para isolar escrita de disco em testes/auditorias (D-044, D-032). Toca 09_decide.py (blindado). MOTOR_OVERRIDE.
+
+## 2026-04-03
+
+- feat: T-045 — SSOT ledger imutável (D-045). Novo pipeline/ledger.py com event sourcing financeiro. Migração de 9 boletins + gap 01/04. Painel e servidor refatorados para ler/escrever no ledger. Boletins preservados como artefato de exibição.
+- fix: T-046 — Corrige injeção de caixa fantasma por SETTLEMENT sem ref_id e duplicação de eventos no servidor (D-045). Auditoria forense Gemini/Kimi.
+- chore: T-047-HF — commit com MOTOR_OVERRIDE + tag v1.4.0-motor-us selando T-041/T-042/T-043/T-045/T-046 (D-041/D-043/D-044/D-045). Governança Git exigiu consolidação.

@@ -17,6 +17,15 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from pipeline import run_daily
+from pipeline.ledger import (
+    EventType,
+    append_event,
+    compute_cash,
+    create_event,
+    export_snapshot,
+    is_duplicate,
+    pending_settlements,
+)
 
 
 @dataclass
@@ -36,19 +45,18 @@ JOB_STATE = JobState()
 
 
 def _panel_path(day: date) -> Path:
-    return ROOT / "data" / "daily" / f"painel_{day.isoformat()}.html"
+    return ROOT / "data" / "cycles" / day.isoformat() / "painel.html"
 
 
 def _list_existing_panels() -> list[date]:
-    daily = ROOT / "data" / "daily"
-    if not daily.exists():
+    cycles_dir = ROOT / "data" / "cycles"
+    if not cycles_dir.exists():
         return []
     out: list[date] = []
-    for p in sorted(daily.glob("painel_*.html")):
-        token = p.stem.replace("painel_", "", 1)
+    for p in cycles_dir.glob("*/painel.html"):
         try:
-            out.append(date.fromisoformat(token))
-        except ValueError:
+            out.append(date.fromisoformat(p.parent.name))
+        except Exception:
             continue
     return sorted(set(out))
 
@@ -250,9 +258,88 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                     market_day = save_day
             else:
                 market_day = save_day
+
+            # SSOT imutavel: primeiro grava eventos no ledger (D-045).
+            ops = payload.get("operations", [])
+            for op in ops:
+                typ = str(op.get("type", "")).upper().strip()
+                tk = str(op.get("ticker", "")).upper().strip()
+                qtd = int(op.get("qtd", 0) or 0)
+                preco = float(op.get("preco", 0.0) or 0.0)
+                if not tk or qtd <= 0 or preco <= 0:
+                    continue
+                amount = qtd * preco
+                if typ == "COMPRA":
+                    ev = create_event(EventType.BUY, exec_date=save_day, amount=amount, ticker=tk, qtd=qtd, price=preco)
+                elif typ == "VENDA":
+                    ev = create_event(EventType.SELL, exec_date=save_day, amount=amount, ticker=tk, qtd=qtd, price=preco)
+                else:
+                    continue
+                if not is_duplicate(ev):
+                    append_event(ev)
+
+            cash_movements = payload.get("cash_movements", [])
+            for mv in cash_movements:
+                typ = str(mv.get("type", "")).upper().strip()
+                val = float(mv.get("value", mv.get("valor", 0.0)) or 0.0)
+                desc = str(mv.get("description", "")).strip() or None
+                if val <= 0:
+                    continue
+                if typ in {"APORTE", "DEPOSITO"}:
+                    ev = create_event(EventType.APORTE, exec_date=save_day, amount=val, reason=desc)
+                    if not is_duplicate(ev):
+                        append_event(ev)
+                elif typ in {"DIVIDENDO", "JCP", "BONIFICACAO", "BONUS", "SUBSCRICAO"}:
+                    ev = create_event(EventType.DIVIDENDO, exec_date=save_day, amount=val, reason=desc)
+                    if not is_duplicate(ev):
+                        append_event(ev)
+                elif typ in {"RETIRADA", "SAQUE"}:
+                    ev = create_event(EventType.RETIRADA, exec_date=save_day, amount=val, reason=desc)
+                    if not is_duplicate(ev):
+                        append_event(ev)
+
+            # Transferências usam ref_id quando possível.
+            pend_by_ref = {p.get("ref"): p for p in pending_settlements(save_day)}
+            cash_transfers = payload.get("cash_transfers", [])
+            for tr in cash_transfers:
+                val = float(tr.get("value", tr.get("valor", 0.0)) or 0.0)
+                note = str(tr.get("note", tr.get("ref", ""))).strip()
+                if val <= 0:
+                    continue
+                ref_id = note if note in pend_by_ref else None
+                ev = create_event(
+                    EventType.SETTLEMENT,
+                    exec_date=save_day,
+                    settle_date=save_day,
+                    amount=val,
+                    ref_id=ref_id,
+                    reason=note or "cash_transfer",
+                )
+                if not is_duplicate(ev):
+                    append_event(ev)
+
+            # Boletim salvo vira artefato derivado do ledger.
+            cash = compute_cash(save_day)
+            derived_payload = {
+                "date": payload.get("date", save_day.isoformat()),
+                "reference_decision": payload.get("reference_decision", market_day.isoformat()),
+                "exec_day": save_day.isoformat(),
+                "market_day": market_day.isoformat(),
+                "trade_day": str(payload.get("trade_day", save_day.isoformat())),
+                "operations": ops,
+                "cash_movements": cash_movements,
+                "cash_transfers": cash_transfers,
+                "cash_free": float(cash.get("cash_free", 0.0)),
+                "cash_accounting": float(cash.get("cash_accounting", 0.0)),
+                "caixa_liquido_real": payload.get("caixa_liquido_real", None),
+                "positions_snapshot": export_snapshot(save_day),
+                "cash_balance": float(cash.get("cash_free", 0.0)),
+                "caixa_liquidando": float(cash.get("cash_accounting", 0.0)),
+            }
+
             out_real = real_dir / f"{market_day.isoformat()}.json"
             out_cycle = cycle_dir / "boletim_preenchido.json"
-            content = json.dumps(payload, ensure_ascii=False, indent=2)
+            content = json.dumps(derived_payload, ensure_ascii=False, indent=2)
             out_real.write_text(content, encoding="utf-8")
             out_cycle.write_text(content, encoding="utf-8")
             paths = [str(out_cycle.relative_to(ROOT)), str(out_real.relative_to(ROOT))]

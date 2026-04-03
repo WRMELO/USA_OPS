@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,15 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from pipeline.ledger import (
+    EventType,
+    compute_cash,
+    compute_positions,
+    export_snapshot,
+    pending_settlements,
+    read_all_events,
+)
 PROJECT_START = date(2026, 3, 19)
 
 
@@ -211,103 +221,21 @@ def _calc_cash_balances(
 
 
 def _pending_sales_for_transfer(exec_day: date) -> list[dict[str, Any]]:
-    real_dir = ROOT / "data" / "real"
-    if not real_dir.exists():
-        return []
-
-    all_transfers: list[dict[str, Any]] = []
-    for p in sorted(real_dir.glob("*.json")):
-        try:
-            d = date.fromisoformat(p.stem)
-        except Exception:
-            continue
-        if d >= exec_day:
-            continue
-        payload = _read_json(p)
-        for tr in payload.get("cash_transfers", []):
-            ref = tr.get("note", tr.get("ref", ""))
-            val = _safe_float(tr.get("value", tr.get("valor", 0.0)), 0.0)
-            all_transfers.append({"ref": str(ref), "value": val})
-
-    pending: list[dict[str, Any]] = []
-    for p in sorted(real_dir.glob("*.json")):
-        try:
-            d = date.fromisoformat(p.stem)
-        except Exception:
-            continue
-        if d >= exec_day:
-            continue
-        payload = _read_json(p)
-        for op in payload.get("operations", []):
-            if str(op.get("type", "")).upper() != "VENDA":
-                continue
-            ticker = str(op.get("ticker", "")).upper().strip()
-            qtd = _safe_int(op.get("qtd"), 0)
-            preco = _safe_float(op.get("preco"), 0.0)
-            valor = qtd * preco
-            sale_ref = f"VENDA {ticker} {d.isoformat()}"
-            already = sum(
-                t["value"]
-                for t in all_transfers
-                if sale_ref.lower() in t["ref"].lower()
-                or (ticker.lower() in t["ref"].lower() and d.isoformat() in t["ref"])
-            )
-            remain = valor - already
-            if remain > 0.50:
-                pending.append(
-                    {
-                        "sale_date": d.isoformat(),
-                        "ticker": ticker,
-                        "qtd": qtd,
-                        "preco": preco,
-                        "valor_venda": valor,
-                        "ja_transferido": already,
-                        "pendente": remain,
-                        "ref": sale_ref,
-                    }
-                )
-    return pending
+    return pending_settlements(exec_day)
 
 
 def build_lot_ledger(until_day: date) -> tuple[list[Lot], list[str]]:
-    files = list_real_files_upto(until_day)
-    lots_by_ticker: dict[str, list[Lot]] = {}
-    warnings: list[str] = []
-    for p in files:
-        day = date.fromisoformat(p.stem)
-        payload = _read_json(p)
-        ops = _extract_operations(payload)
-        for op in ops:
-            typ = op["type"]
-            tk = op["ticker"]
-            qtd = _safe_int(op["qtd"], 0)
-            px = _safe_float(op["preco"], 0.0)
-            if not tk or qtd <= 0 or px <= 0:
-                continue
-            if typ == "COMPRA":
-                lots_by_ticker.setdefault(tk, []).append(Lot(ticker=tk, buy_date=day.isoformat(), qtd=qtd, buy_price=px))
-            else:
-                remain = qtd
-                queue = lots_by_ticker.get(tk, [])
-                i = 0
-                while i < len(queue) and remain > 0:
-                    lot = queue[i]
-                    consume = min(lot.qtd, remain)
-                    lot.qtd -= consume
-                    remain -= consume
-                    if lot.qtd == 0:
-                        i += 1
-                queue = [x for x in queue if x.qtd > 0]
-                lots_by_ticker[tk] = queue
-                if remain > 0:
-                    warnings.append(
-                        f"Venda excedente em {day.isoformat()} para {tk}: faltaram {remain} acoes para baixar."
-                    )
-
+    pos = compute_positions(until_day)
     out: list[Lot] = []
-    for t in sorted(lots_by_ticker.keys()):
-        out.extend(lots_by_ticker[t])
-    return out, warnings
+    for tk in sorted(pos.keys()):
+        for lot in pos[tk]:
+            qtd = _safe_int(lot.get("qtd"), 0)
+            px = _safe_float(lot.get("buy_price"), 0.0)
+            buy_date = str(lot.get("buy_date", until_day.isoformat()))
+            if qtd <= 0 or px <= 0:
+                continue
+            out.append(Lot(ticker=tk, buy_date=buy_date, qtd=qtd, buy_price=px))
+    return out, []
 
 
 def _load_curve_until(as_of_day: date) -> pd.DataFrame:
@@ -417,9 +345,10 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
         ref_day = _resolve_to_trading_day(ref_day)
         if ref_day > as_of_day:
             continue
-        snapshot = payload.get("positions_snapshot", [])
-        cash_free = _safe_float(payload.get("cash_free", payload.get("cash_balance", 0.0)), 0.0)
-        cash_acc = _safe_float(payload.get("cash_accounting", payload.get("caixa_liquidando", 0.0)), 0.0)
+        snapshot = export_snapshot(ref_day)
+        cash = compute_cash(ref_day)
+        cash_free = _safe_float(cash.get("cash_free", 0.0), 0.0)
+        cash_acc = _safe_float(cash.get("cash_accounting", 0.0), 0.0)
         if (not snapshot) and abs(cash_free) < 1e-9 and abs(cash_acc) < 1e-9:
             continue
         records.append(
@@ -702,11 +631,7 @@ def _make_positions_snapshot(lots: list[Lot]) -> list[dict[str, Any]]:
 def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[str]]:
     d1 = get_d_minus_1(exec_day)
     cutoff_day = exec_day - timedelta(days=1)
-    d1_real_day, d1_payload = load_latest_real_before(cutoff_day)
-    d2 = None
-    if d1_real_day:
-        _, d2_payload = load_latest_real_before(d1_real_day - timedelta(days=1))
-        d2 = d2_payload
+    d1_real_day, _ = load_latest_real_before(cutoff_day)
 
     lots, warnings = build_lot_ledger(cutoff_day)
     tickers = sorted({x.ticker for x in lots})
@@ -744,22 +669,9 @@ def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[s
             "</tr>"
         )
 
-    cash_free_prev = _safe_float((d2 or {}).get("cash_free", (d2 or {}).get("cash_balance", 0.0)), 0.0)
-    cash_acc_prev = _safe_float((d2 or {}).get("cash_accounting", (d2 or {}).get("caixa_liquidando", 0.0)), 0.0)
-    d1_ops = _extract_operations(d1_payload or {})
-    d1_buy = sum(_safe_int(o.get("qtd"), 0) * _safe_float(o.get("preco"), 0.0) for o in d1_ops if o["type"] == "COMPRA")
-    d1_sell = sum(_safe_int(o.get("qtd"), 0) * _safe_float(o.get("preco"), 0.0) for o in d1_ops if o["type"] == "VENDA")
-    d1_aporte, d1_retirada = _extract_cash_movements(d1_payload or {})
-    d1_transfer = _extract_transfers(d1_payload or {})
-    cash_free_calc, cash_acc_calc = _calc_cash_balances(
-        prev_free=cash_free_prev,
-        prev_acc=cash_acc_prev,
-        buy=d1_buy,
-        sell=d1_sell,
-        aporte=d1_aporte,
-        retirada=d1_retirada,
-        transfer=d1_transfer,
-    )
+    cash_prev = compute_cash(cutoff_day)
+    cash_free_calc = _safe_float(cash_prev.get("cash_free", 0.0), 0.0)
+    cash_acc_calc = _safe_float(cash_prev.get("cash_accounting", 0.0), 0.0)
 
     total_bought_row = (
         "<tr class='total-row'>"
@@ -801,11 +713,13 @@ def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[s
 
     aporte_acc = 0.0
     retirada_acc = 0.0
-    for p in list_real_files_upto(cutoff_day):
-        pp = _read_json(p)
-        a, r = _extract_cash_movements(pp)
-        aporte_acc += a
-        retirada_acc += r
+    for ev in read_all_events():
+        if ev.exec_date > cutoff_day:
+            continue
+        if ev.type in {EventType.APORTE, EventType.DIVIDENDO}:
+            aporte_acc += _safe_float(ev.amount, 0.0)
+        elif ev.type == EventType.RETIRADA:
+            retirada_acc += _safe_float(ev.amount, 0.0)
 
     report_ctx = {
         "d1": d1.isoformat(),

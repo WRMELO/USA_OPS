@@ -115,22 +115,22 @@ CTO orienta → Architect planeja → Owner autoriza → Executor implementa →
 
 ### 6.6 Blindagem do Motor Operacional (D-039)
 
-**Arquivos protegidos** (auditados e selados em `v1.1.0-motor-us`):
+**Arquivos protegidos** (auditados e selados em `v1.4.0-motor-us`):
 
 | Arquivo | Função | Auditorias |
 |---------|--------|------------|
 | `pipeline/painel_diario.py` | Venda defensiva SPC, Base 1 patrimônio real, duplo-caixa, resolução de datas para pregão real | Phase 5 completa, D-027, D-033, D-038 |
 | `pipeline/02_ingest_prices_us.py` | Ingestão Polygon.io (OHLCV, dividendos, splits) | Phase 1 v2, D-007, D-026 |
 | `pipeline/04_build_canonical.py` | Build canonical + operational_window | Phase 1 v2, D-026 |
-| `pipeline/09_decide.py` | Motor C4 puro (TopN=20, Cad=10, K=10, cap=6%, min_market_cap=300M) | Phase 3-4, D-021, D-029, D-033 |
+| `pipeline/09_decide.py` | Motor C4 puro (TopN=20, Cad=10, K=10, cap=6%, min_market_cap=300M) | Phase 3-4, D-021, D-029, D-033, D-044 |
 | `config/winner_us.json` | Declaração canônica do winner C4 com SHA256 das evidências | D-021, T-024 |
 
 **Regras de proteção**:
 
 1. Alterações nestes arquivos exigem ciclo completo: `Architect → Executor → Auditor duplo (Gemini + Kimi) → Curator`, com autorização explícita do Owner.
 2. Um **pre-commit hook** no git bloqueia commits que alterem esses arquivos. Para sobrepor, usar: `MOTOR_OVERRIDE=1 git commit -m "descricao"`.
-3. A tag `v1.1.0-motor-us` marca o snapshot auditado atual. Para restaurar: `git checkout v1.1.0-motor-us -- <arquivo>`.
-4. Novas versões do motor devem gerar nova tag (`v1.2.0-motor-us`, etc.) após novo ciclo completo de auditoria.
+3. A tag `v1.4.0-motor-us` marca o snapshot auditado atual. Para restaurar: `git checkout v1.4.0-motor-us -- <arquivo>`.
+4. Novas versões do motor devem gerar nova tag (`v1.5.0-motor-us`, etc.) após novo ciclo completo de auditoria.
 
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 

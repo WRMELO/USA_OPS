@@ -11,6 +11,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "data" / "daily"
+LAST_REBALANCE_PATH = OUT_DIR / "last_rebalance.json"
 
 def _canonical_path() -> Path:
     env = os.getenv("USA_OPS_CANONICAL_PATH", "").strip()
@@ -40,7 +41,32 @@ def _select_c2_target(scores_day: pd.DataFrame, holdings: set[str], top_n: int, 
     return target[:top_n]
 
 
-def run(target_date: date | None = None) -> dict:
+def _load_last_rebalance_dt() -> date | None:
+    if not LAST_REBALANCE_PATH.exists():
+        return None
+    try:
+        payload = json.loads(LAST_REBALANCE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    raw = str(payload.get("last_rebalance_dt", "")).strip()
+    if not raw:
+        return None
+    try:
+        return date.fromisoformat(raw)
+    except ValueError:
+        return None
+
+
+def _save_last_rebalance_dt(last_rebalance_dt: date) -> None:
+    LAST_REBALANCE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "last_rebalance_dt": last_rebalance_dt.isoformat(),
+        "updated_at": datetime.now(tz=UTC).isoformat(),
+    }
+    LAST_REBALANCE_PATH.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
     winner = _load_winner()
     cfg = winner["winner_config_snapshot"]
     top_n = int(cfg["top_n"])
@@ -104,10 +130,21 @@ def run(target_date: date | None = None) -> dict:
         last_payload = json.loads(prev_decisions[-1].read_text(encoding="utf-8"))
         previous_holdings = [str(x).upper().strip() for x in last_payload.get("selected_tickers", []) if str(x).strip()]
 
-    trading_days = sorted(scores["date"].dropna().unique().tolist())
-    idx_map = {pd.Timestamp(d).normalize(): i for i, d in enumerate(trading_days)}
-    day_idx = int(idx_map.get(prev_dt, 0))
-    is_rebalance_day = (day_idx % max(cadence, 1)) == 0
+    trading_days = [pd.Timestamp(d).normalize() for d in sorted(scores["date"].dropna().unique().tolist())]
+    trading_day_set = set(trading_days)
+    cadence_safe = max(cadence, 1)
+    last_rebalance_dt = _load_last_rebalance_dt()
+
+    if last_rebalance_dt is not None and pd.Timestamp(last_rebalance_dt).normalize() in trading_day_set:
+        last_rebalance_ts = pd.Timestamp(last_rebalance_dt).normalize()
+        days_since_last_rebalance = sum(1 for d in trading_days if last_rebalance_ts < d <= prev_dt)
+        is_rebalance_day = days_since_last_rebalance >= cadence_safe
+        rebalance_trigger_reason = "relative_count"
+    else:
+        idx_map = {d: i for i, d in enumerate(trading_days)}
+        day_idx = int(idx_map.get(prev_dt, 0))
+        is_rebalance_day = (day_idx % cadence_safe) == 0
+        rebalance_trigger_reason = "fallback_absolute_index"
 
     if is_rebalance_day:
         selected = _select_c2_target(day_scores, set(previous_holdings), top_n=top_n, buffer_k=buffer_k)
@@ -128,6 +165,8 @@ def run(target_date: date | None = None) -> dict:
 
     defensive_actions: list[dict] = []
     action = "REBALANCE" if is_rebalance_day else "HOLD"
+    if is_rebalance_day and not dry_run:
+        _save_last_rebalance_dt(prev_dt.date())
 
     payload = {
         "task_id": "T-029",
@@ -138,6 +177,7 @@ def run(target_date: date | None = None) -> dict:
         "winner_config_snapshot": cfg,
         "action": action,
         "is_rebalance_day": bool(is_rebalance_day),
+        "rebalance_trigger_reason": rebalance_trigger_reason,
         "selected_tickers": selected,
         "top20_by_score": top20_by_score,
         "target_weights": weights,
@@ -145,6 +185,7 @@ def run(target_date: date | None = None) -> dict:
         "defensive_actions": defensive_actions,
         "selected_count": int(len(selected)),
     }
-    out_path = OUT_DIR / f"decision_{target_dt.date()}.json"
-    out_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    if not dry_run:
+        out_path = OUT_DIR / f"decision_{target_dt.date()}.json"
+        out_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     return payload

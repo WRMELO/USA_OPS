@@ -92,3 +92,8 @@
 | T-037 | Painel US no formato BR (reescrita completa) | DONE | D-027 |
 | T-038 | Separar Top-20 informativo da carteira ativa | DONE | D-029 |
 | T-039 | Mover venda defensiva do step 09 para painel (carteira real) | DONE | D-033 |
+| T-040 | Desacoplar semântica temporal nos artefatos operacionais (exec_day, market_day, trade_day) | DONE | D-040, R-022 |
+| T-041 | Resiliência do step 05 macro FRED com fallback para dados existentes | DONE | D-041 |
+| T-042 | Rebalance por contagem relativa de pregões desde último rebalance, com fallback bootstrap e persistência em `last_rebalance.json` | DONE | D-043 |
+| T-043 | Parâmetro `dry_run` em `run()` de `09_decide.py` para isolar escrita de disco em testes/auditorias | DONE | D-044 |
+| T-046 | Corrigir caixa fantasma por SETTLEMENT sem `ref_id` e duplicação no servidor | DONE | D-045 |
