@@ -96,4 +96,6 @@
 | T-041 | Resiliência do step 05 macro FRED com fallback para dados existentes | DONE | D-041 |
 | T-042 | Rebalance por contagem relativa de pregões desde último rebalance, com fallback bootstrap e persistência em `last_rebalance.json` | DONE | D-043 |
 | T-043 | Parâmetro `dry_run` em `run()` de `09_decide.py` para isolar escrita de disco em testes/auditorias | DONE | D-044 |
+| T-045 | SSOT ledger imutável BR (módulo + migração + servidor + painel) | DONE | D-045 |
 | T-046 | Corrigir caixa fantasma por SETTLEMENT sem `ref_id` e duplicação no servidor | DONE | D-045 |
+| T-052 | Separar pipeline em duas fases + orquestrador `run_all.sh` | DONE | D-052 |

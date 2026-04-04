@@ -805,7 +805,7 @@ def build_painel(exec_day: date) -> Path:
     chart_252_html = _build_chart_252(curve=curve, as_of_day=d1)
     chart_base1_html = _build_chart_base1(as_of_day=d1)
 
-    cycle_dir = ROOT / "data" / "cycles" / exec_day.isoformat()
+    cycle_dir = ROOT / "data" / "cycles" / d1.isoformat()
     cycle_dir.mkdir(parents=True, exist_ok=True)
     out_cycle = cycle_dir / "painel.html"
     out_daily = ROOT / "data" / "daily" / f"painel_{d1.isoformat()}.html"

@@ -23,7 +23,7 @@ def run(end_date: date | None = None) -> dict:
     if raw_path.exists():
         df = pd.read_parquet(raw_path, columns=["date"]).copy()
         df["date"] = pd.to_datetime(df["date"], errors="coerce").dt.normalize()
-        if df["date"].dropna().any():
+        if not df["date"].dropna().empty:
             last_dt = pd.Timestamp(df["date"].max()).normalize().date()
             start_dt = (pd.Timestamp(last_dt) + pd.Timedelta(days=1)).date()
 

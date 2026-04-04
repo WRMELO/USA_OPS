@@ -101,3 +101,8 @@
 - feat: T-045 — SSOT ledger imutável (D-045). Novo pipeline/ledger.py com event sourcing financeiro. Migração de 9 boletins + gap 01/04. Painel e servidor refatorados para ler/escrever no ledger. Boletins preservados como artefato de exibição.
 - fix: T-046 — Corrige injeção de caixa fantasma por SETTLEMENT sem ref_id e duplicação de eventos no servidor (D-045). Auditoria forense Gemini/Kimi.
 - chore: T-047-HF — commit com MOTOR_OVERRIDE + tag v1.4.0-motor-us selando T-041/T-042/T-043/T-045/T-046 (D-041/D-043/D-044/D-045). Governança Git exigiu consolidação.
+
+## 2026-04-04
+
+- T-052: Separar pipeline em duas fases (--ingest-only / --decision-only) + --dry-run + orquestrador run_all.sh (D-052)
+- audit: T-052 curada com PASS. Artefatos: pipeline/run_daily.py, pipeline/painel_diario.py, pipeline/servidor.py, CHANGELOG.md, ROADMAP.md

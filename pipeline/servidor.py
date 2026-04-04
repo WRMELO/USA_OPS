@@ -17,6 +17,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from pipeline import run_daily
+from pipeline import painel_diario as _painel_diario_mod
 from pipeline.ledger import (
     EventType,
     append_event,
@@ -179,7 +180,7 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 self._respond_html(self._render_status(today))
                 return
             if path == "/painel":
-                panel = _panel_path(today)
+                panel = _panel_path(_painel_diario_mod.get_d_minus_1(today))
                 if not panel.exists():
                     self._respond_html("<h3>Painel do dia nao encontrado.</h3>", code=404)
                     return
@@ -247,9 +248,6 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 return
 
             real_dir = ROOT / "data" / "real"
-            cycle_dir = ROOT / "data" / "cycles" / save_day.isoformat()
-            real_dir.mkdir(parents=True, exist_ok=True)
-            cycle_dir.mkdir(parents=True, exist_ok=True)
             market_day_raw = str(payload.get("market_day", "")).strip()
             if market_day_raw:
                 try:
@@ -258,6 +256,10 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                     market_day = save_day
             else:
                 market_day = save_day
+
+            cycle_dir = ROOT / "data" / "cycles" / market_day.isoformat()
+            real_dir.mkdir(parents=True, exist_ok=True)
+            cycle_dir.mkdir(parents=True, exist_ok=True)
 
             # SSOT imutavel: primeiro grava eventos no ledger (D-045).
             ops = payload.get("operations", [])
