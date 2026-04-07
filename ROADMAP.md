@@ -100,3 +100,4 @@
 | T-046 | Corrigir caixa fantasma por SETTLEMENT sem `ref_id` e duplicação no servidor | DONE | D-045 |
 | T-052 | Separar pipeline em duas fases + orquestrador `run_all.sh` | DONE | D-052 |
 | T-053 | Saneamento de governança pós-auditoria retroativa T-052 | DONE | D-053 |
+| T-054 | Calendário de pregões como infraestrutura (B3/NYSE) | DONE | D-054 |

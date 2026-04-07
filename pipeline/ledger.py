@@ -110,8 +110,9 @@ def _next_trading_day(from_day: date) -> date:
                     return d
         except Exception:
             pass
+    from lib.trading_calendar import is_session
     candidate = from_day + timedelta(days=1)
-    while candidate.weekday() >= 5:
+    while not is_session(candidate, exchange="XNYS"):
         candidate += timedelta(days=1)
     return candidate
 

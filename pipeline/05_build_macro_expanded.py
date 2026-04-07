@@ -90,6 +90,7 @@ def _build_features(df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
 
 def run(end_date: date | None = None) -> dict[str, Any]:
     from lib.adapters import FredAdapter
+    from lib.trading_calendar import prev_session
 
     calendar = _load_calendar(end_date=end_date)
     existing = _load_existing_macro(end_date=end_date)
@@ -162,7 +163,13 @@ def run(end_date: date | None = None) -> dict[str, Any]:
     features, feature_cols = _build_features(macro_us)
 
     target_end = end_date if end_date is not None else pd.to_datetime(calendar["date"]).max().date()
-    min_acceptable = target_end - timedelta(days=2)
+    try:
+        min_acceptable = prev_session(
+            prev_session(target_end, exchange="XNYS"),
+            exchange="XNYS",
+        )
+    except Exception:
+        min_acceptable = target_end - timedelta(days=2)
     date_max = pd.to_datetime(features["date"], errors="coerce").max().date()
     gate_d2 = date_max >= min_acceptable
     if not gate_d2:
