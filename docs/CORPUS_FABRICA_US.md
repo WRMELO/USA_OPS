@@ -298,12 +298,13 @@ O painel (`pipeline/painel_diario.py`, T-037/D-027) replica fielmente a estrutur
 | E-US-13 | 12 tickers fantasma no decision por ausência de USA_OPS_CANONICAL_PATH | Decision gerado fora do pipeline (sem env vars), usou canonical completo | Top-20 contaminado: 12 tickers com M3=0 e preço=$0 no painel | Bug 19/03 |
 | E-US-14 | decision_2026-03-18 gerado antes do rebuild da operational_window | Pipeline executado parcialmente; decision gravado com dados stale | decision HOLD herdou tickers fantasma para o dia seguinte | Bug 19/03 |
 | E-US-15 | Painel original US (T-030) divergia significativamente do painel BR | Reescrita parcial sem paridade visual; seções faltantes | Owner demandou reescrita completa (T-037) | D-027 |
+| E-US-16 | POWL 3:1 forward split não detectado no boletim de turno | `painel_diario.py` não consultava `split_factor` nem `close_operational` para ajustar lotes; Owner descobriu manualmente via aquecimento -65.9% | Perda fantasma de 65.9% exibida sem sinal de venda protetora; boletim com dados pré-split | T-055, D-055 |
 
 ### 5.3 Padrões de falha recorrentes
 
 | Padrão | Descrição | Ocorrências | Mitigação implementada |
 |--------|-----------|-------------|------------------------|
-| **Paridade de código ≠ paridade de semântica** | Copiar código do BR sem verificar se os dados de entrada têm a mesma semântica | E-US-06, E-US-07 | D-012 (duplo bloqueio) + revisão de semântica no checklist |
+| **Paridade de código ≠ paridade de semântica** | Copiar código do BR sem verificar se os dados de entrada têm a mesma semântica | E-US-06, E-US-07, E-US-16 | D-012 (duplo bloqueio) + revisão de semântica no checklist + R-026 (validação semântica obrigatória ao portar entre fábricas) |
 | **CTO inventa thresholds** | CTO introduz gates/filtros sem correspondência no modelo BR | E-US-02 | D-012 (parity_cto_check obrigatório + rejeição pelo Architect) |
 | **Snapshot como universo histórico** | Usar composição atual para simular o passado | E-US-01 | D-007 (universo histórico real via API datada) |
 | **Gate order-of-operations** | Verificar existência de arquivo antes de escrevê-lo | E-US-10 | Padrão: escrever outputs → depois checar gate → depois salvar report |
