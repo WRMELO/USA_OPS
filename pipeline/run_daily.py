@@ -126,6 +126,18 @@ def run(
 
     try:
         run_ingest = bool(full or ingest_only)
+        if ingest_only and not full:
+            _dt = _ssot_date_max_us()
+            _exp = prev_session(run_date, exchange="XNYS")
+            if _dt is not None and _dt >= _exp:
+                logger.info(
+                    "SSOT already fresh (date_max=%s >= expected=%s), skipping ingest.",
+                    _dt.isoformat(),
+                    _exp.isoformat(),
+                )
+                logger.info("=== Pipeline ingest-only concluído (skipped) ===")
+                return {"mode": "INGEST_SKIPPED", "ssot_date_max": _dt.isoformat()}
+
         run_daily_incremental = bool((not full) and (not ingest_only) and (not decision_only))
 
         if run_ingest:

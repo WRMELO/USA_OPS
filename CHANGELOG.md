@@ -114,3 +114,8 @@
 - audit: T-054 curada com PASS — calendários reais de B3/NYSE validados, dry-run e ingest-only sem regressão, sem blindados tocados. Artefatos: ROADMAP.md, DECISION_LOG.md, CHANGELOG.md (D-054)
 - feat: T-055 — deteccao automatica de corporate actions (split) no painel_diario.py: _detect_and_adjust_splits com filtro temporal as_of_day (fix H1 Gemini), alerta visual HTML, campo corporate_actions no JSON, base-1 com close_operational (D-055)
 - audit: T-055 curada com PASS — split POWL ajustado automaticamente, alerta inline no boletim e painel validado end-to-end. Artefatos: pipeline/painel_diario.py, ROADMAP.md, DECISION_LOG.md, CHANGELOG.md (D-055)
+
+## 2026-04-08
+
+- feat: T-SC-001 — freshness guard no --ingest-only: skip automático quando SSOT date_max >= prev_session(run_date). Evita re-fetch desnecessário de Polygon após ingest do timer. (D-056)
+- audit: T-SC-001 curada com PASS — guarda de frescura validada em runtime para US; ingest-only retorna SKIPPED com SSOT já fresco, --full e --decision-only sem regressão. Artefatos: pipeline/run_daily.py, CHANGELOG.md, ROADMAP.md (D-056)

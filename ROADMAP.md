@@ -102,3 +102,4 @@
 | T-053 | Saneamento de governança pós-auditoria retroativa T-052 | DONE | D-053 |
 | T-054 | Calendário de pregões como infraestrutura (B3/NYSE) | DONE | D-054 |
 | T-055 | Detecção automática de splits no painel_diario.py | DONE | D-055 |
+| T-SC-001 | Guarda de frescura no --ingest-only para evitar re-fetch de SSOT já fresco | DONE | D-056 |
