@@ -3,6 +3,8 @@
 __pycache__/
 *.pyc
 data/
+!data/ssot/
+!data/ssot/ledger.jsonl
 logs/
 *.parquet
 *.ubj
