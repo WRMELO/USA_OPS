@@ -104,3 +104,4 @@
 | T-054 | Calendário de pregões como infraestrutura (B3/NYSE) | DONE | D-054 |
 | T-055 | Detecção automática de splits no painel_diario.py | DONE | D-055 |
 | T-SC-001 | Guarda de frescura no --ingest-only para evitar re-fetch de SSOT já fresco | DONE | D-056 |
+| T-036-MOTOR | Redirecionar stdout/stderr de subprocess.run() em `04_build_canonical.py` blindado para arquivos de log | DONE | D-004 |
