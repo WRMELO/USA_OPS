@@ -119,3 +119,8 @@
 
 - feat: T-SC-001 — freshness guard no --ingest-only: skip automático quando SSOT date_max >= prev_session(run_date). Evita re-fetch desnecessário de Polygon após ingest do timer. (D-056)
 - audit: T-SC-001 curada com PASS — guarda de frescura validada em runtime para US; ingest-only retorna SKIPPED com SSOT já fresco, --full e --decision-only sem regressão. Artefatos: pipeline/run_daily.py, CHANGELOG.md, ROADMAP.md (D-056)
+
+## 2026-04-11
+
+- T-036 (D-003): Redirecionar stdout/stderr de subprocess.run() em 00_incremental_ingest.py, rebuild_operational_window.py e 04_build_canonical.py para arquivos de log — imuniza pipeline contra stdout morto do servidor web
+- fix: T-036 — Redirecionar stdout/stderr de subprocess.run() nos callers do pipeline para arquivos de log. Artefatos: pipeline/00_incremental_ingest.py, pipeline/rebuild_operational_window.py, pipeline/04_build_canonical.py, logs/t008_window_subprocess.log, logs/t009_window_subprocess.log, logs/t010_window_subprocess.log (D-003)

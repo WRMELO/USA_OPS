@@ -89,6 +89,7 @@
 | T-034 | Blindagem (tag + hook) + operational_window + ingestão incremental | DONE | D-025, D-026 |
 | T-035 | Dry-run (5 dias) | CANCELLED | D-025 |
 | T-036 | Operação real (BTG Internacional) | CANCELLED | D-025 |
+| T-036-EXEC | Redirecionar stdout/stderr de subprocess.run() nos callers do pipeline para arquivos de log | DONE | D-003 |
 | T-037 | Painel US no formato BR (reescrita completa) | DONE | D-027 |
 | T-038 | Separar Top-20 informativo da carteira ativa | DONE | D-029 |
 | T-039 | Mover venda defensiva do step 09 para painel (carteira real) | DONE | D-033 |

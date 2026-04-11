@@ -42,6 +42,20 @@ def _tickers_from_canonical(path: Path) -> list[str]:
     return sorted(tickers)
 
 
+def _run_logged_subprocess(command: list[str], log_filename: str) -> None:
+    logs_dir = ROOT / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    log_path = logs_dir / log_filename
+    with log_path.open("w", encoding="utf-8") as log_fh:
+        subprocess.run(
+            command,
+            check=True,
+            cwd=str(ROOT),
+            stdout=log_fh,
+            stderr=log_fh,
+        )
+
+
 def run(end_date: date | None = None) -> dict:
     canonical_full = ROOT / "data" / "ssot" / "canonical_us.parquet"
     raw_full = ROOT / "data" / "ssot" / "us_market_data_raw.parquet"
@@ -78,7 +92,7 @@ def run(end_date: date | None = None) -> dict:
         shutil.rmtree(tmp_dir)
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
-    subprocess.run(
+    _run_logged_subprocess(
         [
             str(sys.executable),
             str(ROOT / "scripts" / "t008_quality_spc_and_blacklist_v2.py"),
@@ -101,11 +115,10 @@ def run(end_date: date | None = None) -> dict:
             "--max-workers",
             "10",
         ],
-        check=True,
-        cwd=str(ROOT),
+        "t008_rebuild_subprocess.log",
     )
 
-    subprocess.run(
+    _run_logged_subprocess(
         [
             str(sys.executable),
             str(ROOT / "scripts" / "t009_exclude_bdrs_v2.py"),
@@ -118,11 +131,10 @@ def run(end_date: date | None = None) -> dict:
             "--out-report-json",
             "data/ssot/t009v2_bdr_exclusion_report_window.json",
         ],
-        check=True,
-        cwd=str(ROOT),
+        "t009_rebuild_subprocess.log",
     )
 
-    subprocess.run(
+    _run_logged_subprocess(
         [
             str(sys.executable),
             str(ROOT / "scripts" / "t010_build_canonical_us_v2.py"),
@@ -137,8 +149,7 @@ def run(end_date: date | None = None) -> dict:
             "--out-report",
             "data/ssot/t010v2_operational_window_report.json",
         ],
-        check=True,
-        cwd=str(ROOT),
+        "t010_rebuild_subprocess.log",
     )
 
     # Report mínimo

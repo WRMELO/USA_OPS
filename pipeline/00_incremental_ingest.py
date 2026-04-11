@@ -58,6 +58,20 @@ def _trim_to_last_n_dates(df: pd.DataFrame, n: int) -> pd.DataFrame:
     return df[df["date"].isin(set(keep))].copy()
 
 
+def _run_logged_subprocess(command: list[str], log_filename: str) -> None:
+    logs_dir = ROOT / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    log_path = logs_dir / log_filename
+    with log_path.open("w", encoding="utf-8") as log_fh:
+        subprocess.run(
+            command,
+            check=True,
+            cwd=str(ROOT),
+            stdout=log_fh,
+            stderr=log_fh,
+        )
+
+
 def run(target_date: date) -> dict:
     canonical_full = ROOT / "data" / "ssot" / "canonical_us.parquet"
     raw_full = ROOT / "data" / "ssot" / "us_market_data_raw.parquet"
@@ -102,7 +116,7 @@ def run(target_date: date) -> dict:
     delta_rows = 0
     if start_dt <= target_end:
         # Chama T-007 em modo delta (range curto) e restringe tickers ao universo do canonical.
-        subprocess.run(
+        _run_logged_subprocess(
             [
                 str(sys.executable),
                 str(ROOT / "scripts" / "t007_ingest_us_market_data_raw.py"),
@@ -127,8 +141,7 @@ def run(target_date: date) -> dict:
                 "--failures-path",
                 "logs/t007_failures_delta.json",
             ],
-            check=True,
-            cwd=str(ROOT),
+            "t007_delta_subprocess.log",
         )
 
         if op_raw_delta.exists():
@@ -177,7 +190,7 @@ def run(target_date: date) -> dict:
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
     # Rebuild da janela operacional (SPC + BDR excl + canonical window)
-    subprocess.run(
+    _run_logged_subprocess(
         [
             str(sys.executable),
             str(ROOT / "scripts" / "t008_quality_spc_and_blacklist_v2.py"),
@@ -200,11 +213,10 @@ def run(target_date: date) -> dict:
             "--max-workers",
             "10",
         ],
-        check=True,
-        cwd=str(ROOT),
+        "t008_window_subprocess.log",
     )
 
-    subprocess.run(
+    _run_logged_subprocess(
         [
             str(sys.executable),
             str(ROOT / "scripts" / "t009_exclude_bdrs_v2.py"),
@@ -217,11 +229,10 @@ def run(target_date: date) -> dict:
             "--out-report-json",
             "data/ssot/t009v2_bdr_exclusion_report_window.json",
         ],
-        check=True,
-        cwd=str(ROOT),
+        "t009_window_subprocess.log",
     )
 
-    subprocess.run(
+    _run_logged_subprocess(
         [
             str(sys.executable),
             str(ROOT / "scripts" / "t010_build_canonical_us_v2.py"),
@@ -236,8 +247,7 @@ def run(target_date: date) -> dict:
             "--out-report",
             "data/ssot/t010v2_operational_window_report.json",
         ],
-        check=True,
-        cwd=str(ROOT),
+        "t010_window_subprocess.log",
     )
 
     out = pd.read_parquet(op_canonical, columns=["date", "ticker"]).copy()
