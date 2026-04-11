@@ -124,3 +124,4 @@
 
 - T-036 (D-003): Redirecionar stdout/stderr de subprocess.run() em 00_incremental_ingest.py, rebuild_operational_window.py e 04_build_canonical.py para arquivos de log — imuniza pipeline contra stdout morto do servidor web
 - fix: T-036 — Redirecionar stdout/stderr de subprocess.run() nos callers do pipeline para arquivos de log. Artefatos: pipeline/00_incremental_ingest.py, pipeline/rebuild_operational_window.py, pipeline/04_build_canonical.py, logs/t008_window_subprocess.log, logs/t009_window_subprocess.log, logs/t010_window_subprocess.log (D-003)
+fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em pipeline/04_build_canonical.py (blindado) para arquivos de log via _run_logged_subprocess — ciclo de motor com MOTOR_OVERRIDE, Auditor duplo Gemini+Kimi, tag v1.7.0-motor-us
