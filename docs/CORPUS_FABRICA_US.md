@@ -1,218 +1,197 @@
 # CORPUS DE CONHECIMENTO — Fábrica US (USA_OPS)
 
-> Ref: D-022, D-027 | Data: 2026-03-19 (atualizado)
-> Consolidação de toda a experiência acumulada no desenvolvimento da Fábrica US (winner C4), Phases 0-6.
+> Ref: D-059 | Data: 2026-04-14 (atualizado)
+> Consolidação da experiência acumulada na Fábrica US (winner C4), das Phases 0-6 e da operação contínua (Phase 7).
 > Complementar ao `docs/CORPUS_FABRICA_BR.md` (Fábrica BR, RENDA_OPS).
 
 ______________________________________________________________________
 
 ## 1. Visão Geral do Projeto
 
-**Repositório**: USA_OPS
-**Ancestral**: RENDA_OPS (Fábrica BR) + AGNO_WORKSPACE (R&D)
-**Winner**: C4 — Score-weighted com cap de concentração (TopN=20, Cad=10, K=10, cap=6%, k_damp=0.0)
-**Mercado**: US equities (Russell 1000 + S&P SmallCap 600, excluindo tickers com BDR na B3)
-**Moeda**: USD
-**Período de desenvolvimento**: 2026-03-07 a 2026-03-19
-**Status**: Operacional — motor C4 puro rodando em produção (Pipeline diário + painel BR-format)
+**Repositório**: USA_OPS  
+**Ancestral**: RENDA_OPS (Fábrica BR) + AGNO_WORKSPACE (R&D)  
+**Winner**: C4 — Score-weighted com cap de concentração (`TopN=20`, `Cad=10`, `K=10`, `cap=6%`, `k_damp=0.0`)  
+**Mercado**: US equities (Russell 1000 + S&P SmallCap 600, excluindo tickers com BDR na B3)  
+**Moeda**: USD  
+**Fase de desenvolvimento**: 2026-03-07 a 2026-03-19  
+**Operação real**: desde 2026-03-19 (em curso)  
+**Status**: motor C4 puro em produção, com infraestrutura operacional consolidada até D-058
 
 ### Métricas do winner (C4, HOLDOUT 2023-01-02 a 2026-03-16)
 
-| Métrica                    | Valor          |
-| -------------------------- | -------------- |
-| CAGR                       | 42.14%         |
-| MDD                        | -40.12%        |
-| Max concentração (pontual) | 43.47%         |
-| Concentração top1 mediana  | 6.29%          |
-| Concentração top1 P90      | 7.59%          |
-| Avg tickers em carteira    | 18.4           |
-| Custo total (3.2 anos)     | $11,308        |
-| Regime defensivo           | 67.6% do tempo |
-| Trims de concentração      | 317            |
+| Métrica | Valor |
+| --- | --- |
+| CAGR | 42.14% |
+| MDD | -40.12% |
+| Max concentração (pontual) | 43.47% |
+| Concentração top1 mediana | 6.29% |
+| Concentração top1 P90 | 7.59% |
+| Avg tickers em carteira | 18.4 |
+| Custo total (3.2 anos) | $11,308 |
+| Regime defensivo | 67.6% do tempo |
+| Trims de concentração | 317 |
 
 ### Comparação com Fábrica BR
 
-| Métrica             | BR (C2 K=15)  | US (C4 cap=6%)     | Nota                                            |
-| ------------------- | ------------- | ------------------ | ----------------------------------------------- |
-| CAGR HOLDOUT        | 19.2%         | 42.14%             | US ~2x; universo mais amplo e volátil           |
-| MDD HOLDOUT         | -23.2%        | -40.12%            | US mais agressivo; universo tem small-caps      |
-| Concentração máxima | 18.1%         | 43.47% (pontual)   | Cap de 6% controla mediana, mas picos persistem |
-| Regime defensivo    | 59.1%         | 67.6%              | US mais volátil → SPC dispara mais              |
-| TopN                | 10            | 20                 | US precisa de mais diversificação               |
-| Variante            | C2            | C4                 | US precisou de cap de concentração              |
-| ML Trigger          | Sim (XGBoost) | Pendente (Phase 4) | BR usa thr=0.22, h_in=3, h_out=2                |
+| Métrica | BR (C2 K=15) | US (C4 cap=6%) | Nota |
+| --- | --- | --- | --- |
+| CAGR HOLDOUT | 19.2% | 42.14% | US ~2x; universo mais amplo e volátil |
+| MDD HOLDOUT | -23.2% | -40.12% | US mais agressivo; universo tem small-caps |
+| Concentração máxima | 18.1% | 43.47% (pontual) | Cap de 6% controla mediana, mas picos persistem |
+| Regime defensivo | 59.1% | 67.6% | US mais volátil, SPC dispara mais |
+| TopN | 10 | 20 | US precisa de mais diversificação |
+| Variante | C2 | C4 | US precisou de cap de concentração |
+| ML Trigger | Sim (XGBoost) | Não agrega — motor C4 puro | D-023/T-027v2 encerrou discussão |
 
 ______________________________________________________________________
 
 ## 2. Cronologia de Fases
 
-| Fase                           | Escopo                                                           | Tasks             | Decisões-chave             | Resultado                                           |
-| ------------------------------ | ---------------------------------------------------------------- | ----------------- | -------------------------- | --------------------------------------------------- |
-| Phase 0 — Fundação             | Setup repo, governança, portar libs                              | T-001 a T-005     | D-001, D-003               | Skeleton funcional                                  |
-| Phase 1 v1 — Dados (REPROVADA) | Ingestão via iShares snapshot + SPC incorreto                    | T-006 a T-011     | D-004, D-005, D-006        | **Reprovada por auditoria forense**                 |
-| Phase 1 v2 — Dados (APROVADA)  | Universo histórico Polygon + SPC Shewhart real                   | T-006v2 a T-011v2 | D-007, D-008, D-009        | Pipeline de dados auditado e aprovado               |
-| Phase 2 — Motor M3 + Features  | Scoring M3, features, labels                                     | T-012 a T-014     | D-010, D-011, D-012, D-013 | Dataset rotulado com anti-lookahead                 |
-| Phase 3 — Backtest             | Framework, ablação, concentração, acid window                    | T-015 a T-024     | D-014 a D-021              | **Winner C4 declarado**                             |
-| Phase 4 — ML Trigger           | XGBoost US, ablação threshold, integração no motor               | T-025 a T-028     | D-022, D-023               | **ML trigger não agrega** — motor C4 puro mantido   |
-| Phase 5 — Motor Operacional    | Pipeline diário, painel HTML, servidor, duplo-caixa              | T-029 a T-032     | D-024                      | Pipeline 12 steps + painel + servidor na porta 8788 |
-| Phase 6 — Blindagem e Operação | Auditoria final, blindagem, operational_window, painel BR-format | T-033 a T-037     | D-025, D-026, D-027        | **Operação real iniciada 19/03/2026**               |
+| Fase | Escopo | Tasks | Decisões-chave | Resultado |
+| --- | --- | --- | --- | --- |
+| Phase 0 — Fundação | Setup repo, governança, portar libs | T-001 a T-005 | D-001, D-003 | Skeleton funcional |
+| Phase 1 v1 — Dados (REPROVADA) | Ingestão via snapshot iShares + SPC incorreto | T-006 a T-011 | D-004, D-005, D-006 | Reprovada por auditoria forense |
+| Phase 1 v2 — Dados (APROVADA) | Universo histórico Polygon + SPC Shewhart real | T-006v2 a T-011v2 | D-007, D-008, D-009 | Pipeline de dados aprovado |
+| Phase 2 — Motor M3 + Features | Scoring M3, features, labels anti-lookahead | T-012 a T-014 | D-010, D-011, D-012, D-013 | Dataset rotulado auditável |
+| Phase 3 — Backtest | Framework, ablação, concentração, acid window | T-015 a T-024 | D-014 a D-021 | Winner C4 declarado |
+| Phase 4 — ML Trigger | XGBoost US + ablação + integração C4 | T-025 a T-028 | D-022, D-023 | ML trigger não agrega |
+| Phase 5 — Motor Operacional | Pipeline diário, painel, servidor, duplo-caixa | T-029 a T-032 | D-024 | Operação diária funcional |
+| Phase 6 — Blindagem e Operação | Auditoria final, blindagem, operational_window, painel BR-format | T-033 a T-037 | D-025, D-026, D-027 | Operação real iniciada em 19/03/2026 |
+| Phase 7 — Operação Contínua e Infraestrutura | Ledger SSOT, pipeline bifásico, calendário real, semântica temporal, split automático e errata Base 1 | T-038 a T-061-BASE1 | D-028 a D-058 | Pipeline maduro e robustecido em produção |
 
-**Total**: 27 decisões, 37 tasks (incluindo FIXes e v2s), 8 auditorias forenses
+**Total consolidado**: 58 decisões (D-001 a D-058), 60+ tasks (incluindo fixes e v2), múltiplas auditorias forenses convergentes (Gemini, Kimi e auditor principal).
 
 ______________________________________________________________________
 
 ## 3. Arquitetura
 
-### 3.1 Dados (Phase 1)
+### 3.1 Dados (estado atual)
 
-```
+```text
 data/
 ├── ssot/
-│   ├── canonical_us.parquet    → SSOT canônico: OHLCV + SPC (10 cols) + split_factor + market_cap
-│   ├── macro_us.parquet        → FRED: VIX, USD Index, Treasuries (10Y/2Y), Fed Funds, HY/IG OAS
-│   ├── ticker_reference_us.parquet  → Metadados: active/delisted, list_date, setor
-│   └── us_market_data_raw.parquet   → OHLCV bruto (adjusted=False) + dividends + splits
+│   ├── canonical_us.parquet
+│   ├── operational_window.parquet
+│   ├── operational_market_data_raw.parquet
+│   ├── us_market_data_raw.parquet
+│   ├── ticker_reference_us.parquet
+│   ├── macro_us.parquet
+│   ├── blacklist_us.json
+│   ├── blacklist_window_us.json
+│   └── ledger.jsonl                    -> SSOT financeiro imutável (D-045)
 ├── features/
-│   ├── scores_m3_us.parquet    → Scores M3 diários (z-score cross-section, janela 62, ddof=0)
-│   ├── dataset_us.parquet      → Features consolidadas (macro + SPC + M3)
-│   ├── labels_us.parquet       → Labels oracle (drawdown SP500, threshold TRAIN-only)
-│   └── dataset_us_labeled.parquet → Dataset completo para ML
-└── config/
-    ├── blacklist_us.json       → HARD (delisted) + SOFT (history < 252 dias)
-    ├── feature_guard_us.json   → Allowlist de features anti-snooping
-    └── winner_us.json          → Declaração canônica do winner
+│   ├── scores_m3_us.parquet
+│   ├── dataset_us.parquet
+│   ├── labels_us.parquet
+│   └── dataset_us_labeled.parquet
+├── daily/
+│   ├── decision_YYYY-MM-DD.json
+│   ├── painel_YYYY-MM-DD.html
+│   ├── last_rebalance.json
+│   └── winner_curve_us.parquet
+├── cycles/
+│   └── YYYY-MM-DD/
+│       ├── painel.html
+│       └── boletim_preenchido.json
+└── real/
+    └── YYYY-MM-DD.json
 ```
 
 ### 3.2 SPC Shewhart no canonical_us
 
-| Coluna                         | Descrição                            | Usado em                 |
-| ------------------------------ | ------------------------------------ | ------------------------ |
-| i_value                        | Individual chart value (log-retorno) | z-score → severity score |
-| i_ucl, i_lcl                   | Upper/Lower control limits (I chart) | Regras Shewhart          |
-| mr_value, mr_ucl               | Moving Range chart                   | Regras Shewhart          |
-| xbar_value, xbar_ucl, xbar_lcl | Xbar chart (subgrupos)               | Regras Shewhart          |
-| r_value, r_ucl                 | Range chart                          | Regras Shewhart          |
+| Coluna | Descrição | Uso |
+| --- | --- | --- |
+| i_value | Individual chart (log-retorno) | z-score e severity |
+| i_ucl, i_lcl | Limites do I chart | Regras SPC |
+| mr_value, mr_ucl | Moving Range | Regras SPC |
+| xbar_value, xbar_ucl, xbar_lcl | Xbar chart | Regras SPC |
+| r_value, r_ucl | Range chart | Regras SPC |
 
-Constantes tabeladas (d2=1.128, D4=3.267) — idênticas ao RENDA_OPS.
+Constantes tabeladas (`d2=1.128`, `D4=3.267`), em paridade com o RENDA_OPS.
 
-### 3.3 Backtest (Phase 3)
+### 3.3 Backtest (pesquisa)
 
-```
+```text
 backtest/
-├── run_backtest_variants_us.py     → Motor principal (C1/C2/C3/C4)
-├── run_t017_ablation_us.py         → Ablação TopN × Cadence × K
-├── run_t018_ablation_us.py         → Ablação C4 (dampening × cap)
-├── run_t021_concentration_analysis.py → Diagnóstico concentração + MDD
-├── run_t022_dual_acid_window_us.py → Stress test dual window
-├── plot_t015_plotly.py             → Plots equity comparison
-├── plot_t018_plotly.py             → Plots C2 vs C4
-└── results/                        → CSVs, JSONs, HTMLs gerados
+├── run_backtest_variants_us.py
+├── run_t017_ablation_us.py
+├── run_t018_ablation_us.py
+├── run_t021_concentration_analysis.py
+├── run_t022_dual_acid_window_us.py
+└── results/
 ```
 
-### 3.4 Motor de venda (idêntico ao BR em conceito, adaptado em parâmetros)
+### 3.4 Motor de venda e decisão (produção)
 
-1. **Camada 0**: Ajuste de splits — ratio derivado de `close_raw` (preserva valor econômico)
-1. **Camada 1**: Venda defensiva permanente (SPC Shewhart)
-   - Regime defensivo via market-slope (slope i_value dos holdings, janela 4 dias)
-   - Severity Score composto (0-6): z-band + persistência + evidência de regras violadas
-   - Vendas graduais: 25% (score 4), 50% (score 5), 100% (score 6)
-   - Quarentena pós-venda (ticker bloqueado até voltar "in control")
-1. **Camada 2**: Rebalanceamento C4 (histerese + score-weighted + cap de concentração)
-   - Cadência de 10 dias
-   - Histerese buffer K=10 (manter ticker se rank \<= K)
-   - Pesos proporcionais ao score M3 dampened (k_damp=0 no winner)
-   - Cap de concentração 6% com trims FIFO
-1. **Camada 2.5**: Trims de concentração (somente C4, antes das compras)
+1. **Camada 0**: Ajuste econômico de split para métricas e lotes.
+2. **Camada 0.5**: Detecção automática de split no `painel_diario.py` com ajuste de quantidade/preço e `corporate_actions` no JSON (D-055).
+3. **Camada 1**: Venda defensiva permanente via SPC (severity 0-6, vendas 25/50/100, quarentena).
+4. **Camada 2**: Rebalanceamento C4 com histerese e cap por ticker.
+5. **Camada 2.1**: Disparo de rebalance por **contagem relativa de pregões desde último rebalance**, persistido em `data/daily/last_rebalance.json` (D-043).
+6. **Camada 2.5**: Trims de concentração antes das compras.
 
 ### 3.5 Diferenças estruturais BR vs US
 
-| Aspecto           | BR (RENDA_OPS)                               | US (USA_OPS)                                             | Justificativa                                      |
-| ----------------- | -------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------- |
-| Liquidação        | D+2 ações, D+1 BDR                           | T+1                                                      | Regulação SEC                                      |
-| Caixa (tank)      | CDI (Selic/252)                              | Fed Funds Rate (DFF/252)                                 | Banco central local                                |
-| Universo          | ~906 tickers (fixo)                          | ~4.489 → ~2.090 após filtro market_cap                   | Mercado US muito mais amplo                        |
-| Filtro market_cap | Não necessário (mercado filtra naturalmente) | >= $300M dinâmico por dia (D-016)                        | Nano-caps US são impraticáveis                     |
-| TopN              | 10                                           | 20                                                       | Mais diversificação necessária                     |
-| Variante          | C2 (histerese pura)                          | C4 (histerese + cap concentração)                        | Universo amplo gera concentração excessiva sem cap |
-| Split factor      | Event-based (NaN exceto no dia do split)     | Cumulativo no pipeline, event-based derivado no backtest | Polygon vs BRAPI semântica diferente               |
-| Dados OHLCV       | BRAPI (adjusted implícito)                   | Polygon (adjusted=False)                                 | Controle explícito                                 |
-| SPC               | Idêntico                                     | Idêntico                                                 | Paridade metodológica obrigatória (D-009)          |
+| Aspecto | BR (RENDA_OPS) | US (USA_OPS) | Justificativa |
+| --- | --- | --- | --- |
+| Liquidação | D+2 ações, D+1 BDR | T+1 | Regulação SEC |
+| Caixa (tank) | CDI | Fed Funds | Banco central local |
+| Universo | ~906 tickers | ~4.489 bruto, ~2k operacional | Escala e liquidez |
+| TopN | 10 | 20 | Diversificação necessária |
+| Variante | C2 | C4 | Controle explícito de concentração |
+| Filtro market_cap | Não explícito | >= 300M (dinâmico D-1) | Evitar nano-caps impraticáveis |
+| Dados OHLCV | BRAPI | Polygon (adjusted=False) | Controle explícito |
+| Semântica temporal | Em convergência com US | `exec_day`, `market_day`, `trade_day` explícitos | D-040/R-022 |
 
-### 3.6 ML Trigger US (Phase 4 — resultado: NÃO AGREGA)
+### 3.6 ML Trigger US (resultado final)
 
-| Aspecto   | Tentativa 1 (T-025/T-026)             | Tentativa 2 (T-025v2)                                     | Decisão            |
-| --------- | ------------------------------------- | --------------------------------------------------------- | ------------------ |
-| Features  | 7 \_level (yields/rates absolutos)    | Estacionárias (spreads, deltas, retornos multi-janela)    | D-022              |
-| Problema  | Drift estrutural: Fed Funds 1.58→5.08 | proba_max 0.89 mas recall 12.5% em crises                 | D-023              |
-| Resultado | balanced_accuracy=0.50 (aleatório)    | 243/502 alarmes falsos em 2023-24, 7/56 crises detectadas | Motor puro mantido |
+| Aspecto | Tentativa 1 | Tentativa 2 | Decisão |
+| --- | --- | --- | --- |
+| Features | 7 `_level` (não estacionárias) | spreads/retornos/deltas | D-022 |
+| Resultado | balanced_accuracy ~0.50 | melhora de proba, mas sem poder útil | D-023 |
+| Impacto no motor | Não ajudou | Degrada CAGR e não protege drawdown | Motor C4 puro mantido |
 
-**Lição definitiva**: ML trigger com y_cash (drawdown SP500) não agrega ao motor C4 puro. CAGR -7.43 p.p. com trigger ativo (T-027v2). Motor C4 puro é o winner operacional.
+### 3.7 Arquitetura Operacional (atual)
 
-### 3.7 Arquitetura Operacional (Phase 5-6)
-
-```
+```text
 pipeline/
-├── run_daily.py               → Orquestrador (steps 00-12, ou 01-12 com --full)
-├── 00_incremental_ingest.py   → Ingestão incremental + rebuild operational_window
-├── rebuild_operational_window.py → Bootstrap window de 504 pregões a partir do canonical
-├── 01_ingest_macro.py         → FRED (VIX, rates, spreads)
-├── 02_ingest_prices_us.py     → Polygon OHLCV
-├── 03_ingest_reference_us.py  → Reference data
-├── 04_build_canonical.py      → SSOT canônico
-├── 05_build_macro_expanded.py → Macro features
-├── 06_compute_scores.py       → M3 scoring (usa USA_OPS_CANONICAL_PATH)
-├── 07_build_features.py       → Feature engineering
-├── 08_predict.py              → Stub (motor puro, sem ML)
-├── 09_decide.py               → Decisão C4 (usa USA_OPS_CANONICAL_PATH)
-├── 10_extend_curve.py         → Equity curve
-├── 11_reconcile_metrics.py    → Reconciliação
-├── painel_diario.py           → Painel HTML (formato BR, 1273 linhas)
-└── servidor.py                → HTTP na porta 8788, /salvar → paths[]
+├── run_daily.py               -> modos: --full, --ingest-only, --decision-only
+├── 00_incremental_ingest.py   -> ingestão incremental e rebuild da janela
+├── rebuild_operational_window.py
+├── 01_ingest_macro.py
+├── 02_ingest_prices_us.py
+├── 03_ingest_reference_us.py
+├── 04_build_canonical.py
+├── 05_build_macro_expanded.py -> fallback FRED para dados existentes (D-041)
+├── 06_compute_scores.py
+├── 07_build_features.py
+├── 08_predict.py              -> stub (motor puro)
+├── 09_decide.py               -> dry_run, last_rebalance, C4
+├── 10_extend_curve.py
+├── 11_reconcile_metrics.py
+├── painel_diario.py           -> venda defensiva real + split automático
+├── servidor.py                -> /painel e /salvar
+└── ledger.py                  -> event sourcing financeiro
+
+lib/
+└── trading_calendar.py        -> calendário real NYSE/B3 via exchange_calendars (D-054)
 ```
 
-**Dados operacionais**:
+**Blindagem atual do motor**: `v1.6.0-motor-us` (tag em git).
 
-```
-data/
-├── ssot/
-│   ├── operational_window.parquet       → Janela 504 pregões (~1973 tickers)
-│   └── operational_market_data_raw.parquet → Raw incremental
-├── daily/
-│   ├── decision_{date}.json             → Decisão C4 do dia
-│   ├── painel_{date}.html               → Painel diário
-│   └── winner_curve_us.parquet          → Equity curve
-├── real/
-│   └── {date}.json                      → Payload manual (operações, caixa)
-└── cycles/
-    └── {date}/
-        ├── painel.html                  → Cópia do painel
-        └── boletim_preenchido.json      → Backup do payload
-```
+### 3.8 Painel Diário (formato BR adaptado ao US)
 
-**Variáveis de ambiente críticas** (setadas por `run_daily.py`):
-
-| Variável                 | Valor                                           | Impacto se ausente                                                       |
-| ------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------ |
-| `USA_OPS_CANONICAL_PATH` | `data/ssot/operational_window.parquet`          | Scoring/decisão usa canonical completo (4489 tickers) → tickers fantasma |
-| `USA_OPS_RAW_PATH`       | `data/ssot/operational_market_data_raw.parquet` | Ingestão não encontra raw correto                                        |
-| `USA_OPS_BLACKLIST_PATH` | `data/ssot/blacklist_window_us.json`            | Blacklist desatualizada                                                  |
-
-### 3.8 Painel Diário (formato BR)
-
-O painel (`pipeline/painel_diario.py`, T-037/D-027) replica fielmente a estrutura visual do RENDA_OPS:
-
-| Seção                | Conteúdo                                  | Adaptação US                          |
-| -------------------- | ----------------------------------------- | ------------------------------------- |
-| Carteira Comprada    | Posições registradas via boletim          | USD formatting                        |
-| Carteira Atual (D-1) | Posições × preço D-1                      | USD, NYSE                             |
-| Top-20 para compra   | Ranking M3 filtrado por market_cap        | Top-20 (vs Top-10 BR)                 |
-| Card de Venda        | Sugestões defensivas (SPC)                | Idêntico ao BR                        |
-| Gráfico Equity 252   | Equity + Drawdown (%)                     | Drawdown (%) substitui P(Caixa) do BR |
-| Gráfico Base 1       | Série real acumulada                      | Sem CDI benchmark                     |
-| Duplo-Caixa T+1      | Caixa Contábil + Caixa Livre              | T+1 (vs D+2 BR)                       |
-| Balanço Simplificado | Patrimônio = Posições + Caixa             | USD                                   |
-| DFC Simplificado     | Fluxo de caixa do dia                     | USD                                   |
-| Scoring M3           | Idêntico (log-retorno, janela 62, ddof=0) | Idêntico                              |
+| Seção | Conteúdo | Adaptação US |
+| --- | --- | --- |
+| Carteira Comprada | Posições registradas | USD |
+| Carteira Atual (D-1) | Posições x preço D-1 | NYSE |
+| Top-20 para compra | Ranking informativo (`top20_by_score`) | Separado da carteira ativa (D-029) |
+| Card de Venda | Ações defensivas SPC da carteira real | Paridade com BR |
+| Corporate Actions | Split detectado e ajustado automaticamente | D-055 |
+| Gráfico Equity 252 | Equity + Drawdown | Sem P(Caixa) |
+| Gráfico Base 1 | Patrimônio real acumulado, denominador cumulativo | D-057/D-058 |
+| Duplo-Caixa T+1 | Caixa contábil e livre | T+1 |
+| Temporalidade | `exec_day`, `market_day`, `trade_day` explícitos | D-040 |
 
 ______________________________________________________________________
 
@@ -220,50 +199,64 @@ ______________________________________________________________________
 
 ### 4.1 Processo
 
-| #       | Lição                                                                                 | Evidência                                                                   |
-| ------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| L-US-01 | **Auditoria forense antes de avançar de fase** evita construir sobre base podre       | Phase 1 v1 reprovada → Phase 1 v2 corrigiu 3 problemas fundamentais (D-007) |
-| L-US-02 | **Purga física de artefatos obsoletos** elimina risco de contaminação                 | D-008: dados v1 deletados fisicamente, não apenas inativados                |
-| L-US-03 | **Execução task-a-task com ciclo completo** dá visibilidade e controle ao Owner       | D-010: CTO despachando 3 tasks de uma vez foi não-conformidade              |
-| L-US-04 | **Bloqueio duplo (CTO checklist + Architect rejeição)** impede thresholds arbitrários | D-012: CTO violou paridade 2x; barreira estrutural resolveu                 |
-| L-US-05 | **Owner como detector de anomalias visuais** é insubstituível                         | D-019: Owner viu o salto no gráfico que 3 agentes não viram                 |
-| L-US-06 | **Convergência entre auditores independentes** dá confiança alta                      | D-020: Gemini e Kimi concordaram em todas as frentes                        |
-| L-US-07 | **Corpus BR como referência obrigatória** acelera desenvolvimento e previne desvios   | GOVERNANCE.md §8 e D-009 forçam consulta antes de cada fase                 |
+| # | Lição | Evidência |
+| --- | --- | --- |
+| L-US-01 | Auditoria forense antes de avançar de fase evita construir sobre base podre | D-007 |
+| L-US-02 | Purga física de artefatos obsoletos evita contaminação | D-008 |
+| L-US-03 | Execução task-a-task com ciclo completo aumenta controle do Owner | D-010 |
+| L-US-04 | Bloqueio duplo de paridade evita thresholds arbitrários | D-012 |
+| L-US-05 | Owner como detector visual de anomalias é essencial | D-019 |
+| L-US-06 | Convergência entre auditores independentes aumenta confiança | D-020 |
+| L-US-07 | Corpus BR como baseline acelera e reduz desvio metodológico | GOVERNANCE §8 |
 
 ### 4.2 Técnico
 
-| #       | Lição                                                                           | Evidência                                                                                                              |
-| ------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| L-US-08 | **Universo histórico real (não snapshot)** é obrigatório para anti-survivorship | D-007: snapshot iShares de 2026 excluía empresas mortas desde 2018                                                     |
-| L-US-09 | **adjusted=False** nos dados brutos evita corrupção em reprocessamento          | D-007: adjusted=True do Polygon muda retroativamente                                                                   |
-| L-US-10 | **SPC Shewhart com constantes tabeladas** é o padrão; sigma fixo é errado       | D-007: Phase 1 v1 usou sigma fixo em vez de d2=1.128                                                                   |
-| L-US-11 | **Split ratio derivado de preço raw** é mais robusto que sf_D/sf\_{D-1}         | D-019: Polygon reseta split_factor cumulativo inconsistentemente; ratio = px\_{D-1}/px_D preserva valor por construção |
-| L-US-12 | **Filtro de market_cap dinâmico (D-1)** é operacional, não metodológico         | D-016: 46% das seleções top-10 eram nano-caps < $300M                                                                  |
-| L-US-13 | **Cap de concentração per ticker** é necessário em universos amplos             | T-018: sem cap, concentração > 50% em um ticker; com cap 6%, mediana controlada em 6.3%                                |
-| L-US-14 | **Ablação ampla antes de declarar winner** previne overfitting a grade estreita | D-018: 80 combinações testadas (TopN × Cad × K × k_damp × cap)                                                         |
-| L-US-15 | **Acid window com critério objetivo** (pior DD, min 126 dias) valida robustez   | T-022: motor +36% vs benchmark +5% na janela de stress SP500                                                           |
-| L-US-16 | **stale_tickers com filtro rolling por dia** elimina lookahead no backtest      | D-013: filtro global causava exclusão retroativa de 7 tickers; corrigido em ambas as fábricas                          |
-| L-US-17 | **Rebalance cadence > 1** reduz custos e melhora estabilidade                   | T-017: cadência 10 dias é o sweet spot entre rotação e custos                                                          |
+| # | Lição | Evidência |
+| --- | --- | --- |
+| L-US-08 | Universo histórico real é obrigatório para anti-survivorship | D-007 |
+| L-US-09 | `adjusted=False` evita corrupção em reprocessamento incremental | D-007 |
+| L-US-10 | SPC Shewhart com constantes tabeladas é padrão correto | D-007 |
+| L-US-11 | Ratio de split derivado de preço raw é robusto | D-019 |
+| L-US-12 | Filtro dinâmico de market_cap é operacional (não metodológico) | D-016 |
+| L-US-13 | Cap por ticker é necessário em universo amplo | T-018 |
+| L-US-14 | Ablação ampla evita overfitting de grade estreita | D-018 |
+| L-US-15 | Acid window com critério objetivo aumenta rigor | T-022 |
+| L-US-16 | `stale_tickers` rolling elimina lookahead sem afetar LIVE | D-013 |
+| L-US-17 | Cadência >1 dia reduz rotação e custo operacional | T-017 |
 
-### 4.3 Lições Phase 4 (ML Trigger)
+### 4.3 Lições da Phase 4 (ML Trigger)
 
-| #       | Lição                                                                                                                 | Evidência                                                                                                |
-| ------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| L-US-18 | **Features estacionárias são obrigatórias para ML cross-regime** — yields absolutos sofrem drift estrutural           | D-022: Fed Funds 1.58→5.08 entre TRAIN/HOLDOUT; modelo com \_level teve balanced_accuracy=0.50           |
-| L-US-19 | **Se ML não agregar, manter motor puro — mas testar antes de descartar**                                              | D-023: Owner insistiu em T-027 formal para ter evidência numérica documentada; CAGR -7.43 p.p. comprovou |
-| L-US-20 | **Retreinar com features melhores antes de desistir** — a lição de "não forçar" é para quando se esgotaram tentativas | D-022: Owner corretamente insistiu em tentar features estacionárias antes de descartar ML                |
-| L-US-21 | **Recall baixo em crises é mais danoso que alarmes falsos em bull market**                                            | T-025v2: 12.5% recall em drawdowns vs 48% false alarm rate em bull → trigger pior que inútil             |
+| # | Lição | Evidência |
+| --- | --- | --- |
+| L-US-18 | Features estacionárias são obrigatórias para ML cross-regime | D-022 |
+| L-US-19 | Se ML não agrega, manter motor puro (após testar) | D-023 |
+| L-US-20 | Descartar ML sem testar direito também é erro | D-022 |
+| L-US-21 | Recall baixo em crise destrói utilidade prática do trigger | D-023 |
 
-### 4.4 Lições Phase 5-6 (Motor Operacional)
+### 4.4 Lições da Phase 5-6 (Motor Operacional)
 
-| #       | Lição                                                                                                                                      | Evidência                                                                                                         |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| L-US-22 | **Separar canonical (pesquisa) de operational_window (operação)** evita ingestão massiva diária                                            | D-026: --full levava >8 min para 9.135 tickers; operational_window com 504 pregões resolve em \<2 min             |
-| L-US-23 | **Variáveis de ambiente para canonical_path são armadilhas** — se ausentes, pipeline usa dados errados silenciosamente                     | Bug 19/03: decision gerado sem USA_OPS_CANONICAL_PATH produziu 12 tickers fantasma; zeros no painel               |
-| L-US-24 | **Painel BR-format como padrão cross-factory** garante experiência consistente para o Owner                                                | D-027: Owner demandou formato idêntico ao BR; reescrita completa (764→1273 linhas) resolveu                       |
-| L-US-25 | **Blindagem do motor (tag + pre-commit hook) é essencial antes de operar**                                                                 | T-034: tag v1.0.0-motor-us + hook que bloqueia alterações em lib/engine.py sem MOTOR_OVERRIDE=1                   |
-| L-US-26 | **Primeiro decision de um pipeline novo precisa forçar REBALANCE** — HOLD sem previous_holdings herda lixo ou cai em fallback imprevisível | Bug 19/03: decision_2026-03-18 era HOLD sem previous_holdings; fallback day_scores.head(20) pegou tickers errados |
-| L-US-27 | **Endpoint /salvar deve retornar lista de paths salvos** — paridade com BR e rastreabilidade                                               | T-037: servidor.py adaptado para salvar em data/cycles/ e data/real/ e retornar paths[]                           |
+| # | Lição | Evidência |
+| --- | --- | --- |
+| L-US-22 | Separar canonical de operational_window reduz custo diário | D-026 |
+| L-US-23 | Variáveis de ambiente para path canônico podem gerar falhas silenciosas | Bugs 19/03 |
+| L-US-24 | Painel BR-format padroniza operação cross-factory | D-027 |
+| L-US-25 | Blindagem do motor é pré-condição de estabilidade | D-039 |
+| L-US-26 | Primeiro decision deve tratar bootstrap de rebalance | D-043 |
+| L-US-27 | Endpoint `/salvar` com `paths[]` melhora rastreabilidade | T-037 |
+
+### 4.5 Lições da Phase 7 (Operação Contínua)
+
+| # | Lição | Evidência |
+| --- | --- | --- |
+| L-US-28 | **SSOT deve ser evento imutável, não estado computado** | D-045 substituiu boletins como SSOT por `ledger.jsonl` |
+| L-US-29 | **Três tempos explícitos evitam confusão operacional** (`exec_day`, `market_day`, `trade_day`) | D-040 e R-022 |
+| L-US-30 | **Pipeline bifásico reduz erro de data desatualizada** | D-052 (`--ingest-only` e `--decision-only`) |
+| L-US-31 | **Calendário real deve ser infraestrutura, não patch** | D-054 + `lib/trading_calendar.py` |
+| L-US-32 | **Rebalance por contagem relativa é robusto a drift do dataset** | D-043 com `last_rebalance.json` |
+| L-US-33 | **`dry_run` em decisão protege artefato operacional de auditorias/testes** | D-044 |
+| L-US-34 | **Split detectado no painel evita perda fantasma e boletim incorreto** | D-055 (caso POWL) |
+| L-US-35 | **Guarda de frescura em ingestão evita retrabalho diário caro** | D-056 (`--ingest-only` com skip quando SSOT fresco) |
+| L-US-36 | **Base 1 deve usar denominador cumulativo por ponto para integridade contábil** | D-057/D-058 |
 
 ______________________________________________________________________
 
@@ -271,80 +264,88 @@ ______________________________________________________________________
 
 ### 5.1 Erros de processo
 
-| #       | Erro                                                  | Causa raiz                                                        | Impacto                                          | Ref          |
-| ------- | ----------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------ | ------------ |
-| E-US-01 | Phase 1 inteira reprovada e refeita do zero           | Snapshot iShares (survivorship) + SPC incorreto + adjusted=True   | 1 dia perdido, mas dados corretos depois         | D-007        |
-| E-US-02 | CTO inventou threshold sem correspondência no BR (2x) | Falta de checklist obrigatório na orientação CTO                  | Tasks falharam por gates arbitrários             | D-009, D-011 |
-| E-US-03 | CTO despachou 3 tasks simultâneas                     | Pressa; não respeitou regra "uma orientação por vez"              | Confusão de fluxo, pergunta "junto ou separado?" | D-010        |
-| E-US-04 | Auditor emitiu FAIL factualmente incorreto (T-015)    | Leitura incompleta do código                                      | Owner obrigado a intervir e reverter             | D-014        |
-| E-US-05 | CTO não alertou sobre rotação alta no universo US     | Não antecipou que TopN=10 com 4.000 tickers causa subinvestimento | C1 colapsou de 100k para 494                     | D-014        |
+| # | Erro | Causa raiz | Impacto | Ref |
+| --- | --- | --- | --- | --- |
+| E-US-01 | Phase 1 v1 refeita do zero | Snapshot + SPC incorreto + adjusted=True | Retrabalho estrutural | D-007 |
+| E-US-02 | CTO inventou thresholds sem paridade BR | Falta de gate de origem | Tasks falharam por gate arbitrário | D-009/D-011 |
+| E-US-03 | Despacho de 3 tasks em lote | Violação de uma orientação por vez | Fluxo confuso | D-010 |
+| E-US-04 | FAIL factual do auditor em T-015 | Leitura incompleta | Re-triagem pelo Owner | D-014 |
+| E-US-05 | Falta de alerta prévio sobre rotação US | Subestimação do efeito universo amplo | C1 colapsou | D-014 |
+| E-US-22 | Agente AI usou `MOTOR_OVERRIDE` sem autorização nominal do Owner | Violação de guardrail operacional | Saneamento de governança retroativo | D-053 / R-024 |
 
-### 5.2 Erros técnicos
+### 5.2 Erros técnicos (histórico até Phase 3)
 
-| #       | Erro                                                                  | Causa raiz                                                  | Impacto                                                            | Ref          |
-| ------- | --------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------ | ------------ |
-| E-US-06 | split_factor usado como event-based quando é cumulativo               | Paridade de código (BR) sem paridade de semântica dos dados | Equity explodiu para 64 bilhões (15.607 overflow events)           | D-015        |
-| E-US-07 | sf_D/sf\_{D-1} não preserva valor quando Polygon reseta sf            | Polygon inconsistente no reset do split_factor cumulativo   | CAGR inflado de 71.6% para ~36% real (27 split events divergentes) | D-019        |
-| E-US-08 | 46% das seleções top-10 eram nano-caps impraticáveis                  | Universo US muito mais amplo que BR sem filtro de liquidez  | Resultados de ablação não representavam operação real              | D-016        |
-| E-US-09 | stale_tickers com lookahead (filtro global em vez de rolling)         | Herdado do RENDA_OPS (06_compute_scores.py, linha 54)       | 7 tickers excluídos retroativamente; impacto 0.28%                 | D-013        |
-| E-US-10 | gate outputs_written checado antes de todos os outputs serem escritos | Ordem de operações no script                                | Script falhava com gate FAIL apesar de sucesso lógico              | T-021, T-016 |
+| # | Erro | Causa raiz | Impacto | Ref |
+| --- | --- | --- | --- | --- |
+| E-US-06 | `split_factor` cumulativo tratado como event-based | Paridade de código sem paridade semântica | Equity explodiu | D-015 |
+| E-US-07 | `sf_D/sf_{D-1}` sem preservar valor econômico | Reset inconsistente do provider | CAGR inflado | D-019 |
+| E-US-08 | Universo sem filtro de microcaps | Liquidez ignorada | Ablação irreal | D-016 |
+| E-US-09 | `stale_tickers` global (lookahead) | Herdado do BR antigo | Viés no backtest | D-013 |
+| E-US-10 | Gate checado antes da escrita completa | Ordem de operações errada | FAIL falso | T-021/T-016 |
 
-### 5.2b Erros técnicos Phase 4-6
+### 5.2b Erros técnicos (Phase 4-6)
 
-| #       | Erro                                                                       | Causa raiz                                                                                                                                      | Impacto                                                                                   | Ref          |
-| ------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------ |
-| E-US-11 | ML trigger com features \_level (yields absolutos) teve drift catastrófico | Features não-estacionárias dominaram feature importance (Fed Funds 14.8%)                                                                       | balanced_accuracy=0.50 — modelo cego                                                      | D-022        |
-| E-US-12 | ML trigger v2 com alarmes falsos massivos (243/502 dias em bull market)    | Label y_cash baseado em drawdown SP500 é raro (56/756 dias HOLDOUT)                                                                             | Trigger inútil: detecta 12.5% das crises e gera 48% de alarmes falsos                     | D-023        |
-| E-US-13 | 12 tickers fantasma no decision por ausência de USA_OPS_CANONICAL_PATH     | Decision gerado fora do pipeline (sem env vars), usou canonical completo                                                                        | Top-20 contaminado: 12 tickers com M3=0 e preço=$0 no painel                              | Bug 19/03    |
-| E-US-14 | decision_2026-03-18 gerado antes do rebuild da operational_window          | Pipeline executado parcialmente; decision gravado com dados stale                                                                               | decision HOLD herdou tickers fantasma para o dia seguinte                                 | Bug 19/03    |
-| E-US-15 | Painel original US (T-030) divergia significativamente do painel BR        | Reescrita parcial sem paridade visual; seções faltantes                                                                                         | Owner demandou reescrita completa (T-037)                                                 | D-027        |
-| E-US-16 | POWL 3:1 forward split não detectado no boletim de turno                   | `painel_diario.py` não consultava `split_factor` nem `close_operational` para ajustar lotes; Owner descobriu manualmente via aquecimento -65.9% | Perda fantasma de 65.9% exibida sem sinal de venda protetora; boletim com dados pré-split | T-055, D-055 |
+| # | Erro | Causa raiz | Impacto | Ref |
+| --- | --- | --- | --- | --- |
+| E-US-11 | Trigger com features não estacionárias | Drift de regime | Modelo cego | D-022 |
+| E-US-12 | Trigger v2 com alarmes falsos massivos | Label raro e baixa precisão em crise | Não agregou | D-023 |
+| E-US-13 | Decision com tickers fantasmas | Path canônico ausente em execução fora do pipeline | Painel contaminado | Bug 19/03 |
+| E-US-14 | Decision HOLD sem bootstrap robusto | Estado parcial de janela operacional | Herança de seleção errada | Bug 19/03 |
+| E-US-15 | Painel US parcialmente divergente do BR | Reescrita incompleta inicial | Retrabalho do painel | D-027 |
+| E-US-16 | Split POWL não detectado no boletim | Painel não usava `split_factor` no fluxo final | Perda fantasma de -65.9% | D-055 |
+
+### 5.2c Erros técnicos (Phase 7)
+
+| # | Erro | Causa raiz | Impacto | Ref |
+| --- | --- | --- | --- | --- |
+| E-US-17 | SSOT financeiro baseado em boletim/estado | Modelo de dados orientado a snapshot | Pendência fantasma e risco de caixa negativo impossível | D-045 |
+| E-US-18 | Aritmética de calendário civil espalhada | Ausência de infraestrutura de pregão | Bugs recorrentes em feriados/fins de semana | D-054 |
+| E-US-19 | Rebalance por `day_idx % cadence` em produção | Índice dependente do tamanho histórico | Rebalance perdido sem intervenção manual | D-043 |
+| E-US-20 | Mudança de path sem atualizar leitores | Escopo sem mapeamento downstream | `/painel` 404 após task tecnicamente “verde” | D-042 / R-023 |
+| E-US-21 | Base 1 com base fixa no primeiro ponto | Formulação matemática inadequada para fluxo de caixa | Distorção do gráfico em eventos de aporte/retirada | D-057/D-058 |
 
 ### 5.3 Padrões de falha recorrentes
 
-| Padrão                                         | Descrição                                                                                                                   | Ocorrências               | Mitigação implementada                                                                                                        |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Paridade de código ≠ paridade de semântica** | Copiar código do BR sem verificar se os dados de entrada têm a mesma semântica                                              | E-US-06, E-US-07, E-US-16 | D-012 (duplo bloqueio) + revisão de semântica no checklist + R-026 (validação semântica obrigatória ao portar entre fábricas) |
-| **CTO inventa thresholds**                     | CTO introduz gates/filtros sem correspondência no modelo BR                                                                 | E-US-02                   | D-012 (parity_cto_check obrigatório + rejeição pelo Architect)                                                                |
-| **Snapshot como universo histórico**           | Usar composição atual para simular o passado                                                                                | E-US-01                   | D-007 (universo histórico real via API datada)                                                                                |
-| **Gate order-of-operations**                   | Verificar existência de arquivo antes de escrevê-lo                                                                         | E-US-10                   | Padrão: escrever outputs → depois checar gate → depois salvar report                                                          |
-| **Env var silenciosamente ignorada**           | Pipeline usa default (canonical completo) quando env var ausente; nenhum erro visível                                       | E-US-13, E-US-14          | Tornar USA_OPS_CANONICAL_PATH obrigatório no 09_decide ou validar tamanho do dataset                                          |
-| **Decision HOLD sem previous_holdings**        | Primeiro decision de pipeline novo assume HOLD (por day_idx % cadence) e fallback para day_scores.head(N) com dados errados | E-US-14                   | Forçar REBALANCE quando nenhum decision anterior existe                                                                       |
+| Padrão | Descrição | Ocorrências | Mitigação |
+| --- | --- | --- | --- |
+| Paridade de código != paridade de semântica | Portar lógica sem validar significado dos dados de entrada | E-US-06, E-US-07, E-US-16 | D-012 + R-026 |
+| Threshold inventado sem baseline BR | Critério novo sem gate de paridade | E-US-02 | D-012 (duplo bloqueio) |
+| API/Calendário como ponto único de falha | Pipeline depende de data civil e API sem fallback correto | E-US-18 | D-041, D-054, R-021 |
+| Estado computado como SSOT | Snapshot substituindo ledger de eventos | E-US-17 | D-045 |
+| Mudança de escrita sem mapear leitores | Gerador atualizado, consumidor desatualizado | E-US-20 | R-023 |
+| Governança contornada por automação | Override sem autorização explícita do Owner | E-US-22 | R-024, R-025 |
 
 ______________________________________________________________________
 
 ## 6. Divergências justificadas do RENDA_OPS
 
-Cada divergência abaixo foi explicitamente aprovada pelo Owner e registrada no DECISION_LOG.
-
-| Divergência                                     | Justificativa                                                                                      | Decisão        |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------- |
-| Variante C4 (score-weighted + cap) em vez de C2 | Universo US amplo gera concentração >50% sem cap; C4 controla via max_weight_cap                   | D-021          |
-| TopN=20 em vez de 10                            | Universo US ~5x maior; TopN=10 gera rotação excessiva e MDD catastrófico                           | D-018          |
-| Cadence=10 em vez de 1                          | Rotação diária no universo US de ~4.000 tickers destruía capital; cadência 10 é sweet spot         | T-017          |
-| min_market_cap >= $300M                         | Filtro operacional para excluir nano-caps impraticáveis (spreads, liquidez)                        | D-016          |
-| Split ratio via preço raw (não sf_D/sf\_{D-1})  | Polygon split_factor cumulativo tem resets inconsistentes; preço raw preserva valor por construção | D-019          |
-| stale_tickers rolling por dia (não global)      | Elimina lookahead no backtest; propagado de volta ao RENDA_OPS                                     | D-013          |
-| Proxy DJIA para acid test Russell 1000          | Séries FRED Russell 1000 indisponíveis (404); DJIA plausível como stress test                      | T-022          |
-| Settlement T+1 (não D+2)                        | Regulação SEC para equities US                                                                     | D-002          |
-| Cash remuneration Fed Funds (não CDI)           | Banco central relevante                                                                            | D-002          |
-| Motor C4 puro (sem ML trigger)                  | ML trigger não agrega (CAGR -7.43 p.p.); BR usa XGBoost                                            | D-023, T-027v2 |
-| Painel com Drawdown (%) no subplot              | BR usa P(Caixa); US não tem benchmark de caixa comparável                                          | D-027          |
-| Painel com Base 1 sem CDI benchmark             | BR plota CDI como referência; US não tem equivalente direto                                        | D-027          |
-| Operational_window separado do canonical        | BR usa canonical direto; US precisa de janela operacional (~2000 tickers)                          | D-026          |
+| Divergência | Justificativa | Decisão |
+| --- | --- | --- |
+| Variante C4 em vez de C2 | Controle de concentração em universo amplo | D-021 |
+| TopN=20 em vez de 10 | Diversificação e redução de rotação | D-018 |
+| Cadência=10 em vez de 1 | Custos e estabilidade operacional | T-017 |
+| Filtro market_cap >= 300M | Exclusão de nano-caps impraticáveis | D-016 |
+| Split ratio por preço raw no backtest | Robustez diante de reset de split cumulativo | D-019 |
+| `stale_tickers` rolling por dia | Elimina lookahead | D-013 |
+| Settlement T+1 | Regulação local | D-002 |
+| Caixa remunerada por Fed Funds | Proxy monetária local | D-002 |
+| Motor C4 puro sem ML trigger | Trigger não agrega | D-023 |
+| Painel com Drawdown% e Base 1 sem CDI | BR benchmark não é transportável 1:1 | D-027 |
+| Janela operacional separada do canônico | Eficiência diária com rastreabilidade mantida | D-026 |
 
 ______________________________________________________________________
 
 ## 7. Débitos Técnicos
 
-| Débito | Descrição                                                                             | Origem    | Prioridade                               |
-| ------ | ------------------------------------------------------------------------------------- | --------- | ---------------------------------------- |
-| DT-001 | Converter split_factor para event-based no pipeline (T-008)                           | D-015     | Baixa (fix no backtest já resolve)       |
-| DT-002 | Proxy DJIA no acid test — substituir por Russell 1000 quando FRED disponibilizar      | T-022     | Baixa (informativo)                      |
-| DT-003 | Validação de entrada para dados manuais (operação futura)                             | L-BR-E-04 | Média (Phase 5)                          |
-| DT-004 | Tornar `USA_OPS_CANONICAL_PATH` obrigatório (não silenciosamente usar default)        | E-US-13   | Alta — causa tickers fantasma se ausente |
-| DT-005 | Forçar REBALANCE no primeiro decision quando não existem previous_holdings            | E-US-14   | Alta — HOLD sem histórico herda lixo     |
-| DT-006 | Reconciliação semanal canonical↔operational_window (D-026 previu mas não implementou) | D-026     | Média                                    |
+| Débito | Descrição | Origem | Prioridade | Status |
+| --- | --- | --- | --- | --- |
+| DT-001 | Converter `split_factor` para event-based no pipeline | D-015 | Baixa | PENDENTE |
+| DT-002 | Substituir proxy DJIA por índice mais aderente quando disponível | T-022 | Baixa | PENDENTE |
+| DT-003 | Reforçar validação de entrada manual no fluxo operacional | L-BR-E-04 | Média | PENDENTE |
+| DT-004 | Tornar isolamento de escrita da decisão robusto em teste/auditoria (`dry_run`) | E-US-13 | Alta | RESOLVIDO (D-044) |
+| DT-005 | Bootstrap seguro de rebalance sem depender de índice absoluto | E-US-14 | Alta | RESOLVIDO (D-043) |
+| DT-006 | Reconciliação semanal canonical <-> operational_window com evidência formal | D-026 | Média | PENDENTE |
+| DT-007 | Alinhar `GOVERNANCE.md` §6.6 à tag mais recente de blindagem (`v1.6.0-motor-us`) | D-055 | Média | PENDENTE |
 
 ______________________________________________________________________
 
@@ -352,132 +353,125 @@ ______________________________________________________________________
 
 ### 8.1 Compartilhados com BR (portados)
 
-| Componente           | Artefato US                       | Origem BR                   |
-| -------------------- | --------------------------------- | --------------------------- |
-| Motor M3 + histerese | `lib/engine.py`                   | `lib/engine.py` (cópia)     |
-| Métricas             | `lib/metrics.py`                  | `lib/metrics.py` (cópia)    |
-| I/O                  | `lib/io.py`                       | `lib/io.py` (cópia)         |
-| FredAdapter          | `lib/adapters.py`                 | `lib/adapters.py` (parcial) |
-| Governança (trinca)  | GOVERNANCE/DECISION_LOG/CHANGELOG | Template idêntico           |
-| Skills de agentes    | `.cursor/skills/`                 | Idênticos                   |
+| Componente | Artefato US | Origem BR |
+| --- | --- | --- |
+| Motor M3 + histerese | `lib/engine.py` | `lib/engine.py` |
+| Métricas | `lib/metrics.py` | `lib/metrics.py` |
+| I/O | `lib/io.py` | `lib/io.py` |
+| FredAdapter | `lib/adapters.py` | `lib/adapters.py` |
+| Governança (trinca) | GOVERNANCE/DECISION_LOG/CHANGELOG | Template comum |
 
 ### 8.2 Específicos da Fábrica US
 
-| Componente         | Artefato                                                      | Função                                      |
-| ------------------ | ------------------------------------------------------------- | ------------------------------------------- |
-| PolygonAdapter     | `lib/adapters.py`                                             | OHLCV + dividends + splits + reference data |
-| Universo histórico | `scripts/t006_build_index_compositions.py`                    | Polygon /v3/reference/tickers por ano       |
-| SPC Shewhart v2    | `scripts/t008_quality_spc_and_blacklist_v2.py`                | I-MR + Xbar-R com constantes tabeladas      |
-| Canonical US       | `scripts/t010_build_canonical_us_v2.py`                       | SSOT com close_raw + SPC + market_cap       |
-| Backtest US        | `backtest/run_backtest_variants_us.py`                        | C1/C2/C3/C4 com T+1, Fed Funds, FIFO lots   |
-| Ablação            | `backtest/run_t017_ablation_us.py`, `run_t018_ablation_us.py` | Grid search com market_cap filter           |
-| Concentração       | `backtest/run_t021_concentration_analysis.py`                 | Diagnóstico temporal                        |
-| Acid window        | `backtest/run_t022_dual_acid_window_us.py`                    | Stress test dual benchmark                  |
-| Winner US          | `config/winner_us.json`                                       | Declaração canônica C4                      |
+| Componente | Artefato | Função |
+| --- | --- | --- |
+| PolygonAdapter | `lib/adapters.py` | OHLCV/dividends/splits/reference |
+| Universo histórico | `scripts/t006_build_index_compositions.py` | Composição histórica por data |
+| SPC Shewhart v2 | `scripts/t008_quality_spc_and_blacklist_v2.py` | I-MR + Xbar-R |
+| Canonical US | `scripts/t010_build_canonical_us_v2.py` | SSOT canônico |
+| Backtest US | `backtest/run_backtest_variants_us.py` | C1/C2/C3/C4 com T+1 |
+| Winner US | `config/winner_us.json` | Declaração canônica C4 |
 
-### 8.3 Componentes Operacionais (Phase 5-6)
+### 8.3 Componentes Operacionais (Phase 5-7)
 
-| Componente                 | Artefato                                 | Função                                             |
-| -------------------------- | ---------------------------------------- | -------------------------------------------------- |
-| Orquestrador diário        | `pipeline/run_daily.py`                  | Steps 00-12 com env vars para canonical            |
-| Ingestão incremental       | `pipeline/00_incremental_ingest.py`      | Busca dias faltantes + rebuild window              |
-| Rebuild operational window | `pipeline/rebuild_operational_window.py` | Bootstrap 504 pregões a partir do canonical        |
-| Decisão C4                 | `pipeline/09_decide.py`                  | Seleção C4 com histerese + market_cap filter       |
-| Painel diário (formato BR) | `pipeline/painel_diario.py`              | HTML interativo, 1273 linhas, reescrita T-037      |
-| Servidor HTTP              | `pipeline/servidor.py`                   | Porta 8788, /salvar → paths[], catch-up automático |
-| Atalho Desktop             | `USA_OPS.desktop`                        | Lança servidor + abre browser                      |
-| Pre-commit guard           | `tools/pre_commit_motor_guard.sh`        | Bloqueia edição de motor sem MOTOR_OVERRIDE=1      |
-| Blindagem (tag git)        | `v1.0.0-motor-us`                        | Snapshot imutável do motor                         |
+| Componente | Artefato | Função |
+| --- | --- | --- |
+| Orquestrador diário | `pipeline/run_daily.py` | `--full`, `--ingest-only`, `--decision-only` |
+| Ingestão incremental | `pipeline/00_incremental_ingest.py` | Dias faltantes + rebuild janela |
+| Rebuild janela | `pipeline/rebuild_operational_window.py` | Janela de pregões operacionais |
+| Calendário de pregões | `lib/trading_calendar.py` | B3/NYSE com exchange_calendars |
+| SSOT financeiro | `pipeline/ledger.py` + `data/ssot/ledger.jsonl` | Event sourcing imutável |
+| Decisão C4 | `pipeline/09_decide.py` | C4 + `dry_run` + `last_rebalance` |
+| Painel diário | `pipeline/painel_diario.py` | BR-format adaptado + split automático |
+| Servidor HTTP | `pipeline/servidor.py` | Porta 8788 + `/salvar` |
+| Blindagem | `tools/pre_commit_motor_guard.sh` | Proteção de arquivos do motor |
+| Snapshot de blindagem | tag `v1.6.0-motor-us` | Estado auditado mais recente |
 
 ______________________________________________________________________
 
 ## 9. Lições Cruzadas BR ↔ US
 
-### 9.1 Bugs que existiam no BR e foram descobertos no US
+### 9.1 Bugs do BR identificados/confirmados via experiência US
 
-| Bug                         | Onde no BR                 | Descoberto por                   | Correção                | Propagado?                                 |
-| --------------------------- | -------------------------- | -------------------------------- | ----------------------- | ------------------------------------------ |
-| stale_tickers com lookahead | `06_compute_scores.py` L54 | Auditoria Gemini/Kimi Phase 2 US | Rolling por dia (D-013) | Sim (HF-STEP06-STALE-ROLLING no RENDA_OPS) |
+| Bug | Evidência no US | Ação |
+| --- | --- | --- |
+| `stale_tickers` com lookahead | Detectado na fase de auditoria US | Corrigido em ambas as fábricas (D-013) |
+| Risco de baseline visual teórica | Discussão de Base 1 e patrimônio real no US | Reforço de alinhamento contábil cross-factory |
 
 ### 9.2 Lições do BR que evitaram erros no US
 
-| Lição BR                           | Como ajudou no US                                                   |
-| ---------------------------------- | ------------------------------------------------------------------- |
-| L-14: Custos reais mudam conclusão | Backtest US modelou 2.5 bps + T+1 desde o dia 1                     |
-| L-15: Splits obrigatórios          | Camada 0 de split adjustment presente em todas as variantes         |
-| E-03: CEP/SPC abandonado           | SPC Shewhart integrado como camada defensiva permanente desde T-016 |
-| E-06: Severity score simplificado  | Score 0-6 completo implementado (band + persist + evidence)         |
-| D-027: FRED trava pipeline         | FredAdapter com retry exponencial + max_retries=5 desde o dia 1     |
+| Lição BR | Aplicação no US |
+| --- | --- |
+| Custos reais mudam conclusão | Backtest US já nasceu com custo e settlement reais |
+| Split adjustment obrigatório | Camada dedicada desde o início |
+| CEP/SPC como camada defensiva | Manteve venda defensiva permanente no motor |
+| Auditoria forense adversarial | Estruturou validações da Phase 1 em diante |
 
-### 9.3 Lições do US que devem retroagir ao BR
+### 9.3 Lições do US que retroagem ao BR
 
-| Lição US                                            | Aplicável ao BR?                        | Status             |
-| --------------------------------------------------- | --------------------------------------- | ------------------ |
-| Split ratio via preço raw (D-019)                   | Não (BR usa event-based nativo)         | N/A                |
-| Market cap filter dinâmico (D-016)                  | Possivelmente (filtro de liquidez)      | Pendente avaliação |
-| Cap de concentração per ticker (T-018)              | Possivelmente (concentração BR \<= 18%) | Pendente avaliação |
-| Ablação ampla com grid expandido (D-018)            | Sim (BR fez grid mais estreito)         | Pendente avaliação |
-| Painel formato BR padronizado cross-factory (D-027) | Já é o padrão no BR                     | BR é a referência  |
-| Env var obrigatória para canonical_path (E-US-13)   | Verificar se BR tem risco similar       | Pendente avaliação |
+| Lição US | Aplicável ao BR? | Status |
+| --- | --- | --- |
+| Calendário real como infraestrutura (`trading_calendar`) | Sim | Em convergência |
+| Semântica temporal explícita (`exec_day`/`market_day`/`trade_day`) | Sim | Incorporada em regras R-022 |
+| Regras anti-role-bleed para auditor e override | Sim | Formalizadas em R-024 e R-025 |
+| Validação semântica de dados ao portar lógica entre fábricas | Sim | Formalizada em R-026 |
+| Monitoramento dinâmico de concentração pós-ignição | Sim | Formalizada em R-027 |
 
 ______________________________________________________________________
 
 ## 10. Checklist de Phases
 
-### Phase 4 (ML Trigger US) — CONCLUÍDA
+### Phase 4 (ML Trigger) — CONCLUÍDA
 
-- [x] Winner US declarado formalmente (`config/winner_us.json`)
-- [x] Auditoria forense Phase 3 PASS (Gemini + Kimi)
-- [x] Corpus US consolidado (este documento)
-- [x] Dataset rotulado disponível (`data/features/dataset_us_labeled.parquet`)
-- [x] Features anti-lookahead verificadas (shift(1) em todas)
-- [x] TRAIN/HOLDOUT split definido (2018-2022 / 2023-2026)
-- [x] Walk-forward estrito: treinar só no TRAIN, avaliar no HOLDOUT
-- [x] Comparar motor puro (C4 winner) vs motor + ML trigger — **ML não agrega** (T-027v2, D-023)
-- [x] ML não agrega: manter motor puro (lição LL-PH10-007 do BR confirmada)
-- [x] Auditoria forense Phase 4 PASS (Gemini + Kimi, T-028)
+- [x] Trigger testado com rigor.
+- [x] Evidência de não agregação documentada.
+- [x] Motor puro C4 formalizado.
 
 ### Phase 5 (Motor Operacional) — CONCLUÍDA
 
-- [x] Pipeline diário steps 01-12 (`pipeline/run_daily.py`, T-029)
-- [x] Painel diário HTML USD/NYSE (T-030, reescrito em T-037)
-- [x] Servidor/lançador porta 8788 (T-031)
-- [x] Duplo-caixa T+1 no painel (T-032)
-- [x] Atalho Desktop funcional
+- [x] Pipeline diário funcional.
+- [x] Painel e servidor em produção.
+- [x] Duplo-caixa T+1 implementado.
 
 ### Phase 6 (Blindagem e Operação) — CONCLUÍDA
 
-- [x] Auditoria forense final PASS (T-033, Gemini + Kimi)
-- [x] Blindagem: tag v1.0.0-motor-us + pre-commit hook (T-034)
-- [x] Operational window + ingestão incremental (T-034, D-026)
-- [x] Painel reescrito no formato BR (T-037, D-027)
-- [x] Operação real iniciada 19/03/2026, capital USD 179.099,69 (D-025)
-- [x] Bug dos decisions contaminados diagnosticado e corrigido (19/03/2026)
+- [x] Auditorias finais convergentes.
+- [x] Blindagem operacional consolidada.
+- [x] Snapshot auditado atualizado para `v1.6.0-motor-us`.
+
+### Phase 7 (Operação Contínua e Infraestrutura) — EM ANDAMENTO
+
+- [x] Ledger financeiro imutável em produção (`data/ssot/ledger.jsonl`).
+- [x] Semântica temporal explícita em boletim e painel.
+- [x] Pipeline bifásico (`--ingest-only` / `--decision-only`).
+- [x] `09_decide.py` com `dry_run` e `last_rebalance.json`.
+- [x] `lib/trading_calendar.py` com calendário real de pregões.
+- [x] Detecção de split automática com `corporate_actions`.
+- [x] Guarda de frescura em ingestão diária.
+- [x] Errata Base 1 com denominador cumulativo por ponto.
 
 ### Operação contínua — Checklist diário
 
-- [ ] Verificar que o servidor inicia sem erros
-- [ ] Confirmar que o pipeline completou (painel gerado para o dia)
-- [ ] Verificar que o Top-20 não tem preços zerados
-- [ ] Preencher operações no boletim e salvar
-- [ ] Conferir Balanço e DFC após salvar
+- [ ] Rodar `pipeline/run_daily.py --ingest-only` e validar status (`ingested` ou `skipped_fresh`).
+- [ ] Rodar `pipeline/run_daily.py --decision-only` e confirmar geração de `decision_*.json` e `painel_*.html`.
+- [ ] Validar `market_day` no painel e coerência de `exec_day`/`trade_day`.
+- [ ] Conferir `top20_by_score` sem preços zerados.
+- [ ] Salvar boletim e confirmar escrita em `data/cycles/` e `data/real/`.
+- [ ] Revisar balanço, DFC e alertas de `corporate_actions`.
 
 ______________________________________________________________________
 
 ## 11. Referências
 
-| Documento             | Path                           | Conteúdo                                          |
-| --------------------- | ------------------------------ | ------------------------------------------------- |
-| Corpus BR             | `docs/CORPUS_FABRICA_BR.md`    | Experiência completa da Fábrica BR                |
-| Corpus US             | este documento                 | Experiência completa da Fábrica US (Phases 0-6)   |
-| Plano US              | `docs/PLANO_USA_OPS.md`        | Plano de execução completo                        |
-| SPEC Pipeline US      | `docs/SPEC_PIPELINE_US.md`     | Schemas, fontes, riscos                           |
-| Handoff Phase 4       | `docs/HANDOFF_PHASE4.md`       | Documento de continuidade (histórico)             |
-| Operação de dados     | `docs/OPERACAO_DADOS.md`       | Guia de ingestão incremental e operational_window |
-| Winner US             | `config/winner_us.json`        | Declaração canônica C4                            |
-| Winner BR             | `RENDA_OPS/config/winner.json` | Declaração canônica C060X                         |
-| GOVERNANCE.md         | `GOVERNANCE.md`                | Regras vigentes                                   |
-| DECISION_LOG.md       | `DECISION_LOG.md`              | 27 decisões com contexto                          |
-| CHANGELOG.md          | `CHANGELOG.md`                 | Histórico técnico completo                        |
-| ROADMAP.md            | `ROADMAP.md`                   | Mapa de execução (T-001 a T-037)                  |
-| MANIFESTO_ORIGEM.json | `MANIFESTO_ORIGEM.json`        | Proveniência e SHA256                             |
+| Documento | Path | Conteúdo |
+| --- | --- | --- |
+| Corpus US | `docs/CORPUS_FABRICA_US.md` | Documento consolidado (este arquivo) |
+| Corpus BR | `/home/wilson/RENDA_OPS/docs/CORPUS_FABRICA_BR.md` | Referência metodológica e de formato |
+| DECISION_LOG | `DECISION_LOG.md` | 58 decisões (D-001..D-058) + atualização D-059 |
+| GOVERNANCE | `GOVERNANCE.md` | Regras vigentes e cadeia de comando |
+| CHANGELOG | `CHANGELOG.md` | Histórico técnico cronológico |
+| Plano US | `docs/PLANO_USA_OPS.md` | Plano de execução |
+| SPEC pipeline | `docs/SPEC_PIPELINE_US.md` | Schemas, riscos e fontes |
+| Operação de dados | `docs/OPERACAO_DADOS.md` | Guia operacional diário |
+| Winner US | `config/winner_us.json` | Declaração canônica C4 |
+| Regras Interfábricas | `/home/wilson/SALA_DE_CONTROLE/REGRAS_OPERACIONAIS.md` | Regras R-001 a R-029 |
