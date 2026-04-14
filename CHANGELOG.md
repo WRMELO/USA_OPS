@@ -126,3 +126,7 @@
 - fix: T-036 — Redirecionar stdout/stderr de subprocess.run() nos callers do pipeline para arquivos de log. Artefatos: pipeline/00_incremental_ingest.py, pipeline/rebuild_operational_window.py, pipeline/04_build_canonical.py, logs/t008_window_subprocess.log, logs/t009_window_subprocess.log, logs/t010_window_subprocess.log (D-003)
 fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em pipeline/04_build_canonical.py (blindado) para arquivos de log via _run_logged_subprocess — ciclo de motor com MOTOR_OVERRIDE, Auditor duplo Gemini+Kimi, tag v1.7.0-motor-us
 - fix: T-036-MOTOR — curar alteração blindada em `pipeline/04_build_canonical.py` com Auditor duplo e `MOTOR_OVERRIDE`. Artefatos: pipeline/04_build_canonical.py, CHANGELOG.md, ROADMAP.md (D-004)
+
+## 2026-04-14
+
+- fix(motor)[MOTOR-OVERRIDE]: T-061-BASE1-v2 — Base 1 US com denominador vetorizado por ponto (patrimônio cumulativo `aportes - retiradas`) em substituição à base fixa `total_ativo.iloc[0]`, preservando leitura do boletim real, eixo operacional e extensão até `market_day`. Artefatos: pipeline/painel_diario.py, DECISION_LOG.md (D-058).

@@ -19,7 +19,6 @@ from pipeline.ledger import (
     EventType,
     compute_cash,
     compute_positions,
-    export_snapshot,
     pending_settlements,
     read_all_events,
 )
@@ -435,16 +434,16 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
         ref_day = _resolve_to_trading_day(ref_day)
         if ref_day > as_of_day:
             continue
-        snapshot = export_snapshot(ref_day)
-        cash = compute_cash(ref_day)
-        cash_free = _safe_float(cash.get("cash_free", 0.0), 0.0)
-        cash_acc = _safe_float(cash.get("cash_accounting", 0.0), 0.0)
+        snapshot = payload.get("positions_snapshot", [])
+        cash_free = _safe_float(payload.get("cash_free", payload.get("cash_balance", 0.0)), 0.0)
+        cash_acc = _safe_float(payload.get("cash_accounting", payload.get("caixa_liquidando", 0.0)), 0.0)
         if (not snapshot) and abs(cash_free) < 1e-9 and abs(cash_acc) < 1e-9:
             continue
         records.append(
             {
                 "exec_day": exec_day,
                 "ref_day": ref_day,
+                "payload": payload,
                 "snapshot": snapshot,
                 "cash_free": cash_free,
                 "cash_acc": cash_acc,
@@ -460,6 +459,29 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
         if curr is None or rec["exec_day"] > curr["exec_day"]:
             by_ref_day[rec["ref_day"]] = rec
     ordered = [by_ref_day[d] for d in sorted(by_ref_day.keys())]
+    if ordered and ordered[-1]["ref_day"] < as_of_day:
+        last_rec = ordered[-1]
+        ordered.append(
+            {
+                "exec_day": as_of_day,
+                "ref_day": as_of_day,
+                "snapshot": last_rec["snapshot"],
+                "cash_free": last_rec["cash_free"],
+                "cash_acc": last_rec["cash_acc"],
+            }
+        )
+
+    cum_aportes = 0.0
+    cum_retiradas = 0.0
+    base_patrimonio_by_rec: list[float] = []
+    for rec in ordered:
+        aporte, retirada = _extract_cash_movements(rec.get("payload", {}))
+        cum_aportes += aporte
+        cum_retiradas += retirada
+        base_patrimonio_by_rec.append(cum_aportes - cum_retiradas)
+
+    if not base_patrimonio_by_rec or base_patrimonio_by_rec[0] <= 0:
+        return pd.DataFrame(columns=["date", "total_ativo", "base1", "daily_var_pct"])
 
     tickers: set[str] = set()
     for rec in ordered:
@@ -481,15 +503,13 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
         prices = prices.sort_values(["ticker", "date"]).reset_index(drop=True)
 
     by_ticker: dict[str, pd.DataFrame] = {}
-    sf_latest_map: dict[str, float] = {}
     if not prices.empty:
         for tk in prices["ticker"].unique():
             sub = prices[prices["ticker"] == tk][["date", "close_operational", "split_factor"]].copy()
             by_ticker[tk] = sub
-            sf_latest_map[tk] = float(sub.iloc[-1]["split_factor"])
 
     rows: list[dict[str, Any]] = []
-    for rec in ordered:
+    for idx, rec in enumerate(ordered):
         ref_ts = pd.Timestamp(rec["ref_day"])
         total_mkt = 0.0
         for pos in rec["snapshot"]:
@@ -498,32 +518,43 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
             if not tk or qtd <= 0:
                 continue
             buy_date_str = str(pos.get("buy_date", pos.get("data_compra", "")))
+            buy_ts: pd.Timestamp | None = None
+            if buy_date_str:
+                try:
+                    buy_ts = pd.Timestamp(buy_date_str)
+                except Exception:
+                    buy_ts = None
             sub = by_ticker.get(tk)
-            if sub is not None and not sub.empty and buy_date_str:
-                buy_ts = pd.Timestamp(buy_date_str)
+            if sub is not None and not sub.empty and buy_ts is not None:
                 sf_at_buy = sub[sub["date"] <= buy_ts]
-                if not sf_at_buy.empty:
+                sf_at_ref = sub[sub["date"] <= ref_ts]
+                if not sf_at_buy.empty and not sf_at_ref.empty:
                     sf_buy = float(sf_at_buy.iloc[-1]["split_factor"])
-                    sf_now = sf_latest_map.get(tk, sf_buy)
-                    if abs(sf_buy - sf_now) > 1e-9:
-                        qtd = round(qtd * (sf_now / sf_buy))
+                    sf_ref = float(sf_at_ref.iloc[-1]["split_factor"])
+                    if abs(sf_buy - sf_ref) > 1e-9:
+                        qtd = round(qtd * (sf_ref / sf_buy))
             px = _safe_float(pos.get("preco_compra", pos.get("buy_price", 0.0)), 0.0)
-            if sub is not None and not sub.empty:
+            if sub is not None and not sub.empty and (buy_ts is None or buy_ts <= ref_ts):
                 sub_until = sub[sub["date"] <= ref_ts]
                 if not sub_until.empty:
                     px = _safe_float(sub_until.iloc[-1]["close_operational"], px)
             total_mkt += qtd * px
         total_ativo = total_mkt + _safe_float(rec["cash_free"], 0.0) + _safe_float(rec["cash_acc"], 0.0)
-        rows.append({"date": ref_ts, "total_ativo": total_ativo})
+        plot_day = rec["exec_day"] if rec["exec_day"] <= as_of_day else as_of_day
+        rows.append(
+            {
+                "date": pd.Timestamp(plot_day),
+                "total_ativo": total_ativo,
+                "base_patrimonio": base_patrimonio_by_rec[idx],
+            }
+        )
 
     out = pd.DataFrame(rows).sort_values("date").drop_duplicates(subset=["date"], keep="last")
     if out.empty:
         return pd.DataFrame(columns=["date", "total_ativo", "base1", "daily_var_pct"])
-    base = _safe_float(out["total_ativo"].iloc[0], 0.0)
-    if base <= 0:
-        return pd.DataFrame(columns=["date", "total_ativo", "base1", "daily_var_pct"])
-    out["base1"] = out["total_ativo"] / base
+    out["base1"] = out["total_ativo"] / out["base_patrimonio"]
     out["daily_var_pct"] = out["base1"].pct_change() * 100.0
+    out = out.drop(columns=["base_patrimonio"])
     return out.reset_index(drop=True)
 
 
@@ -585,6 +616,7 @@ def _build_chart_base1(as_of_day: date) -> str:
         margin=dict(l=50, r=20, t=50, b=30),
         legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="right", x=1),
     )
+    fig.update_xaxes(type="category")
     fig.update_yaxes(title_text="Base 1", secondary_y=False)
     fig.update_yaxes(title_text="Var. Diaria (%)", secondary_y=True)
     return fig.to_html(full_html=False, include_plotlyjs=False)
