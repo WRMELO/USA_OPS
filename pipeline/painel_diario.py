@@ -22,6 +22,7 @@ from pipeline.ledger import (
     pending_settlements,
     read_all_events,
 )
+from lib.trading_calendar import sessions_in_range
 PROJECT_START = date(2026, 3, 19)
 
 
@@ -327,6 +328,43 @@ def build_lot_ledger(until_day: date) -> tuple[list[Lot], list[str]]:
     return out, []
 
 
+def _load_trading_days_us() -> list[date]:
+    path = ROOT / "data" / "ssot" / "operational_window.parquet"
+    if path.exists():
+        try:
+            df = pd.read_parquet(path, columns=["date"])
+        except Exception:
+            df = pd.DataFrame(columns=["date"])
+        if not df.empty:
+            df["date"] = pd.to_datetime(df["date"], errors="coerce")
+            days = sorted(set(df["date"].dt.date.dropna().tolist()))
+            if days:
+                return days
+    return sessions_in_range(start=PROJECT_START, end=date.today(), exchange="XNYS")
+
+
+def _load_last_rebalance_dt() -> date | None:
+    payload = _read_json(ROOT / "data" / "daily" / "last_rebalance.json")
+    raw = str(payload.get("last_rebalance_dt", "")).strip()
+    if not raw:
+        return None
+    try:
+        return date.fromisoformat(raw)
+    except Exception:
+        return None
+
+
+def _calc_next_rebalance_us(last_rebalance_dt: date | None, cadence: int = 10) -> date | None:
+    if last_rebalance_dt is None or cadence <= 0:
+        return None
+    start = last_rebalance_dt + timedelta(days=1)
+    end = last_rebalance_dt + timedelta(days=cadence * 3)
+    sessions = sessions_in_range(start=start, end=end, exchange="XNYS")
+    if len(sessions) < cadence:
+        return None
+    return sessions[cadence - 1]
+
+
 def _load_curve_until(as_of_day: date) -> pd.DataFrame:
     curve_path = ROOT / "data" / "daily" / "winner_curve_us.parquet"
     if not curve_path.exists():
@@ -345,20 +383,73 @@ def _load_curve_until(as_of_day: date) -> pd.DataFrame:
     return curve
 
 
-def _build_chart_252(curve: pd.DataFrame, as_of_day: date) -> str:
+def _build_chart_252(
+    curve: pd.DataFrame,
+    as_of_day: date,
+    decision: dict[str, Any] | None = None,
+) -> tuple[str, str]:
     if curve.empty:
-        return "<div class='chart-empty'>Curva de equity indisponível.</div>"
+        chart_html = "<div class='chart-empty'>Curva de equity indisponível.</div>"
+        decision = decision or {}
+        is_rebalance_day = bool(decision.get("is_rebalance_day", False))
+        last_rebalance_dt = _load_last_rebalance_dt()
+        next_rebalance_dt = _calc_next_rebalance_us(last_rebalance_dt, cadence=10)
+        motor_items = [
+            ("Motor", "C4 Puro", "ok"),
+            ("TopN", "20", ""),
+            ("Cadência", "10 pregões", ""),
+            ("Cap por ticker", "6%", ""),
+            ("Market cap mín", ">= $300M", ""),
+            ("Hoje é rebalanceamento", "SIM" if is_rebalance_day else "NÃO", "ok" if is_rebalance_day else "bad"),
+            ("Próximo rebalanceamento", _fmt_date_br(next_rebalance_dt) if next_rebalance_dt else "N/D", "warn" if next_rebalance_dt else ""),
+            ("Último rebalanceamento", _fmt_date_br(last_rebalance_dt) if last_rebalance_dt else "N/D", ""),
+        ]
+        motor_cells = "".join(
+            f"<div class='motor-item'><div class='motor-label'>{label}</div><div class='motor-value {klass}'>{value}</div></div>"
+            for label, value, klass in motor_items
+        )
+        motor_status_html = (
+            "<div class='motor-status-wrap'>"
+            "<div class='motor-status-title'>Motor C4 — Status Operacional</div>"
+            f"<div class='motor-status-grid'>{motor_cells}</div>"
+            "</div>"
+        )
+        return chart_html, motor_status_html
     last_252 = curve.tail(252).copy()
     if last_252.empty:
-        return "<div class='chart-empty'>Curva de equity indisponível.</div>"
+        chart_html = "<div class='chart-empty'>Curva de equity indisponível.</div>"
+        decision = decision or {}
+        is_rebalance_day = bool(decision.get("is_rebalance_day", False))
+        last_rebalance_dt = _load_last_rebalance_dt()
+        next_rebalance_dt = _calc_next_rebalance_us(last_rebalance_dt, cadence=10)
+        motor_items = [
+            ("Motor", "C4 Puro", "ok"),
+            ("TopN", "20", ""),
+            ("Cadência", "10 pregões", ""),
+            ("Cap por ticker", "6%", ""),
+            ("Market cap mín", ">= $300M", ""),
+            ("Hoje é rebalanceamento", "SIM" if is_rebalance_day else "NÃO", "ok" if is_rebalance_day else "bad"),
+            ("Próximo rebalanceamento", _fmt_date_br(next_rebalance_dt) if next_rebalance_dt else "N/D", "warn" if next_rebalance_dt else ""),
+            ("Último rebalanceamento", _fmt_date_br(last_rebalance_dt) if last_rebalance_dt else "N/D", ""),
+        ]
+        motor_cells = "".join(
+            f"<div class='motor-item'><div class='motor-label'>{label}</div><div class='motor-value {klass}'>{value}</div></div>"
+            for label, value, klass in motor_items
+        )
+        motor_status_html = (
+            "<div class='motor-status-wrap'>"
+            "<div class='motor-status-title'>Motor C4 — Status Operacional</div>"
+            f"<div class='motor-status-grid'>{motor_cells}</div>"
+            "</div>"
+        )
+        return chart_html, motor_status_html
 
     fig = make_subplots(
         rows=2,
         cols=1,
         shared_xaxes=True,
-        vertical_spacing=0.10,
-        row_heights=[0.70, 0.30],
-        subplot_titles=("Curva de Equity - Ultimos 252 Pregoes", "Drawdown (%)"),
+        vertical_spacing=0.06,
+        row_heights=[0.76, 0.24],
     )
     fig.add_trace(
         go.Scatter(
@@ -383,30 +474,45 @@ def _build_chart_252(curve: pd.DataFrame, as_of_day: date) -> str:
         row=2,
         col=1,
     )
-
-    fig.add_vline(
-        x=pd.Timestamp(PROJECT_START).timestamp() * 1000,
-        line_dash="dash",
-        line_color="purple",
-        line_width=2,
-        annotation_text="INICIO REAL 19/03/2026",
-        annotation_position="top left",
-        annotation_font_size=10,
-        annotation_font_color="purple",
-        row=1,
-        col=1,
-    )
     fig.update_layout(
         height=430,
         template="plotly_white",
-        margin=dict(l=50, r=20, t=45, b=30),
-        legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="right", x=1),
+        margin=dict(l=30, r=20, t=24, b=30),
+        separators=",.",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         font_size=11,
     )
-    fig.update_yaxes(title_text="Equity (USD)", row=1, col=1)
-    fig.update_yaxes(title_text="Drawdown (%)", row=2, col=1)
-    _ = as_of_day
-    return fig.to_html(full_html=False, include_plotlyjs=False)
+    fig.update_yaxes(row=1, col=1)
+    fig.update_yaxes(row=2, col=1)
+    fig.update_xaxes(type="date", tickformat="%d/%m", row=1, col=1, showticklabels=False)
+    fig.update_xaxes(type="date", tickformat="%d/%m", row=2, col=1)
+
+    decision = decision or {}
+    is_rebalance_day = bool(decision.get("is_rebalance_day", False))
+    last_rebalance_dt = _load_last_rebalance_dt()
+    next_rebalance_dt = _calc_next_rebalance_us(last_rebalance_dt, cadence=10)
+    motor_items = [
+        ("Motor", "C4 Puro", "ok"),
+        ("TopN", "20", ""),
+        ("Cadência", "10 pregões", ""),
+        ("Cap por ticker", "6%", ""),
+        ("Market cap mín", ">= $300M", ""),
+        ("Hoje é rebalanceamento", "SIM" if is_rebalance_day else "NÃO", "ok" if is_rebalance_day else "bad"),
+        ("Próximo rebalanceamento", _fmt_date_br(next_rebalance_dt) if next_rebalance_dt else "N/D", "warn" if next_rebalance_dt else ""),
+        ("Último rebalanceamento", _fmt_date_br(last_rebalance_dt) if last_rebalance_dt else "N/D", ""),
+    ]
+    motor_cells = "".join(
+        f"<div class='motor-item'><div class='motor-label'>{label}</div><div class='motor-value {klass}'>{value}</div></div>"
+        for label, value, klass in motor_items
+    )
+    motor_status_html = (
+        "<div class='motor-status-wrap'>"
+        "<div class='motor-status-title'>Motor C4 — Status Operacional</div>"
+        f"<div class='motor-status-grid'>{motor_cells}</div>"
+        "</div>"
+    )
+
+    return fig.to_html(full_html=False, include_plotlyjs=False), motor_status_html
 
 
 def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
@@ -574,12 +680,24 @@ def _build_chart_base1(as_of_day: date) -> str:
             font=dict(size=13, color="#666"),
         )
         fig.update_layout(
-            title=dict(text=f"Base 1 - Inicio: {_fmt_date_br(proj['date'].iloc[0].date())}", font_size=13),
             height=430,
             template="plotly_white",
-            margin=dict(l=50, r=20, t=50, b=30),
+            margin=dict(l=30, r=20, t=24, b=30),
+            separators=",.",
         )
         return fig.to_html(full_html=False, include_plotlyjs=False)
+
+    trading_days = sorted(set(_load_trading_days_us()))
+    axis_dates: list[pd.Timestamp] = []
+    if trading_days:
+        start_day = pd.Timestamp(proj["date"].min()).date()
+        axis_dates = [pd.Timestamp(d) for d in trading_days if start_day <= d <= as_of_day]
+    if not axis_dates:
+        axis_dates = sorted(set(pd.to_datetime(proj["date"]).tolist()))
+    axis_df = pd.DataFrame({"date": pd.to_datetime(axis_dates)})
+    carteira_line = axis_df.merge(proj[["date", "base1"]], on="date", how="left")
+    if "base1" in carteira_line.columns:
+        carteira_line["base1"] = pd.to_numeric(carteira_line["base1"], errors="coerce").ffill().bfill()
 
     bar_df = proj.dropna(subset=["daily_var_pct"]).copy()
     bar_colors = ["#26a69a" if _safe_float(v, 0.0) >= 0 else "#ef5350" for v in bar_df["daily_var_pct"]]
@@ -597,28 +715,24 @@ def _build_chart_base1(as_of_day: date) -> str:
         )
     fig.add_trace(
         go.Scatter(
-            x=proj["date"],
-            y=proj["base1"],
+            x=carteira_line["date"],
+            y=carteira_line["base1"],
             mode="lines+markers",
             name="Carteira Real",
             line=dict(color="#1f77b4", width=2.5),
             marker=dict(size=6),
+            connectgaps=True,
         ),
         secondary_y=False,
     )
     fig.update_layout(
-        title=dict(
-            text=f"Base 1 - Inicio: {_fmt_date_br(proj['date'].iloc[0].date())} | Ate: {_fmt_date_br(as_of_day)}",
-            font_size=13,
-        ),
         height=430,
         template="plotly_white",
-        margin=dict(l=50, r=20, t=50, b=30),
+        margin=dict(l=30, r=20, t=24, b=30),
+        separators=",.",
         legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="right", x=1),
     )
-    fig.update_xaxes(type="category")
-    fig.update_yaxes(title_text="Base 1", secondary_y=False)
-    fig.update_yaxes(title_text="Var. Diaria (%)", secondary_y=True)
+    fig.update_xaxes(type="date", tickformat="%d/%m")
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 
@@ -961,7 +1075,7 @@ def build_painel(exec_day: date) -> Path:
         )
 
     curve = _load_curve_until(d1)
-    chart_252_html = _build_chart_252(curve=curve, as_of_day=d1)
+    chart_252_html, motor_status_html = _build_chart_252(curve=curve, as_of_day=d1, decision=decision)
     chart_base1_html = _build_chart_base1(as_of_day=d1)
 
     cycle_dir = ROOT / "data" / "cycles" / d1.isoformat()
@@ -985,6 +1099,15 @@ h1 {{ margin:0; font-size:24px; color:#0f172a; }}
 .twocol {{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; }}
 .chart-grid {{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-top:14px; }}
 .chart-wrap {{ border:1px solid #dbe2ea; border-radius:8px; padding:8px; background:#fff; min-height:455px; }}
+.motor-status-wrap {{ border:1px solid #0f172a; border-radius:10px; background:#0f172a; padding:12px 14px; margin-top:14px; }}
+.motor-status-title {{ color:#f8fafc; font-size:16px; font-weight:700; margin-bottom:10px; }}
+.motor-status-grid {{ display:grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap:10px 12px; }}
+.motor-item {{ background:#1e293b; border:1px solid #334155; border-radius:8px; padding:8px 10px; }}
+.motor-label {{ color:#94a3b8; font-size:12px; margin-bottom:4px; }}
+.motor-value {{ color:#e2e8f0; font-size:16px; font-weight:700; line-height:1.2; }}
+.motor-value.ok {{ color:#22c55e; }}
+.motor-value.bad {{ color:#ef4444; }}
+.motor-value.warn {{ color:#f59e0b; }}
 .chart-empty {{ color:#64748b; font-size:13px; padding:10px; }}
 .info-grid {{ display:grid; grid-template-columns: 0.40fr 0.60fr; gap:14px; }}
 table {{ width:100%; border-collapse: collapse; font-size:13px; table-layout:fixed; }}
@@ -1017,6 +1140,7 @@ input, select {{ width:100%; padding:6px; border:1px solid #cbd5e1; border-radiu
 .cash-real {{ margin-top:10px; }}
 @media (max-width: 1200px) {{
   .twocol, .chart-grid, .info-grid, .cash-layout {{ grid-template-columns: 1fr; }}
+  .motor-status-grid {{ grid-template-columns: repeat(2, minmax(160px, 1fr)); }}
 }}
 @media print {{
   @page {{ size: A3 landscape; margin: 8mm; }}
@@ -1040,6 +1164,7 @@ input, select {{ width:100%; padding:6px; border:1px solid #cbd5e1; border-radiu
         <div class="chart-wrap">{chart_252_html}</div>
         <div class="chart-wrap">{chart_base1_html}</div>
       </div>
+      {motor_status_html}
     </div>
 
     <div class="block">

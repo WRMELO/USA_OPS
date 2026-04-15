@@ -132,3 +132,7 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 - fix(motor)[MOTOR-OVERRIDE]: T-061-BASE1-v2 — Base 1 US com denominador vetorizado por ponto (patrimônio cumulativo `aportes - retiradas`) em substituição à base fixa `total_ativo.iloc[0]`, preservando leitura do boletim real, eixo operacional e extensão até `market_day`. Artefatos: pipeline/painel_diario.py, DECISION_LOG.md (D-058).
 - docs: T-CORPUS-US-V2 (D-059) — reescrita completa do `docs/CORPUS_FABRICA_US.md` para cobrir D-001..D-058, incluir Phase 7, atualizar arquitetura operacional (ledger imutável, pipeline bifásico, calendário real, `dry_run`, `last_rebalance`), consolidar novas lições/erros e alinhar blindagem para `v1.6.0-motor-us`.
 - docs: T-CORPUS-US-V2 curada com PASS (D-059) — fechamento da rastreabilidade do corpus US após auditoria favorável. Artefatos: docs/CORPUS_FABRICA_US.md, DECISION_LOG.md, CHANGELOG.md.
+
+## 2026-04-15
+
+- feat(painel): T-PAINEL-GRAFICOS-US — reforma visual dos gráficos US com paridade ao padrão BR corrigido (T-PAINEL-GRAFICOS): layout compacto, Motor Status C4 em cards e Base 1 com eixo temporal real NYSE. (ref: D-060)
