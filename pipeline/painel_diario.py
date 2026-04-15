@@ -512,7 +512,8 @@ def _build_chart_252(
         "</div>"
     )
 
-    return fig.to_html(full_html=False, include_plotlyjs=False), motor_status_html
+    chart_html = fig.to_html(full_html=False, include_plotlyjs=False).replace("%d\\u002f%m", "%d/%m")
+    return chart_html, motor_status_html
 
 
 def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
@@ -733,7 +734,7 @@ def _build_chart_base1(as_of_day: date) -> str:
         legend=dict(orientation="h", yanchor="bottom", y=1.03, xanchor="right", x=1),
     )
     fig.update_xaxes(type="date", tickformat="%d/%m")
-    return fig.to_html(full_html=False, include_plotlyjs=False)
+    return fig.to_html(full_html=False, include_plotlyjs=False).replace("%d\\u002f%m", "%d/%m")
 
 
 def _load_score_map(as_of_day: date) -> dict[str, float]:
