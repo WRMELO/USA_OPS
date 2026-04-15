@@ -345,7 +345,7 @@ ______________________________________________________________________
 | DT-004 | Tornar isolamento de escrita da decisão robusto em teste/auditoria (`dry_run`) | E-US-13 | Alta | RESOLVIDO (D-044) |
 | DT-005 | Bootstrap seguro de rebalance sem depender de índice absoluto | E-US-14 | Alta | RESOLVIDO (D-043) |
 | DT-006 | Reconciliação semanal canonical <-> operational_window com evidência formal | D-026 | Média | PENDENTE |
-| DT-007 | Alinhar `GOVERNANCE.md` §6.6 à tag mais recente de blindagem (`v1.6.0-motor-us`) | D-055 | Média | PENDENTE |
+| DT-007 | Alinhar `GOVERNANCE.md` §6.6 à tag mais recente de blindagem (`v1.6.0-motor-us`) | D-055 | Média | RESOLVIDO (D-060) |
 
 ______________________________________________________________________
 
