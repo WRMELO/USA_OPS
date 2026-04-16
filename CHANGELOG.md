@@ -137,3 +137,7 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 
 - feat(painel): T-PAINEL-GRAFICOS-US — reforma visual dos gráficos US com paridade ao padrão BR corrigido (T-PAINEL-GRAFICOS): layout compacto, Motor Status C4 em cards e Base 1 com eixo temporal real NYSE. (ref: D-060)
 - docs: T-PAINEL-GRAFICOS-US curada com PASS — alinhamento de `GOVERNANCE.md` §6.6 à tag `v1.6.0-motor-us` e resolução de DT-007 no corpus US. Artefatos: `GOVERNANCE.md`, `docs/CORPUS_FABRICA_US.md` (ref: D-060)
+
+## 2026-04-16
+
+- docs: T-GOV-DOC-US — saneamento de governança documental do USA_OPS: §6.7 adicionado ao GOVERNANCE.md (regra de espelhamento SALA + convenção de prefixo), D-061 e D-062 registrados no DECISION_LOG.md, CORPUS_FABRICA_US.md atualizado para D-062, cópia stale docs/CORPUS_FABRICA_BR.md confirmada ausente no workspace. (D-061, D-062; ref: SALA D-010, SALA D-011)

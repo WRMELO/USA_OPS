@@ -132,6 +132,24 @@ CTO orienta → Architect planeja → Owner autoriza → Executor implementa →
 3. A tag `v1.6.0-motor-us` marca o snapshot auditado atual. Para restaurar: `git checkout v1.6.0-motor-us -- <arquivo>`.
 4. Novas versões do motor devem gerar nova tag (`v1.6.0-motor-us`, etc.) após novo ciclo completo de auditoria.
 
+### 6.7 Regra de Documentação por Fábrica (D-061)
+
+Decisões formalizadas na `SALA_DE_CONTROLE` que alterem código, skills, comportamento operacional ou produto da Fábrica US devem ser espelhadas na trinca do `USA_OPS` com ID próprio e referência cruzada explícita ao ID de origem.
+
+**Convenção de prefixo (obrigatória)**: toda referência a decisão de outro workspace deve incluir o prefixo do repositório de origem.
+
+- Exemplo: `SALA D-011` (decisão da SALA) vs `USA D-011` (decisão local do USA_OPS).
+- Referências sem prefixo são interpretadas como locais ao workspace em que aparecem.
+- Esta convenção aplica-se retroativamente à leitura de entradas existentes no `CHANGELOG.md` que mencionem `(D-003)` e `(D-004)` em 2026-04-11 — essas referências designam `SALA D-003` e `SALA D-004`, não `USA D-003`/`USA D-004`.
+
+**Critério de espelhamento**:
+
+1. Decisões da SALA que afetem apenas setup operacional da SALA (timer, autostart, organização de arquivos da SALA) **não** exigem entrada no `DECISION_LOG.md` do USA_OPS.
+2. Decisões da SALA que alterem código de produto, skills operacionais ou comportamento do pipeline do USA_OPS **exigem** entrada com ID local e referência cruzada.
+3. Decisões da SALA já cobertas por entradas USA com referência cruzada explícita dispensam novo espelhamento.
+
+Alterações a esta seção exigem registro prévio no `DECISION_LOG.md`.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.
