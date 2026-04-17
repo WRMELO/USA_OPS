@@ -7,7 +7,7 @@ import sys
 import threading
 import webbrowser
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -344,6 +344,26 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
             content = json.dumps(derived_payload, ensure_ascii=False, indent=2)
             out_real.write_text(content, encoding="utf-8")
             out_cycle.write_text(content, encoding="utf-8")
+            try:
+                decision_path = ROOT / "data" / "daily" / f"decision_{save_day.isoformat()}.json"
+                if decision_path.exists():
+                    decision_payload = json.loads(decision_path.read_text(encoding="utf-8"))
+                    if bool(decision_payload.get("is_rebalance_day", False)):
+                        rebalance_dt_raw = str(decision_payload.get("scores_reference_date_d_minus_1", "")).strip()
+                        if rebalance_dt_raw:
+                            date.fromisoformat(rebalance_dt_raw)
+                            last_rebalance_path = ROOT / "data" / "daily" / "last_rebalance.json"
+                            last_rebalance_path.parent.mkdir(parents=True, exist_ok=True)
+                            last_rebalance_payload = {
+                                "last_rebalance_dt": rebalance_dt_raw,
+                                "updated_at": datetime.now(tz=timezone.utc).isoformat(),
+                            }
+                            last_rebalance_path.write_text(
+                                json.dumps(last_rebalance_payload, indent=2, ensure_ascii=False),
+                                encoding="utf-8",
+                            )
+            except Exception:
+                pass
             paths = [str(out_cycle.relative_to(ROOT)), str(out_real.relative_to(ROOT))]
             self._respond_json({"ok": True, "paths": paths}, code=200)
 

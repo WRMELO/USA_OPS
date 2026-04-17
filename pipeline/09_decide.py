@@ -103,6 +103,12 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
     prev_dt = pd.Timestamp(scores[scores["date"] < target_dt]["date"].max()).normalize()
     if pd.isna(prev_dt):
         raise RuntimeError("Sem data D-1 de score para decidir.")
+    decision_path = OUT_DIR / f"decision_{target_dt.date()}.json"
+    if not dry_run and decision_path.exists():
+        try:
+            return json.loads(decision_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
 
     day_scores = scores[scores["date"] == prev_dt].copy()
     day_caps = canonical[canonical["date"] == prev_dt][["ticker", "market_cap"]].drop_duplicates("ticker")
@@ -165,8 +171,6 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
 
     defensive_actions: list[dict] = []
     action = "REBALANCE" if is_rebalance_day else "HOLD"
-    if is_rebalance_day and not dry_run:
-        _save_last_rebalance_dt(prev_dt.date())
 
     payload = {
         "task_id": "T-029",
@@ -186,6 +190,5 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
         "selected_count": int(len(selected)),
     }
     if not dry_run:
-        out_path = OUT_DIR / f"decision_{target_dt.date()}.json"
-        out_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        decision_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     return payload

@@ -127,7 +127,7 @@ backtest/
 2. **Camada 0.5**: Detecção automática de split no `painel_diario.py` com ajuste de quantidade/preço e `corporate_actions` no JSON (D-055).
 3. **Camada 1**: Venda defensiva permanente via SPC (severity 0-6, vendas 25/50/100, quarentena).
 4. **Camada 2**: Rebalanceamento C4 com histerese e cap por ticker.
-5. **Camada 2.1**: Disparo de rebalance por **contagem relativa de pregões desde último rebalance**, persistido em `data/daily/last_rebalance.json` (D-043).
+5. **Camada 2.1**: Disparo de rebalance por **contagem relativa de pregões desde último rebalance**, com persistência de `last_rebalance.json` somente após confirmação operacional no `/salvar` (D-043, D-063).
 6. **Camada 2.5**: Trims de concentração antes das compras.
 
 ### 3.5 Diferenças estruturais BR vs US
@@ -257,6 +257,7 @@ ______________________________________________________________________
 | L-US-34 | **Split detectado no painel evita perda fantasma e boletim incorreto** | D-055 (caso POWL) |
 | L-US-35 | **Guarda de frescura em ingestão evita retrabalho diário caro** | D-056 (`--ingest-only` com skip quando SSOT fresco) |
 | L-US-36 | **Base 1 deve usar denominador cumulativo por ponto para integridade contábil** | D-057/D-058 |
+| L-US-37 | **Decision do dia deve ser imutável; commit de rebalance pertence ao ato de salvar, não à computação** | D-063 |
 
 ______________________________________________________________________
 

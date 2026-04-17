@@ -141,3 +141,8 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 ## 2026-04-16
 
 - docs: T-GOV-DOC-US — saneamento de governança documental do USA_OPS: §6.7 adicionado ao GOVERNANCE.md (regra de espelhamento SALA + convenção de prefixo), D-061 e D-062 registrados no DECISION_LOG.md, CORPUS_FABRICA_US.md atualizado para D-062, cópia stale docs/CORPUS_FABRICA_BR.md confirmada ausente no workspace. (D-061, D-062; ref: SALA D-010, SALA D-011)
+
+## 2026-04-17
+
+- fix(motor) [MOTOR-OVERRIDE]: T-063-PIPELINE-IDEMPOTENCY — idempotência do pipeline de decisão US: `decision_{date}.json` imutável após primeira execução do dia e `last_rebalance.json` atualizado somente após salvamento do boletim via `/salvar`. Artefatos: `pipeline/09_decide.py`, `pipeline/servidor.py`, `DECISION_LOG.md` (D-063).
+- audit: T-063-PIPELINE-IDEMPOTENCY curada com PASS — idempotência validada, `decision_{date}.json` preservado na primeira execução válida e `last_rebalance.json` commitado apenas no `/salvar`. Artefatos: `pipeline/09_decide.py`, `pipeline/servidor.py`, `CHANGELOG.md`.
