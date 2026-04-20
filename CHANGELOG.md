@@ -146,3 +146,7 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 
 - fix(motor) [MOTOR-OVERRIDE]: T-063-PIPELINE-IDEMPOTENCY — idempotência do pipeline de decisão US: `decision_{date}.json` imutável após primeira execução do dia e `last_rebalance.json` atualizado somente após salvamento do boletim via `/salvar`. Artefatos: `pipeline/09_decide.py`, `pipeline/servidor.py`, `DECISION_LOG.md` (D-063).
 - audit: T-063-PIPELINE-IDEMPOTENCY curada com PASS — idempotência validada, `decision_{date}.json` preservado na primeira execução válida e `last_rebalance.json` commitado apenas no `/salvar`. Artefatos: `pipeline/09_decide.py`, `pipeline/servidor.py`, `CHANGELOG.md`.
+
+## 2026-04-20
+
+- docs: T-GOV-D013-US — espelho documental de SALA D-013 no USA_OPS: USA D-064 registrado no DECISION_LOG.md (Protocolo de Entrada obrigatório no analista-usa), CORPUS_FABRICA_US.md corrigido para D-063/D-064, CHANGELOG atualizado. (ref: SALA D-013, §6.7)

@@ -15,7 +15,7 @@ ______________________________________________________________________
 **Moeda**: USD  
 **Fase de desenvolvimento**: 2026-03-07 a 2026-03-19  
 **Operação real**: desde 2026-03-19 (em curso)  
-**Status**: motor C4 puro em produção, com infraestrutura operacional consolidada até D-062
+**Status**: motor C4 puro em produção, com infraestrutura operacional consolidada até D-064
 
 ### Métricas do winner (C4, HOLDOUT 2023-01-02 a 2026-03-16)
 
@@ -59,7 +59,7 @@ ______________________________________________________________________
 | Phase 6 — Blindagem e Operação | Auditoria final, blindagem, operational_window, painel BR-format | T-033 a T-037 | D-025, D-026, D-027 | Operação real iniciada em 19/03/2026 |
 | Phase 7 — Operação Contínua e Infraestrutura | Ledger SSOT, pipeline bifásico, calendário real, semântica temporal, split automático e errata Base 1 | T-038 a T-061-BASE1 | D-028 a D-058 | Pipeline maduro e robustecido em produção |
 
-**Total consolidado**: 62 decisões (D-001 a D-062), 60+ tasks (incluindo fixes e v2), múltiplas auditorias forenses convergentes (Gemini, Kimi e auditor principal).
+**Total consolidado**: 64 decisões (D-001 a D-064), 60+ tasks (incluindo fixes e v2), múltiplas auditorias forenses convergentes (Gemini, Kimi e auditor principal).
 
 ______________________________________________________________________
 
@@ -468,7 +468,7 @@ ______________________________________________________________________
 | --- | --- | --- |
 | Corpus US | `docs/CORPUS_FABRICA_US.md` | Documento consolidado (este arquivo) |
 | Corpus BR | `/home/wilson/RENDA_OPS/docs/CORPUS_FABRICA_BR.md` | Referência metodológica e de formato |
-| DECISION_LOG | `DECISION_LOG.md` | 62 decisões (D-001 a D-062); saneamento documental T-GOV-DOC-US (D-061/D-062) |
+| DECISION_LOG | `DECISION_LOG.md` | 64 decisões (D-001 a D-064); saneamento documental T-GOV-DOC-US (D-061/D-062); idempotência pipeline (D-063); espelho SALA D-013 analista-usa (D-064) |
 | GOVERNANCE | `GOVERNANCE.md` | Regras vigentes e cadeia de comando |
 | CHANGELOG | `CHANGELOG.md` | Histórico técnico cronológico |
 | Plano US | `docs/PLANO_USA_OPS.md` | Plano de execução |
