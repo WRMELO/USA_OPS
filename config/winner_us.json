@@ -17,6 +17,8 @@
     "variant": "C4",
     "top_n": 20,
     "rebalance_cadence": 10,
+    "rebalance_anchor_date": "2026-04-16",
+    "rebalance_phase_offset": 0,
     "buffer_k": 10,
     "k_damp": 0.0,
     "max_weight_cap": 0.06,

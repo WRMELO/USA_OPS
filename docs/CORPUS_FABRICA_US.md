@@ -177,7 +177,7 @@ lib/
 └── trading_calendar.py        -> calendário real NYSE/B3 via exchange_calendars (D-054)
 ```
 
-**Blindagem atual do motor**: `v1.6.0-motor-us` (tag em git).
+**Blindagem atual do motor**: `v1.7.0-motor-us` (tag em git).
 
 ### 3.8 Painel Diário (formato BR adaptado ao US)
 
@@ -258,6 +258,7 @@ ______________________________________________________________________
 | L-US-35 | **Guarda de frescura em ingestão evita retrabalho diário caro** | D-056 (`--ingest-only` com skip quando SSOT fresco) |
 | L-US-36 | **Base 1 deve usar denominador cumulativo por ponto para integridade contábil** | D-057/D-058 |
 | L-US-37 | **Decision do dia deve ser imutável; commit de rebalance pertence ao ato de salvar, não à computação** | D-063 |
+| L-US-38 | **Cadência de rebalanceamento deve ser puramente funcional: baseada em anchor + contagem de pregões, sem leitura de estado externo** | D-065 |
 
 ______________________________________________________________________
 

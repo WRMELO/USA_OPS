@@ -41,6 +41,7 @@ def _select_c2_target(scores_day: pd.DataFrame, holdings: set[str], top_n: int, 
     return target[:top_n]
 
 
+# DEPRECATED (T-MOTOR-ANCHOR-US-V1 / D-065): substituída por cadência absoluta ancorada; mantida como dead code.
 def _load_last_rebalance_dt() -> date | None:
     if not LAST_REBALANCE_PATH.exists():
         return None
@@ -57,6 +58,7 @@ def _load_last_rebalance_dt() -> date | None:
         return None
 
 
+# DEPRECATED (T-MOTOR-ANCHOR-US-V1 / D-065): /salvar é o único escritor de last_rebalance.json; não é chamada por run().
 def _save_last_rebalance_dt(last_rebalance_dt: date) -> None:
     LAST_REBALANCE_PATH.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -137,15 +139,15 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
         previous_holdings = [str(x).upper().strip() for x in last_payload.get("selected_tickers", []) if str(x).strip()]
 
     trading_days = [pd.Timestamp(d).normalize() for d in sorted(scores["date"].dropna().unique().tolist())]
-    trading_day_set = set(trading_days)
     cadence_safe = max(cadence, 1)
-    last_rebalance_dt = _load_last_rebalance_dt()
+    anchor_date_str = cfg.get("rebalance_anchor_date", "")
+    phase_offset = int(cfg.get("rebalance_phase_offset", 0))
 
-    if last_rebalance_dt is not None and pd.Timestamp(last_rebalance_dt).normalize() in trading_day_set:
-        last_rebalance_ts = pd.Timestamp(last_rebalance_dt).normalize()
-        days_since_last_rebalance = sum(1 for d in trading_days if last_rebalance_ts < d <= prev_dt)
-        is_rebalance_day = days_since_last_rebalance >= cadence_safe
-        rebalance_trigger_reason = "relative_count"
+    if anchor_date_str and pd.Timestamp(anchor_date_str).normalize() <= prev_dt:
+        anchor_ts = pd.Timestamp(anchor_date_str).normalize()
+        days_since_anchor = sum(1 for d in trading_days if anchor_ts < d <= prev_dt)
+        is_rebalance_day = days_since_anchor > 0 and ((days_since_anchor - phase_offset) % cadence_safe) == 0
+        rebalance_trigger_reason = "anchor_cadence"
     else:
         idx_map = {d: i for i, d in enumerate(trading_days)}
         day_idx = int(idx_map.get(prev_dt, 0))

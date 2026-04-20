@@ -150,3 +150,4 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 ## 2026-04-20
 
 - docs: T-GOV-D013-US — espelho documental de SALA D-013 no USA_OPS: USA D-064 registrado no DECISION_LOG.md (Protocolo de Entrada obrigatório no analista-usa), CORPUS_FABRICA_US.md corrigido para D-063/D-064, CHANGELOG atualizado. (ref: SALA D-013, §6.7)
+- fix(motor) [MOTOR-OVERRIDE]: T-MOTOR-ANCHOR-US-V1 — porta `09_decide.py` para cadência absoluta ancorada: `is_rebalance_day` passa a usar `rebalance_anchor_date + rebalance_phase_offset + rebalance_cadence` de `winner_us.json`, eliminando leitura de `last_rebalance.json` como gatilho. `_load_last_rebalance_dt` / `_save_last_rebalance_dt` marcadas como dead code. Artefatos: `pipeline/09_decide.py`, `config/winner_us.json` (Step 1 pré-aplicado), `DECISION_LOG.md` (D-065), `GOVERNANCE.md` (tag v1.7.0-motor-us), `CHANGELOG.md`, `docs/CORPUS_FABRICA_US.md`. (D-065, D-063, R-030)
