@@ -130,6 +130,8 @@ backtest/
 5. **Camada 2.1**: Disparo de rebalance por **contagem relativa de pregões desde último rebalance**, com persistência de `last_rebalance.json` somente após confirmação operacional no `/salvar` (D-043, D-063).
 6. **Camada 2.5**: Trims de concentração antes das compras.
 
+**Nota operacional (D-066)**: SPC opera exclusivamente como gate de **saída** (Camada 1 defensiva + quarentena em tickers HELD). Não há gate formal de entrada por SPC em `select_top_n` — um ticker INSTÁVEL pode entrar na carteira via rebalanceamento. Enquanto o gate formal não for implementado (exige T-REBALANCE-WEAKNESS-US + ciclo completo sobre motor blindado), a barreira de entrada vive na skill do Analista USA — ALERTA DURO no Passo 5 (D-066).
+
 ### 3.5 Diferenças estruturais BR vs US
 
 | Aspecto | BR (RENDA_OPS) | US (USA_OPS) | Justificativa |
@@ -259,6 +261,7 @@ ______________________________________________________________________
 | L-US-36 | **Base 1 deve usar denominador cumulativo por ponto para integridade contábil** | D-057/D-058 |
 | L-US-37 | **Decision do dia deve ser imutável; commit de rebalance pertence ao ato de salvar, não à computação** | D-063 |
 | L-US-38 | **Cadência de rebalanceamento deve ser puramente funcional: baseada em anchor + contagem de pregões, sem leitura de estado externo** | D-065 |
+| L-US-39 | **Sinal de rank só é acionável quando combinado com o SPC do candidato no d_prev** — evidência empírica BR (L-25, RENDA_OPS D-082/D-083) mostra que `spc_status(d_prev)` é o preditor dominante de cauda negativa pré-rebalance. Portado ao USA_OPS como barreira operacional na skill do Analista (Passo 5, ALERTA DURO). Motor US segue com SPC apenas como gate de saída (Camada 1). Gate formal de entrada condicionado a T-REBALANCE-WEAKNESS-US | D-066; RENDA_OPS D-082, D-083, D-084; L-25 BR |
 
 ______________________________________________________________________
 

@@ -151,3 +151,7 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 
 - docs: T-GOV-D013-US — espelho documental de SALA D-013 no USA_OPS: USA D-064 registrado no DECISION_LOG.md (Protocolo de Entrada obrigatório no analista-usa), CORPUS_FABRICA_US.md corrigido para D-063/D-064, CHANGELOG atualizado. (ref: SALA D-013, §6.7)
 - fix(motor) [MOTOR-OVERRIDE]: T-MOTOR-ANCHOR-US-V1 — porta `09_decide.py` para cadência absoluta ancorada: `is_rebalance_day` passa a usar `rebalance_anchor_date + rebalance_phase_offset + rebalance_cadence` de `winner_us.json`, eliminando leitura de `last_rebalance.json` como gatilho. `_load_last_rebalance_dt` / `_save_last_rebalance_dt` marcadas como dead code. Artefatos: `pipeline/09_decide.py`, `config/winner_us.json` (Step 1 pré-aplicado), `DECISION_LOG.md` (D-065), `GOVERNANCE.md` (tag v1.7.0-motor-us), `CHANGELOG.md`, `docs/CORPUS_FABRICA_US.md`. (D-065, D-063, R-030)
+
+## 2026-04-21
+
+- docs: T-D066-SPC-ALERTA-USA — espelho parcial de RENDA_OPS D-084 Frente 1 no USA_OPS: ALERTA DURO de candidato INSTAVEL por SPC inserido no Passo 5 do analista-usa; D-066 registrado no DECISION_LOG.md; L-US-39 e nota operacional §3.4 adicionadas ao CORPUS_FABRICA_US.md. Nenhum arquivo de motor blindado tocado. (ref: D-066, RENDA_OPS D-082/D-083/D-084, L-25 BR, R-001)
