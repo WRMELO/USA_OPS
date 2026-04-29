@@ -578,13 +578,35 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
             }
         )
 
+    # Aportes/retiradas via ledger SSOT (paridade D-095 BR); fallback legado para cash_movements de boletins
+    try:
+        _ledger_events = read_all_events()
+        _use_ledger = len(_ledger_events) > 0
+    except Exception:
+        _ledger_events = []
+        _use_ledger = False
+
     cum_aportes = 0.0
     cum_retiradas = 0.0
     base_patrimonio_by_rec: list[float] = []
     for rec in ordered:
-        aporte, retirada = _extract_cash_movements(rec.get("payload", {}))
-        cum_aportes += aporte
-        cum_retiradas += retirada
+        ref_d = rec.get("ref_day") or rec.get("exec_day")
+        if _use_ledger and ref_d is not None:
+            cum_aportes = sum(
+                float(ev.amount)
+                for ev in _ledger_events
+                if ev.type in {EventType.APORTE, EventType.DIVIDENDO}
+                and ev.exec_date <= ref_d
+            )
+            cum_retiradas = sum(
+                float(ev.amount)
+                for ev in _ledger_events
+                if ev.type == EventType.RETIRADA and ev.exec_date <= ref_d
+            )
+        else:
+            aporte, retirada = _extract_cash_movements(rec.get("payload", {}))
+            cum_aportes += aporte
+            cum_retiradas += retirada
         base_patrimonio_by_rec.append(cum_aportes - cum_retiradas)
 
     if not base_patrimonio_by_rec or base_patrimonio_by_rec[0] <= 0:
