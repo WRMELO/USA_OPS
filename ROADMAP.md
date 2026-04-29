@@ -9,6 +9,13 @@
 
 ---
 
+## Backlog Estratégico
+
+| Task | Descrição | Status | Decisão |
+|------|-----------|--------|---------|
+| T-REBALANCE-WEAKNESS-US | Backtest HOLDOUT US de rank-decay pre-rebalance (paridade RENDA_OPS D-082/D-083) | BACKLOG | D-070, D-066 |
+| T-SPC-BC-MOTOR-US | Implementar classificador SPC B+C no motor US: gate de entrada (`pipeline/09_decide.py`) e release de quarentena (`pipeline/painel_diario.py`). BLOQUEADO até PASS de T-REBALANCE-WEAKNESS-US | BLOCKED | D-070, D-066, RENDA_OPS D-088, D-090 |
+
 ## Phase 0 — Fundação
 
 | Task | Descrição | Status | Decisão |

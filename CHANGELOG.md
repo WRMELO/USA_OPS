@@ -155,3 +155,7 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 ## 2026-04-21
 
 - docs: T-D066-SPC-ALERTA-USA — espelho parcial de RENDA_OPS D-084 Frente 1 no USA_OPS: ALERTA DURO de candidato INSTAVEL por SPC inserido no Passo 5 do analista-usa; D-066 registrado no DECISION_LOG.md; L-US-39 e nota operacional §3.4 adicionadas ao CORPUS_FABRICA_US.md. Nenhum arquivo de motor blindado tocado. (ref: D-066, RENDA_OPS D-082/D-083/D-084, L-25 BR, R-001)
+
+## 2026-04-29
+
+- feat(skills): T-R034-SKILLS-SPC-LOCK-US — gate R-034 inserido em `analista-usa` (Passo 1 e Passo 5) e `analista-br` (Passo 1 e Passo 5); backlog `T-REBALANCE-WEAKNESS-US` e `T-SPC-BC-MOTOR-US` adicionados ao ROADMAP. (ref: D-068, D-070, R-034)
