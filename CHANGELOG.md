@@ -159,3 +159,4 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 ## 2026-04-29
 
 - feat(skills): T-R034-SKILLS-SPC-LOCK-US — gate R-034 inserido em `analista-usa` (Passo 1 e Passo 5) e `analista-br` (Passo 1 e Passo 5); backlog `T-REBALANCE-WEAKNESS-US` e `T-SPC-BC-MOTOR-US` adicionados ao ROADMAP. (ref: D-068, D-070, R-034)
+- fix(motor): T-PAINEL-APORTE-LEDGER-US — Base 1 do painel US lê aportes/retiradas do ledger SSOT via `read_all_events()` com fallback legado para `cash_movements`; tag `v1.8.0-motor-us` registrada na blindagem. Artefatos: `pipeline/painel_diario.py`, `DECISION_LOG.md`, `GOVERNANCE.md`, `ROADMAP.md`. Decision: D-069.
