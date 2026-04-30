@@ -262,6 +262,7 @@ ______________________________________________________________________
 | L-US-37 | **Decision do dia deve ser imutável; commit de rebalance pertence ao ato de salvar, não à computação** | D-063 |
 | L-US-38 | **Cadência de rebalanceamento deve ser puramente funcional: baseada em anchor + contagem de pregões, sem leitura de estado externo** | D-065 |
 | L-US-39 | **Sinal de rank só é acionável quando combinado com o SPC do candidato no d_prev** — evidência empírica BR (L-25, RENDA_OPS D-082/D-083) mostra que `spc_status(d_prev)` é o preditor dominante de cauda negativa pré-rebalance. Portado ao USA_OPS como barreira operacional na skill do Analista (Passo 5, ALERTA DURO). Motor US segue com SPC apenas como gate de saída (Camada 1). Gate formal de entrada condicionado a T-REBALANCE-WEAKNESS-US | D-066; RENDA_OPS D-082, D-083, D-084; L-25 BR |
+| L-US-40 | **Corte ledger-first do Base 1 deve usar `exec_day` do boletim, não `market_day`** — o APORTE inicial vive no `exec_day` do primeiro boletim, enquanto `market_day` é apenas eixo visual D-1; filtrar o ledger por `market_day` apaga a base e derruba o gráfico. | D-069, D-071, D-040, D-045 |
 
 ______________________________________________________________________
 

@@ -164,3 +164,4 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 ## 2026-04-30
 
 - fix(motor) [MOTOR-OVERRIDE]: T-BASE1-LEDGER-CUTOFF-FIX-US — corrigir semântica temporal do corte ledger-first em `_build_real_base1_series`: usar `exec_day` do boletim (não `market_day`) como data de corte na filtragem de APORTE/RETIRADA/DIVIDENDO do ledger SSOT. Resolve regressão "Base 1 indisponível" introduzida por D-069. Ref: D-071, D-069, D-040, D-045.
+- audit: T-BASE1-LEDGER-CUTOFF-FIX-US curada com PASS — Base 1 validada em 17 registros, placeholder ausente e tag `v1.9.0-motor-us` confirmada. Artefatos: `pipeline/painel_diario.py`, `DECISION_LOG.md`, `CHANGELOG.md`, `GOVERNANCE.md`, `docs/CORPUS_FABRICA_US.md` (ref: D-071).
