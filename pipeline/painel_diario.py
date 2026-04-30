@@ -591,17 +591,19 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
     base_patrimonio_by_rec: list[float] = []
     for rec in ordered:
         ref_d = rec.get("ref_day") or rec.get("exec_day")
-        if _use_ledger and ref_d is not None:
+        # exec_day e a data em que o caixa entrou/saiu; usar como corte para eventos do ledger (D-040/D-069)
+        _cutoff = rec.get("exec_day") or ref_d
+        if _use_ledger and _cutoff is not None:
             cum_aportes = sum(
                 float(ev.amount)
                 for ev in _ledger_events
                 if ev.type in {EventType.APORTE, EventType.DIVIDENDO}
-                and ev.exec_date <= ref_d
+                and ev.exec_date <= _cutoff
             )
             cum_retiradas = sum(
                 float(ev.amount)
                 for ev in _ledger_events
-                if ev.type == EventType.RETIRADA and ev.exec_date <= ref_d
+                if ev.type == EventType.RETIRADA and ev.exec_date <= _cutoff
             )
         else:
             aporte, retirada = _extract_cash_movements(rec.get("payload", {}))

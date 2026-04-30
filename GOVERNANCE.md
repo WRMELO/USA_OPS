@@ -115,7 +115,7 @@ CTO orienta → Architect planeja → Owner autoriza → Executor implementa →
 
 ### 6.6 Blindagem do Motor Operacional (D-039)
 
-**Arquivos protegidos** (auditados e selados em `v1.8.0-motor-us`):
+**Arquivos protegidos** (auditados e selados em `v1.9.0-motor-us`):
 
 | Arquivo | Função | Auditorias |
 |---------|--------|------------|
