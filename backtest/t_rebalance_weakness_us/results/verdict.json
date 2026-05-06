@@ -1,0 +1,40 @@
+{
+  "verdict": "INCONCLUSIVO",
+  "reason": "Amostra insuficiente: n_INSTAVEL=nan, n_ESTAVEL=2390, min=50",
+  "computed": {
+    "instavel_became_instavel_rate": NaN,
+    "estavel_became_instavel_rate": 0.0834731543624161,
+    "instavel_log_ret_mean": NaN,
+    "estavel_log_ret_mean": -0.00345653683123602,
+    "n_instavel": NaN,
+    "n_estavel": 2390.0,
+    "gate1_passed": false,
+    "gate2_passed": false,
+    "n_ok": false
+  },
+  "criteria": {
+    "_note": "Criterios pre-registrados antes da execucao. NAO ALTERAR apos rodar.",
+    "primary_split": "HOLDOUT",
+    "primary_lookback_L": 5,
+    "primary_horizon": 3,
+    "primary_sample_group": "TOPN_ALL",
+    "min_n_per_bucket": 50,
+    "CONFIRMA_SINAL_US": {
+      "description": "INSTAVEL pior que ESTAVEL em HOLDOUT - ambos gates simultaneos",
+      "gates": [
+        "became_instavel_3_rate(INSTAVEL) > became_instavel_3_rate(ESTAVEL) + 0.05",
+        "log_ret_3_mean(INSTAVEL) < log_ret_3_mean(ESTAVEL) - 0.015"
+      ]
+    },
+    "NAO_CONFIRMA_SINAL_US": {
+      "description": "Sem diferenca material entre buckets",
+      "gates": [
+        "became_instavel_3_rate(INSTAVEL) <= became_instavel_3_rate(ESTAVEL)",
+        "OU log_ret_3_mean(INSTAVEL) >= log_ret_3_mean(ESTAVEL)"
+      ]
+    },
+    "INCONCLUSIVO": {
+      "description": "Um gate confirma e o outro nao; ou n < min_n_per_bucket em algum bucket"
+    }
+  }
+}

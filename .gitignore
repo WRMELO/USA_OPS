@@ -10,3 +10,4 @@ logs/
 *.ubj
 .DS_Store
 .obsidian/
+backtest/t_rebalance_weakness_us/results/observations_*.csv

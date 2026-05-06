@@ -168,4 +168,6 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 
 ## 2026-05-06
 
+- chore(backtest): T-REBALANCE-WEAKNESS-US-FASE-A — reanalise honesta dos dados existentes: matriz spc_status x rank_trend x lookback x split; demonstracao formal de bug semantico em compute_verdict e tautologia em became_instavel_K; relatorio reanalysis_report.md e reanalysis_report.json em results/; observations_*.csv excluidos do git (regeneraveis); D-074 registrado. (ref: D-074, D-073, D-070)
+- feat(backtest): T-REBALANCE-WEAKNESS-US — backtest isolado de rank-decay + spc_status pre-rebalance Top-20+Top-30 (paridade RENDA_OPS D-082/D-083); veredito pre-registrado em verdict.json; D-073 registrado no DECISION_LOG.md; ROADMAP atualizado IN_PROGRESS. (ref: D-073, D-070, D-066)
 - docs(skills): T-NELSON-WE-AVISO-ANALISTA-USA — aviso consultivo duro Nelson/WE fora Regra 1 inserido em Passo 4 (holdings ativos) e Passo 5 (candidatos) da skill `analista-usa`; D-072 registrado em `DECISION_LOG.md`. Nenhum arquivo de motor blindado tocado. (ref: D-072, RENDA_OPS D-101, L-27, R-020)
