@@ -11,3 +11,4 @@ logs/
 .DS_Store
 .obsidian/
 backtest/t_rebalance_weakness_us/results/observations_*.csv
+backtest/t088b_spc_enriched_ablation_us_fixed/results/observations_*.csv

@@ -14,8 +14,9 @@
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
 | T-REBALANCE-WEAKNESS-US | Backtest HOLDOUT US de rank-decay pre-rebalance (paridade RENDA_OPS D-082/D-083) | DONE | D-070, D-066; Fase B-Prep concluida (D-075); Opcao A aprovada (D-076) |
-| T-088-SPC-ENRICHED-ABLATION-US | Ablacao de 3 bracos SPC enriquecido (Baseline/B/B+C, phase sweep 10 fases) para desbloquear gate de entrada no motor US | DONE | D-076, D-075, D-070; PASS do Auditor recebido |
-| T-SPC-BC-MOTOR-US | Implementar blocked_bc no motor US: gate de entrada (pipeline/09_decide.py) e release de quarentena (pipeline/painel_diario.py). BLOQUEADO ate IMPLEMENTAR_BC em T-088-SPC-ENRICHED-ABLATION-US | BLOCKED | D-076, D-070, D-066, RENDA_OPS D-088, D-090 |
+| T-088-SPC-ENRICHED-ABLATION-US | Ablacao de 3 bracos SPC enriquecido (Baseline/B/B+C, phase sweep 10 fases) para desbloquear gate de entrada no motor US | DONE (SUPERSEDED) | D-076, D-075, D-070; veredito IMPLEMENTAR_BC suspenso por gap metodologico (D-077); substituido por T-088B |
+| T-088B-SPC-ENRICHED-ABLATION-US-FIXED | Rerun da ablacao T-088 com filtro min_market_cap >= 300M por d_prev (paridade com pipeline/09_decide.py) para gerar veredito valido sobre universo do motor produtivo | IN_PROGRESS | D-077 |
+| T-SPC-BC-MOTOR-US | Implementar blocked_bc no motor US: gate de entrada (pipeline/09_decide.py) e release de quarentena (pipeline/painel_diario.py). BLOQUEADO ate IMPLEMENTAR_BC em T-088B-SPC-ENRICHED-ABLATION-US-FIXED | BLOCKED | D-077, D-076, D-070, D-066, RENDA_OPS D-088, D-090 |
 
 ## Phase 0 — Fundação
 
