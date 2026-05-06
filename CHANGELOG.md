@@ -168,6 +168,7 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 
 ## 2026-05-06
 
+- docs(curadoria): T-CURATION-088C-CLOSE - fechar T-088C-SPC-ENRICHED-ABLATION-US-PARITY como DONE com veredito INCONCLUSIVO; D-079 registrado; T-SPC-BC-MOTOR-US permanece BLOCKED; L-US-41 adicionada ao corpus US. (ref: D-079, D-078, D-070)
 - feat(backtest): T-088C-SPC-ENRICHED-ABLATION-US-PARITY — rerun da ablacao SPC com paridade estrita BR (blocked_b=Regra1+runs_value, blocked_bc=blocked_b+runs_disp), preservando filtro market_cap >= 300M do T-088B; runs_xbar e runs_r removidos; D-078 registrado. (ref: D-078, D-077, D-076, D-070)
 - feat(backtest): T-088B-SPC-ENRICHED-ABLATION-US-FIXED — rerun da ablacao SPC enriquecida (3 bracos Baseline/B/B+C, phase sweep 10 fases) com filtro market_cap >= 300M por d_prev, lido de winner_us.json (paridade com pipeline/09_decide.py); veredito de T-088 suspenso por gap metodologico; D-077 registrado. (ref: D-077, D-076, D-070)
 - feat(backtest): T-088-SPC-ENRICHED-ABLATION-US — ablacao de 3 bracos SPC enriquecido (Baseline/B/B+C, phase sweep 10 fases, criterio pre-registrado em CVaR5/Sharpe/recidiva) sobre motor C4 US; veredito final em phase_sweep_stats_t088_us.json; D-076 registrado; nenhum arquivo de motor blindado tocado. (ref: D-076, D-075, D-070, RENDA_OPS D-087/D-088/D-090)
