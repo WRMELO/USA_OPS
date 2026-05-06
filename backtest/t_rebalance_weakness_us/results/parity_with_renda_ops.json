@@ -1,0 +1,151 @@
+{
+  "task_id": "T-REBALANCE-WEAKNESS-US-FASE-B-PREP",
+  "generated_at_utc": "2026-05-06T16:23:19.725090+00:00",
+  "inputs": {
+    "br_observations": "/home/wilson/RENDA_OPS/backtest/t082_rebalance_weakness/results/observations.csv",
+    "us_observations": "/home/wilson/USA_OPS/backtest/t_rebalance_weakness_us/results/observations_top20.csv"
+  },
+  "filter": {
+    "sample_group": "TOPN_ALL",
+    "split": "HOLDOUT",
+    "lookback_L": 5
+  },
+  "br": {
+    "factory": "BR",
+    "source_path": "/home/wilson/RENDA_OPS/backtest/t082_rebalance_weakness/results/observations.csv",
+    "rows_total": 137420,
+    "rows_filtered": 8190,
+    "filter": {
+      "sample_group": "TOPN_ALL",
+      "split": "HOLDOUT",
+      "lookback_L": 5
+    },
+    "by_spc_status": {
+      "ESTAVEL": {
+        "n": 7374,
+        "log_ret_3_mean": -0.00134753036771004,
+        "log_ret_3_std": 0.06280361339449107,
+        "became_instavel_1_mean": 0.0,
+        "became_instavel_3_mean": 0.05435521130588395,
+        "share_became_instavel_1_eq_1": 0.0
+      },
+      "ATENCAO": {
+        "n": 203,
+        "log_ret_3_mean": -0.004725167545617356,
+        "log_ret_3_std": 0.07540021437731179,
+        "became_instavel_1_mean": 0.0,
+        "became_instavel_3_mean": 0.23645320197044334,
+        "share_became_instavel_1_eq_1": 0.0
+      },
+      "INSTAVEL": {
+        "n": 613,
+        "log_ret_3_mean": -0.01461095023756319,
+        "log_ret_3_std": 0.13394777678293937,
+        "became_instavel_1_mean": 1.0,
+        "became_instavel_3_mean": 1.0,
+        "share_became_instavel_1_eq_1": 1.0
+      }
+    },
+    "instavel_minus_estavel_log_ret_3": -0.01326341986985315,
+    "tautology_instavel_became_instavel_1": {
+      "became_instavel_1_mean": 1.0,
+      "share_became_instavel_1_eq_1": 1.0,
+      "is_tautological": true
+    }
+  },
+  "us": {
+    "factory": "US",
+    "source_path": "/home/wilson/USA_OPS/backtest/t_rebalance_weakness_us/results/observations_top20.csv",
+    "rows_total": 249230,
+    "rows_filtered": 16740,
+    "filter": {
+      "sample_group": "TOPN_ALL",
+      "split": "HOLDOUT",
+      "lookback_L": 5
+    },
+    "by_spc_status": {
+      "ESTAVEL": {
+        "n": 14872,
+        "log_ret_3_mean": 0.000676872572483811,
+        "log_ret_3_std": 0.10096096964842098,
+        "became_instavel_1_mean": 0.0,
+        "became_instavel_3_mean": 0.04618081305197869,
+        "share_became_instavel_1_eq_1": 0.0
+      },
+      "ATENCAO": {
+        "n": 443,
+        "log_ret_3_mean": -0.006254087235315955,
+        "log_ret_3_std": 0.13408223165691158,
+        "became_instavel_1_mean": 0.0,
+        "became_instavel_3_mean": 0.20361990950226244,
+        "share_became_instavel_1_eq_1": 0.0
+      },
+      "INSTAVEL": {
+        "n": 1425,
+        "log_ret_3_mean": -0.00941522148940812,
+        "log_ret_3_std": 0.22399986413395287,
+        "became_instavel_1_mean": 1.0,
+        "became_instavel_3_mean": 1.0,
+        "share_became_instavel_1_eq_1": 1.0
+      }
+    },
+    "instavel_minus_estavel_log_ret_3": -0.01009209406189193,
+    "tautology_instavel_became_instavel_1": {
+      "became_instavel_1_mean": 1.0,
+      "share_became_instavel_1_eq_1": 1.0,
+      "is_tautological": true
+    }
+  },
+  "magnitude_comparison": {
+    "log_ret_3_mean_by_spc_status": {
+      "BR": {
+        "ESTAVEL": -0.00134753036771004,
+        "ATENCAO": -0.004725167545617356,
+        "INSTAVEL": -0.01461095023756319
+      },
+      "US": {
+        "ESTAVEL": 0.000676872572483811,
+        "ATENCAO": -0.006254087235315955,
+        "INSTAVEL": -0.00941522148940812
+      }
+    },
+    "instavel_minus_estavel_log_ret_3": {
+      "BR": -0.01326341986985315,
+      "US": -0.01009209406189193,
+      "BR_minus_US": -0.0031713258079612196
+    }
+  },
+  "tautology_check": {
+    "BR": {
+      "became_instavel_1_mean": 1.0,
+      "share_became_instavel_1_eq_1": 1.0,
+      "is_tautological": true
+    },
+    "US": {
+      "became_instavel_1_mean": 1.0,
+      "share_became_instavel_1_eq_1": 1.0,
+      "is_tautological": true
+    },
+    "same_pattern_br_us": true,
+    "mechanism": "future_days inclui d_reb (janela [idx_reb : idx_reb+horizon]), logo INSTAVEL em d_reb implica became_instavel_1=1 por construcao"
+  },
+  "gate_mapping": {
+    "br_motor_gate": "blocked_bc (Regra 1 + Nelson/WE B+C nas cartas I, MR, Xbar e R)",
+    "br_backtest_status_dimension": "spc_status (ESTAVEL/ATENCAO/INSTAVEL)",
+    "us_open_decision": "Owner decide se Fase B usa INSTAVEL puro, blocked_bc, ou outro escopo",
+    "references": [
+      "RENDA_OPS/lib/spc.py",
+      "RENDA_OPS/pipeline/09_decide.py",
+      "RENDA_OPS/DECISION_LOG.md D-088/D-090"
+    ]
+  },
+  "q4_threshold_check": {
+    "exists_numeric_log_ret_threshold_in_br_motor": false,
+    "evidence": "Nao foi identificado threshold numerico de log_ret para gate de motor no BR; D-088 referencia criterio pre-registrado do T-088 (ablacao), nao threshold de retorno isolado."
+  },
+  "owner_decision_points": [
+    "Escopo do gate na Fase B US: INSTAVEL puro vs blocked_bc.",
+    "Incluir ATENCAO no gate US ou manter escopo BR-equivalente.",
+    "Abordagem de validacao para desbloqueio do motor US: ablacao BR-like vs threshold numerico proprio."
+  ]
+}
