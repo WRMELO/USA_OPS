@@ -13,8 +13,9 @@
 
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
-| T-REBALANCE-WEAKNESS-US | Backtest HOLDOUT US de rank-decay pre-rebalance (paridade RENDA_OPS D-082/D-083) | IN_PROGRESS | D-070, D-066; Fase B-Prep concluida - aguardando 3 decisoes Owner para Fase B motor |
-| T-SPC-BC-MOTOR-US | Implementar classificador SPC B+C no motor US: gate de entrada (`pipeline/09_decide.py`) e release de quarentena (`pipeline/painel_diario.py`). BLOQUEADO até PASS de T-REBALANCE-WEAKNESS-US | BLOCKED | D-070, D-066, RENDA_OPS D-088, D-090 |
+| T-REBALANCE-WEAKNESS-US | Backtest HOLDOUT US de rank-decay pre-rebalance (paridade RENDA_OPS D-082/D-083) | DONE | D-070, D-066; Fase B-Prep concluida (D-075); Opcao A aprovada (D-076) |
+| T-088-SPC-ENRICHED-ABLATION-US | Ablacao de 3 bracos SPC enriquecido (Baseline/B/B+C, phase sweep 10 fases) para desbloquear gate de entrada no motor US | IN_PROGRESS | D-076, D-075, D-070; aguardando auditoria dupla e veredito |
+| T-SPC-BC-MOTOR-US | Implementar blocked_bc no motor US: gate de entrada (pipeline/09_decide.py) e release de quarentena (pipeline/painel_diario.py). BLOQUEADO ate IMPLEMENTAR_BC em T-088-SPC-ENRICHED-ABLATION-US | BLOCKED | D-076, D-070, D-066, RENDA_OPS D-088, D-090 |
 
 ## Phase 0 — Fundação
 
