@@ -180,3 +180,7 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 ## 2026-05-13
 
 - docs(gov): T-096-SKILLS-SPC-CANVAS-60D - espelha decisao RENDA_OPS D-106 na skill `analista-usa` (Passo 4), exigindo canvas de 60 pregoes para ativos instaveis. D-081 registrada.
+
+## 2026-05-16
+
+- docs(curadoria): T-PAINEL-SETTLEMENT-VIEW-US - adiciona secao informativa de vendas em liquidacao no painel US com reconciliacao de Caixa Contabil; nova funcao `sells_in_settlement()` no ledger e teste de reconciliacao em `tests/test_ledger.py`. (ref: D-082)

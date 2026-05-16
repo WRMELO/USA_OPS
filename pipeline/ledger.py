@@ -331,6 +331,36 @@ def pending_settlements(as_of_date: date) -> list[dict[str, Any]]:
     return out
 
 
+def sells_in_settlement(as_of_date: date) -> list[dict[str, Any]]:
+    """Vendas executadas com settle_date > as_of_date: inaptas a transferencia."""
+    events = _effective_events(as_of_date)
+    settled, _ = _settled_amounts(events, as_of_date)
+    out: list[dict[str, Any]] = []
+    for ev in events:
+        if ev.type != EventType.SELL:
+            continue
+        if not ev.settle_date or ev.settle_date <= as_of_date:
+            continue
+        already = settled.get(ev.id, 0.0)
+        remain = float(ev.amount) - already
+        if remain > 0.50:
+            out.append(
+                {
+                    "sell_id": ev.id,
+                    "sale_date": ev.exec_date.isoformat(),
+                    "ticker": ev.ticker or "",
+                    "qtd": int(ev.qtd or 0),
+                    "preco": float(ev.price or 0.0),
+                    "valor_venda": float(ev.amount),
+                    "ja_transferido": already,
+                    "pendente": remain,
+                    "settle_date": ev.settle_date.isoformat(),
+                }
+            )
+    out.sort(key=lambda x: (x["sale_date"], x["ticker"]))
+    return out
+
+
 def compute_cash(as_of_date: date) -> dict[str, float]:
     events = _effective_events(as_of_date)
     free = 0.0

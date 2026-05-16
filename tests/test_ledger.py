@@ -138,3 +138,58 @@ def test_duplicate_event_not_appended(tmp_path):
     _append(ev)
     assert ledger.is_duplicate(ev) is True
 
+
+def test_sells_in_settlement_and_reconciliation(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+
+    _append(
+        LedgerEvent(
+            id="R1",
+            type=EventType.APORTE,
+            exec_date=date(2026, 1, 2),
+            created_at=datetime.now(tz=UTC),
+            amount=1000.0,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="R2",
+            type=EventType.SELL,
+            exec_date=date(2026, 1, 3),
+            created_at=datetime.now(tz=UTC),
+            ticker="XYZ",
+            qtd=5,
+            price=40.0,
+            amount=200.0,
+            settle_date=date(2026, 1, 5),
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="R3",
+            type=EventType.SELL,
+            exec_date=date(2026, 1, 3),
+            created_at=datetime.now(tz=UTC),
+            ticker="ABC",
+            qtd=3,
+            price=50.0,
+            amount=150.0,
+            settle_date=date(2026, 1, 4),
+        )
+    )
+
+    cash_d1 = ledger.compute_cash(date(2026, 1, 3))
+    assert abs(cash_d1["cash_accounting"] - 350.0) < 1e-9
+
+    as_of = date(2026, 1, 4)
+    pending = ledger.pending_settlements(as_of)
+    in_settlement = ledger.sells_in_settlement(as_of)
+
+    assert any(p["sell_id"] == "R3" for p in pending)
+    assert any(s["sell_id"] == "R2" for s in in_settlement)
+    assert not any(p["sell_id"] == "R2" for p in pending)
+    assert not any(s["sell_id"] == "R3" for s in in_settlement)
+
+    recon = sum(p["pendente"] for p in pending) + sum(s["pendente"] for s in in_settlement)
+    assert abs(recon - cash_d1["cash_accounting"]) < 0.02
+
