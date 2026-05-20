@@ -188,3 +188,5 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 ## 2026-05-20
 
 - fix(ledger): T-USA-LEDGER-RESTORE-V1 — Restaura 28 linhas de operacoes reais (2026-05-18 a 2026-05-20) revertidas indevidamente de `data/ssot/ledger.jsonl` pelo Auditor-Gemini (R-025). Ref: SALA D-035, USA D-083.
+- fix(gov): T-AUDITOR-HARDENING-V1 — Estende pre-commit hook para bloquear rollback/truncamento de `data/ssot/ledger.jsonl`. Espelha revisao das skills de auditoria (principio funcional, R-025). Ref: SALA D-036, USA D-084.
+- fix(ledger): T-LEDGER-AUTOCOMMIT-V1 — Auto-commit+push do ledger SSOT em `pipeline/servidor.py` apos `/salvar`. Elimina janela de appends nao-commitados. Ref: SALA D-037, USA D-085.

@@ -132,6 +132,16 @@ CTO orienta → Architect planeja → Owner autoriza → Executor implementa →
 3. A tag `v1.8.0-motor-us` marca o snapshot auditado atual. Para restaurar: `git checkout v1.8.0-motor-us -- <arquivo>`.
 4. Novas versões do motor devem gerar nova tag (`v1.6.0-motor-us`, etc.) após novo ciclo completo de auditoria.
 
+#### 6.6.1 Protecao do SSOT append-only
+
+O arquivo `data/ssot/ledger.jsonl` e protegido por politica append-only: commits que reduzam o numero de linhas sao bloqueados pelo pre-commit hook.
+
+Esta protecao e distinta da blindagem de motor (`§6.6`): nao exige ciclo completo com Auditor duplo para appends legitimos (estes ocorrem automaticamente via `/salvar`), mas proibe rollback, truncamento ou qualquer operacao que apague registros existentes.
+
+Modificacoes estruturais no ledger (ex: correcao de entrada incorreta) exigem task formal aprovada pelo Owner via cadeia Interlocutor -> CTO -> Architect -> Executor -> Auditor.
+
+Ref: SALA D-036, D-035, R-025.
+
 ### 6.7 Regra de Documentação por Fábrica (D-061)
 
 Decisões formalizadas na `SALA_DE_CONTROLE` que alterem código, skills, comportamento operacional ou produto da Fábrica US devem ser espelhadas na trinca do `USA_OPS` com ID próprio e referência cruzada explícita ao ID de origem.

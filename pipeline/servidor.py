@@ -365,6 +365,36 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
             except Exception:
                 pass
             paths = [str(out_cycle.relative_to(ROOT)), str(out_real.relative_to(ROOT))]
+            # Auto-commit e auto-push do ledger SSOT apos salvar o boletim (D-037, R-030).
+            # Falha no commit/push NAO bloqueia o 200 OK: registra no log e continua.
+            try:
+                import logging
+                import subprocess
+
+                ledger_rel = "data/ssot/ledger.jsonl"
+                add_cmd = ["git", "-C", str(ROOT), "add", "-f", ledger_rel]
+                add_run = subprocess.run(add_cmd, capture_output=True, text=True, timeout=15)
+                if add_run.returncode == 0:
+                    commit_msg = f"feat(ledger): auto-commit boletim {save_day.isoformat()}"
+                    commit_cmd = ["git", "-C", str(ROOT), "commit", "-m", commit_msg]
+                    commit_run = subprocess.run(commit_cmd, capture_output=True, text=True, timeout=15)
+                    commit_stdout = (commit_run.stdout or "").lower()
+                    commit_stderr = (commit_run.stderr or "").lower()
+                    if commit_run.returncode == 0:
+                        push_cmd = ["git", "-C", str(ROOT), "push"]
+                        push_run = subprocess.run(push_cmd, capture_output=True, text=True, timeout=30)
+                        if push_run.returncode != 0:
+                            logging.warning("[ledger-autocommit] git push falhou: %s", (push_run.stderr or "").strip())
+                    elif "nothing to commit" not in commit_stdout and "nothing to commit" not in commit_stderr:
+                        logging.warning("[ledger-autocommit] git commit falhou: %s", (commit_run.stderr or "").strip())
+                else:
+                    logging.warning("[ledger-autocommit] git add falhou: %s", (add_run.stderr or "").strip())
+            except Exception as exc:
+                try:
+                    import logging as _logging
+                    _logging.warning("[ledger-autocommit] excecao inesperada: %s", exc)
+                except Exception:
+                    pass
             self._respond_json({"ok": True, "paths": paths}, code=200)
 
         def _render_home(self, today: date) -> str:
