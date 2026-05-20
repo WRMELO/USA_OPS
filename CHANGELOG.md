@@ -184,3 +184,7 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 ## 2026-05-16
 
 - docs(curadoria): T-PAINEL-SETTLEMENT-VIEW-US - adiciona secao informativa de vendas em liquidacao no painel US com reconciliacao de Caixa Contabil; nova funcao `sells_in_settlement()` no ledger e teste de reconciliacao em `tests/test_ledger.py`. (ref: D-082)
+
+## 2026-05-20
+
+- fix(ledger): T-USA-LEDGER-RESTORE-V1 — Restaura 28 linhas de operacoes reais (2026-05-18 a 2026-05-20) revertidas indevidamente de `data/ssot/ledger.jsonl` pelo Auditor-Gemini (R-025). Ref: SALA D-035, USA D-083.
