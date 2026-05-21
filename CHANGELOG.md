@@ -190,3 +190,5 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 - fix(ledger): T-USA-LEDGER-RESTORE-V1 — Restaura 28 linhas de operacoes reais (2026-05-18 a 2026-05-20) revertidas indevidamente de `data/ssot/ledger.jsonl` pelo Auditor-Gemini (R-025). Ref: SALA D-035, USA D-083.
 - fix(gov): T-AUDITOR-HARDENING-V1 — Estende pre-commit hook para bloquear rollback/truncamento de `data/ssot/ledger.jsonl`. Espelha revisao das skills de auditoria (principio funcional, R-025). Ref: SALA D-036, USA D-084.
 - fix(ledger): T-LEDGER-AUTOCOMMIT-V1 — Auto-commit+push do ledger SSOT em `pipeline/servidor.py` apos `/salvar`. Elimina janela de appends nao-commitados. Ref: SALA D-037, USA D-085.
+- docs(gov): T-SDC-VENV-RUNTIME-ARCHITECT-HARDENING-V1 — Espelho SALA D-038: hotfix venv SALA, R-039 interfabricas, endurecimento skill architect. Ref: SALA D-038, USA D-086.
+- docs(gov): T-SDC-INTERLOCUTOR-DIRECT-MODE-V1 — Espelho SALA D-039: modo direto na skill interlocutor-tecnico. Ref: SALA D-039, USA D-087.
