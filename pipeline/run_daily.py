@@ -66,8 +66,7 @@ def _ssot_date_max_us() -> date | None:
 
 
 def _expected_ssot_min_date(run_date: date) -> date:
-    last = prev_session(run_date, exchange="XNYS")
-    return prev_session(last, exchange="XNYS")
+    return prev_session(run_date, exchange="XNYS")
 
 
 def _assert_ssot_fresh_us(run_date: date) -> None:
@@ -75,12 +74,12 @@ def _assert_ssot_fresh_us(run_date: date) -> None:
     expected = _expected_ssot_min_date(run_date)
     if dt_max is None:
         raise RuntimeError(
-            f"SSOT desatualizado: operational_window sem datas. Esperado >= {expected.isoformat()}. "
+            f"SSOT desatualizado: operational_window sem datas. Esperado >= {expected.isoformat()} (D-1 pregão real XNYS). "
             "Rode --ingest-only primeiro."
         )
     if dt_max < expected:
         raise RuntimeError(
-            f"SSOT desatualizado: última data={dt_max.isoformat()}, esperado >= {expected.isoformat()}. "
+            f"SSOT desatualizado: última data={dt_max.isoformat()}, esperado >= {expected.isoformat()} (D-1 pregão real XNYS). "
             "Rode --ingest-only primeiro."
         )
 

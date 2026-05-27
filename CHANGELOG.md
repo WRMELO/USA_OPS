@@ -192,3 +192,7 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 - fix(ledger): T-LEDGER-AUTOCOMMIT-V1 — Auto-commit+push do ledger SSOT em `pipeline/servidor.py` apos `/salvar`. Elimina janela de appends nao-commitados. Ref: SALA D-037, USA D-085.
 - docs(gov): T-SDC-VENV-RUNTIME-ARCHITECT-HARDENING-V1 — Espelho SALA D-038: hotfix venv SALA, R-039 interfabricas, endurecimento skill architect. Ref: SALA D-038, USA D-086.
 - docs(gov): T-SDC-INTERLOCUTOR-DIRECT-MODE-V1 — Espelho SALA D-039: modo direto na skill interlocutor-tecnico. Ref: SALA D-039, USA D-087.
+
+## 2026-05-27
+
+- fix: T-SSOT-FRESHNESS-GATE-US-V1 — gate SSOT D-1 estrito em `--decision-only`, catch-up OPW-first no servidor e validacao de cache em `09_decide`. Artefatos: `pipeline/run_daily.py`, `pipeline/servidor.py`, `pipeline/09_decide.py`, `DECISION_LOG.md` (ref: D-088). Tag: `v1.11.0-motor-us`.

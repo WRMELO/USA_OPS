@@ -63,9 +63,10 @@ def _list_existing_panels() -> list[date]:
 
 
 def _trading_days() -> list[date]:
+    operational_window = ROOT / "data" / "ssot" / "operational_window.parquet"
     canonical = ROOT / "data" / "ssot" / "canonical_us.parquet"
     dataset = ROOT / "data" / "features" / "dataset_us.parquet"
-    for p in (canonical, dataset):
+    for p in (operational_window, canonical, dataset):
         if not p.exists():
             continue
         try:

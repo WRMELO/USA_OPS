@@ -108,7 +108,11 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
     decision_path = OUT_DIR / f"decision_{target_dt.date()}.json"
     if not dry_run and decision_path.exists():
         try:
-            return json.loads(decision_path.read_text(encoding="utf-8"))
+            cached = json.loads(decision_path.read_text(encoding="utf-8"))
+            cached_ref = str(cached.get("scores_reference_date_d_minus_1", "")).strip()
+            if cached_ref == str(prev_dt.date()):
+                return cached
+            # Cache com referência defasada — recomputar
         except Exception:
             pass
 
