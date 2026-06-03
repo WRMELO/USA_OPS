@@ -110,9 +110,9 @@
 
 ## 2026-04-07
 
-- feat: T-054 — exchange_calendars como infraestrutura de pregões (B3/NYSE). lib/trading_calendar.py criado; run_daily _assert_ssot_fresh*, 01_ingest_macro, ledger_br, 05_build_macro_expanded, auto_simulate migrados para calendário real. Guard no iniciar.sh. (D-054)
+- feat: T-054 — exchange_calendars como infraestrutura de pregões (B3/NYSE). lib/trading_calendar.py criado; run_daily_assert_ssot_fresh*, 01_ingest_macro, ledger_br, 05_build_macro_expanded, auto_simulate migrados para calendário real. Guard no iniciar.sh. (D-054)
 - audit: T-054 curada com PASS — calendários reais de B3/NYSE validados, dry-run e ingest-only sem regressão, sem blindados tocados. Artefatos: ROADMAP.md, DECISION_LOG.md, CHANGELOG.md (D-054)
-- feat: T-055 — deteccao automatica de corporate actions (split) no painel_diario.py: _detect_and_adjust_splits com filtro temporal as_of_day (fix H1 Gemini), alerta visual HTML, campo corporate_actions no JSON, base-1 com close_operational (D-055)
+- feat: T-055 — deteccao automatica de corporate actions (split) no painel_diario.py:_detect_and_adjust_splits com filtro temporal as_of_day (fix H1 Gemini), alerta visual HTML, campo corporate_actions no JSON, base-1 com close_operational (D-055)
 - audit: T-055 curada com PASS — split POWL ajustado automaticamente, alerta inline no boletim e painel validado end-to-end. Artefatos: pipeline/painel_diario.py, ROADMAP.md, DECISION_LOG.md, CHANGELOG.md (D-055)
 
 ## 2026-04-08
@@ -129,7 +129,7 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 
 ## 2026-04-14
 
-- fix(motor)[MOTOR-OVERRIDE]: T-061-BASE1-v2 — Base 1 US com denominador vetorizado por ponto (patrimônio cumulativo `aportes - retiradas`) em substituição à base fixa `total_ativo.iloc[0]`, preservando leitura do boletim real, eixo operacional e extensão até `market_day`. Artefatos: pipeline/painel_diario.py, DECISION_LOG.md (D-058).
+- fix[motor](MOTOR-OVERRIDE): T-061-BASE1-v2 — Base 1 US com denominador vetorizado por ponto (patrimônio cumulativo `aportes - retiradas`) em substituição à base fixa `total_ativo.iloc[0]`, preservando leitura do boletim real, eixo operacional e extensão até `market_day`. Artefatos: pipeline/painel_diario.py, DECISION_LOG.md (D-058).
 - docs: T-CORPUS-US-V2 (D-059) — reescrita completa do `docs/CORPUS_FABRICA_US.md` para cobrir D-001..D-058, incluir Phase 7, atualizar arquitetura operacional (ledger imutável, pipeline bifásico, calendário real, `dry_run`, `last_rebalance`), consolidar novas lições/erros e alinhar blindagem para `v1.6.0-motor-us`.
 - docs: T-CORPUS-US-V2 curada com PASS (D-059) — fechamento da rastreabilidade do corpus US após auditoria favorável. Artefatos: docs/CORPUS_FABRICA_US.md, DECISION_LOG.md, CHANGELOG.md.
 
@@ -196,3 +196,7 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 ## 2026-05-27
 
 - fix: T-SSOT-FRESHNESS-GATE-US-V1 — gate SSOT D-1 estrito em `--decision-only`, catch-up OPW-first no servidor e validacao de cache em `09_decide`. Artefatos: `pipeline/run_daily.py`, `pipeline/servidor.py`, `pipeline/09_decide.py`, `DECISION_LOG.md` (ref: D-088). Tag: `v1.11.0-motor-us`.
+
+## 2026-06-03
+
+- fix: T-SDC-AUTOMACAO-SSOT-ROBUSTEZ-US-V1 — espelho de SALA D-048: `pipeline/01_ingest_macro.py` passa a usar fallback operacional quando o Step 01 falha por indisponibilidade do FRED (reaproveita `macro_us.parquet`, recompõe `macro_features_us.parquet`, notifica o Owner e permite continuidade do ingest). Ref: SALA D-048, USA D-107.
