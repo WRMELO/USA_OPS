@@ -7,6 +7,7 @@ from datetime import date
 from pathlib import Path
 
 import pandas as pd
+from lib.trading_calendar import prev_session
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_SERIES = [
@@ -21,9 +22,8 @@ BASE_SERIES = [
 
 
 def _normalize_target_date(end_date: date | None) -> pd.Timestamp:
-    if end_date is None:
-        return pd.Timestamp(date.today()).normalize()
-    return pd.Timestamp(end_date).normalize()
+    run_day = end_date or date.today()
+    return pd.Timestamp(prev_session(run_day, exchange="XNYS")).normalize()
 
 
 def _extend_macro_with_ffill(macro_path: Path, target_day: pd.Timestamp) -> tuple[pd.DataFrame, bool]:

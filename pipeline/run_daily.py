@@ -69,6 +69,20 @@ def _expected_ssot_min_date(run_date: date) -> date:
     return prev_session(run_date, exchange="XNYS")
 
 
+def _pid_is_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except Exception:
+        return False
+    return True
+
+
 def _assert_ssot_fresh_us(run_date: date) -> None:
     dt_max = _ssot_date_max_us()
     expected = _expected_ssot_min_date(run_date)
@@ -94,6 +108,8 @@ def run(
 ) -> dict:
     run_date = target_date or date.today()
     logger = setup_logging(run_date)
+    ingest_lock_path = Path("/tmp/usa_ops_ingest.lock")
+    ingest_lock_acquired = False
     if ingest_only and decision_only:
         raise ValueError("--ingest-only e --decision-only são mutuamente exclusivos.")
     mode = "FULL" if full else "DAILY"
@@ -104,6 +120,22 @@ def run(
     if dry_run:
         mode = f"{mode}+DRY_RUN"
     logger.info("=== USA_OPS daily pipeline started (date=%s, mode=%s) ===", run_date, mode)
+    if ingest_only:
+        existing_pid = None
+        if ingest_lock_path.exists():
+            lock_text = ingest_lock_path.read_text(encoding="utf-8").strip()
+            if lock_text:
+                try:
+                    existing_pid = int(lock_text)
+                except ValueError:
+                    existing_pid = None
+        if existing_pid is not None and existing_pid != os.getpid() and _pid_is_alive(existing_pid):
+            raise RuntimeError(
+                f"Ingest já em execução (pid={existing_pid}). "
+                "Aguarde o processo ativo concluir antes de iniciar novo --ingest-only."
+            )
+        ingest_lock_path.write_text(str(os.getpid()), encoding="utf-8")
+        ingest_lock_acquired = True
     if ingest_only:
         total_steps = 5
     elif decision_only or full:
@@ -209,6 +241,15 @@ def run(
         logger.error("Pipeline FAILED: %s", exc)
         logger.error(traceback.format_exc())
         raise
+    finally:
+        if ingest_lock_acquired:
+            try:
+                if ingest_lock_path.exists():
+                    lock_pid_text = ingest_lock_path.read_text(encoding="utf-8").strip()
+                    if lock_pid_text == str(os.getpid()):
+                        ingest_lock_path.unlink()
+            except Exception:
+                pass
 
 
 def main() -> None:

@@ -200,3 +200,4 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 ## 2026-06-03
 
 - fix: T-SDC-AUTOMACAO-SSOT-ROBUSTEZ-US-V1 — espelho de SALA D-048: `pipeline/01_ingest_macro.py` passa a usar fallback operacional quando o Step 01 falha por indisponibilidade do FRED (reaproveita `macro_us.parquet`, recompõe `macro_features_us.parquet`, notifica o Owner e permite continuidade do ingest). Ref: SALA D-048, USA D-107.
+- fix: T-USA-MACRO-FALLBACK-DATE-LOCK-FIX-V1 — errata de D-107: fallback de `pipeline/01_ingest_macro.py` passa a usar `prev_session(XNYS)` para evitar data civil futura em `macro_us`; `pipeline/run_daily.py` ganha lockfile PID para impedir ingest-only concorrente. Ref: SALA D-049, SALA D-048, USA D-108.
