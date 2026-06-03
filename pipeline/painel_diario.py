@@ -847,6 +847,15 @@ def _compute_defensive_actions_from_holdings(spc_day: pd.DataFrame, holdings_qty
         if not any_rule:
             continue
 
+        # D-USA-DOWNSIDE-GATE: gerar venda defensiva somente para instabilidade negativa
+        # (paridade conceitual BR _build_defensive_candidates linha 777: `if z_prev < 0 and score >= 4`)
+        downside = (
+            (math.isfinite(iv) and math.isfinite(il) and iv < il)
+            or (math.isfinite(xv) and math.isfinite(xl) and xv < xl)
+        )
+        if not downside:
+            continue
+
         score = 4
         sell_pct = 25.0
         if (math.isfinite(iv) and math.isfinite(il) and iv < il) or (math.isfinite(mv) and math.isfinite(mu) and mv > mu):
