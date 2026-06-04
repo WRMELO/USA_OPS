@@ -1,0 +1,23 @@
+=== CALIBRACAO PREVENTIVE ALERT US V1 ===
+
+H1_exaustao_parabolica_sem_persistencia
+  CAL: n_sig=1519 n_ctrl=3101 mean_sig=-0.039486 mean_ctrl=-0.013801 p=0.0025
+  VAL: n_sig=1395 n_ctrl=2725 mean_sig=-0.039285 mean_ctrl=-0.012469 p=0.0005
+  VEREDITO: PASS
+
+H2_run_downside_carta_i
+  CAL: n_sig=144 n_ctrl=4476 mean_sig=-0.007009 mean_ctrl=-0.022736 p=0.7726
+  VAL: n_sig=152 n_ctrl=3968 mean_sig=-0.008159 mean_ctrl=-0.022062 p=0.7671
+  VEREDITO: FAIL
+
+H3_drawdown_desde_pico_local
+  CAL: n_sig=1354 n_ctrl=3266 mean_sig=-0.033493 mean_ctrl=-0.017583 p=0.0345
+  VAL: n_sig=840 n_ctrl=3280 mean_sig=-0.018048 mean_ctrl=-0.022445 p=0.7171
+  VEREDITO: INCONCLUSIVO
+
+H4_amplitude_larga_mais_negativo_desde_ignicao
+  CAL: n_sig=239 n_ctrl=4381 mean_sig=0.006319 mean_ctrl=-0.023804 p=0.9530
+  VAL: n_sig=269 n_ctrl=3851 mean_sig=-0.036848 mean_ctrl=-0.020480 p=0.1204
+  VEREDITO: INCONCLUSIVO
+
+Resultados salvos em: /home/wilson/USA_OPS/analise_interfabricas/T-SDC-SATL-FCEL-PREVENTIVE-ALERT-CALIBRATION-US-V1/resultados_raw.json
