@@ -1,0 +1,20 @@
+=== CALIBRACAO EXIT SIGNAL US V2 ===
+DD0.100_SL0.080_RD10 | cal_melh=0.9591 cal_fp=0.6667 | val_melh=0.9130 val_fp=1.0000 | FAIL
+DD0.100_SL0.080_RD15 | cal_melh=nan cal_fp=nan | val_melh=nan val_fp=nan | INCONCLUSIVO
+DD0.100_SL0.100_RD10 | cal_melh=0.9591 cal_fp=0.6667 | val_melh=0.9130 val_fp=1.0000 | FAIL
+DD0.100_SL0.100_RD15 | cal_melh=nan cal_fp=nan | val_melh=nan val_fp=nan | INCONCLUSIVO
+DD0.100_SL0.120_RD10 | cal_melh=0.9591 cal_fp=0.6667 | val_melh=nan val_fp=1.0000 | FAIL
+DD0.100_SL0.120_RD15 | cal_melh=nan cal_fp=nan | val_melh=nan val_fp=nan | INCONCLUSIVO
+DD0.125_SL0.080_RD10 | cal_melh=0.9591 cal_fp=0.6667 | val_melh=0.9130 val_fp=1.0000 | FAIL
+DD0.125_SL0.080_RD15 | cal_melh=nan cal_fp=nan | val_melh=nan val_fp=nan | INCONCLUSIVO
+DD0.125_SL0.100_RD10 | cal_melh=0.9591 cal_fp=0.6667 | val_melh=0.9130 val_fp=1.0000 | FAIL
+DD0.125_SL0.100_RD15 | cal_melh=nan cal_fp=nan | val_melh=nan val_fp=nan | INCONCLUSIVO
+DD0.125_SL0.120_RD10 | cal_melh=0.9591 cal_fp=0.6667 | val_melh=nan val_fp=1.0000 | FAIL
+DD0.125_SL0.120_RD15 | cal_melh=nan cal_fp=nan | val_melh=nan val_fp=nan | INCONCLUSIVO
+DD0.150_SL0.080_RD10 | cal_melh=0.9591 cal_fp=0.6667 | val_melh=nan val_fp=1.0000 | FAIL
+DD0.150_SL0.080_RD15 | cal_melh=nan cal_fp=nan | val_melh=nan val_fp=nan | INCONCLUSIVO
+DD0.150_SL0.100_RD10 | cal_melh=0.9591 cal_fp=0.6667 | val_melh=nan val_fp=1.0000 | FAIL
+DD0.150_SL0.100_RD15 | cal_melh=nan cal_fp=nan | val_melh=nan val_fp=nan | INCONCLUSIVO
+DD0.150_SL0.120_RD10 | cal_melh=0.9591 cal_fp=0.6667 | val_melh=nan val_fp=1.0000 | FAIL
+DD0.150_SL0.120_RD15 | cal_melh=nan cal_fp=nan | val_melh=nan val_fp=nan | INCONCLUSIVO
+Resultados salvos em /home/wilson/USA_OPS/analise_interfabricas/T-SDC-EXIT-SIGNAL-CALIBRATION-US-V2/resultados_raw.json
