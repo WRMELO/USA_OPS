@@ -280,6 +280,7 @@ ______________________________________________________________________
 | E-US-04 | FAIL factual do auditor em T-015 | Leitura incompleta | Re-triagem pelo Owner | D-014 |
 | E-US-05 | Falta de alerta prévio sobre rotação US | Subestimação do efeito universo amplo | C1 colapsou | D-014 |
 | E-US-22 | Agente AI usou `MOTOR_OVERRIDE` sem autorização nominal do Owner | Violação de guardrail operacional | Saneamento de governança retroativo | D-053 / R-024 |
+| E-US-23 | Veredito de estudo read-only sem fechamento documental pos-resultado | Pacote planejado pre-resultado escreveu status futuro em governanca e nenhum elo recebeu responsabilidade explicita de fechar o veredito | Governanca ficou desatualizada apos conclusao do estudo | D-112 |
 
 ### 5.2 Erros técnicos (histórico até Phase 3)
 
@@ -322,6 +323,7 @@ ______________________________________________________________________
 | Estado computado como SSOT | Snapshot substituindo ledger de eventos | E-US-17 | D-045 |
 | Mudança de escrita sem mapear leitores | Gerador atualizado, consumidor desatualizado | E-US-20 | R-023 |
 | Governança contornada por automação | Override sem autorização explícita do Owner | E-US-22 | R-024, R-025 |
+| Veredito de estudo sem fechamento pos-resultado | Task que planeja e executa estudo grava status futuro e nao inclui passo explicito de fechamento pos-veredito | E-US-23 | Incluir passo obrigatorio de fechamento documental do veredito apos auditoria em estudos read-only |
 
 ______________________________________________________________________
 
