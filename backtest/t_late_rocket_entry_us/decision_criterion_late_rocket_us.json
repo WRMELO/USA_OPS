@@ -1,0 +1,32 @@
+{
+  "task_id": "T-LATE-ROCKET-ENTRY-US-V1",
+  "hypothesis": "Um gate de entrada baseado em ret_62 elevado (foguete tardio) reduz a cauda de perdas do C4 sem destruir o Sharpe ajustado por custo.",
+  "arms": {
+    "Baseline": "C4 puro sem gate de ret_62 (replicar winner_us.json exato)",
+    "Arm_A_0.80": "C4 + veto de candidato com ret_62_d_prev >= 0.80",
+    "Arm_A_0.90": "C4 + veto de candidato com ret_62_d_prev >= 0.90",
+    "Arm_A_1.00": "C4 + veto de candidato com ret_62_d_prev >= 1.00",
+    "Arm_A_1.10": "C4 + veto de candidato com ret_62_d_prev >= 1.10",
+    "Arm_A_1.20": "C4 + veto de candidato com ret_62_d_prev >= 1.20",
+    "Arm_A_1.30": "C4 + veto de candidato com ret_62_d_prev >= 1.30"
+  },
+  "best_arm_selection": "argmax(mean_cvar5_holdout + mean_sharpe_cost_adj_holdout) entre os bracos com mean_veto_rate_holdout <= 0.35. Se nenhum braco satisfizer a restricao de veto, best_arm = 'nenhum_viavel'.",
+  "metrics": {
+    "mean_cvar5_holdout": "media do CVaR5 (percentil 5 do log_ret do cesto por ciclo) no HOLDOUT sobre todas as fases",
+    "mean_sharpe_cost_adj_holdout": "media do Sharpe ajustado por custo de churn (2.5 bps one-way) no HOLDOUT sobre todas as fases",
+    "mean_veto_rate_holdout": "fracao media de candidatos top-N vetados pelo gate por ciclo no HOLDOUT"
+  },
+  "verdict_per_best_arm": {
+    "CONFIRMA_SINAL_US": "arm_better_tail=true AND arm_better_sharpe=true AND arm_acceptable_veto=true",
+    "NAO_CONFIRMA_SINAL_US": "arm_better_tail=false AND arm_better_sharpe=false",
+    "INCONCLUSIVO": "qualquer outro caso (inclusive best_arm='nenhum_viavel')"
+  },
+  "thresholds_for_verdict": {
+    "arm_better_tail": "mean_cvar5_holdout(best_arm) > mean_cvar5_holdout(Baseline)",
+    "arm_better_sharpe": "mean_sharpe_cost_adj_holdout(best_arm) > mean_sharpe_cost_adj_holdout(Baseline)",
+    "arm_acceptable_veto": "mean_veto_rate_holdout(best_arm) <= 0.35"
+  },
+  "post_hoc_prohibition": "O criterio acima e fixo e imutavel. E proibido reinterpretar, redefinir metricas ou escolher subperiodos apos ver os resultados. INCONCLUSIVO e resultado legitimo (L-US-41).",
+  "registered_at": "2026-06-05",
+  "registered_before_execution": true
+}

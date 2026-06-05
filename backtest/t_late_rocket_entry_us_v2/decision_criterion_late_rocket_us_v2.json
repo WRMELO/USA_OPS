@@ -1,0 +1,40 @@
+{
+  "task_id": "T-LATE-ROCKET-ENTRY-US-V2",
+  "hypothesis": "O gate ret_62>=1.00 confirmado na V1 mantém seu efeito (a) quando o anchor operacional real é usado, (b) quando combinado com o gate SPC de saída existente, e (c) em subjanelas temporais do HOLDOUT.",
+  "arms": {
+    "Baseline": "C4 puro sem gate de ret_62",
+    "Arm_A_1.00": "C4 + veto de candidato com ret_62_d_prev >= 1.00",
+    "Arm_A_1.00_SPC": "C4 + veto de candidato com ret_62_d_prev >= 1.00 + bloqueio SPC de saída existente (i_value>i_ucl OU i_value<i_lcl OU mr_value>mr_ucl OU r_value>r_ucl OU xbar fora das bandas)"
+  },
+  "subwindows": {
+    "SW1": {
+      "start": "2023-01-02",
+      "end": "2024-06-30"
+    },
+    "SW2": {
+      "start": "2024-07-01",
+      "end": "2026-03-16"
+    }
+  },
+  "best_arm_selection": "argmax(mean_cvar5_holdout + mean_sharpe_cost_adj_holdout) entre os bracos com mean_veto_rate_holdout <= 0.35. Se nenhum braco satisfizer a restricao de veto, best_arm = 'nenhum_viavel'.",
+  "metrics": {
+    "mean_cvar5_holdout": "media do CVaR5 (percentil 5 do log_ret do cesto por ciclo) no HOLDOUT sobre todas as fases",
+    "mean_sharpe_cost_adj_holdout": "media do Sharpe ajustado por custo de churn (2.5 bps one-way) no HOLDOUT sobre todas as fases",
+    "mean_veto_rate_holdout": "fracao media de candidatos top-N vetados pelo gate por ciclo no HOLDOUT",
+    "sw1_sw2_stability": "checagem de arm_better_tail, arm_better_sharpe e arm_acceptable_veto em SW1 e SW2"
+  },
+  "verdict_per_best_arm": {
+    "CONFIRMA_V2": "arm_better_tail=true AND arm_better_sharpe=true AND arm_acceptable_veto=true no HOLDOUT completo E nos dois subwindows (SW1 e SW2)",
+    "PARCIAL": "criterios atingidos no HOLDOUT completo, mas falham em pelo menos um subwindow",
+    "NAO_CONFIRMA_V2": "arm_better_tail=false AND arm_better_sharpe=false no HOLDOUT completo",
+    "INCONCLUSIVO": "qualquer outro caso (inclusive best_arm='nenhum_viavel')"
+  },
+  "thresholds_for_verdict": {
+    "arm_better_tail": "mean_cvar5(best_arm) > mean_cvar5(Baseline)",
+    "arm_better_sharpe": "mean_sharpe_cost_adj(best_arm) > mean_sharpe_cost_adj(Baseline)",
+    "arm_acceptable_veto": "mean_veto_rate(best_arm) <= 0.35"
+  },
+  "post_hoc_prohibition": "O criterio acima e fixo e imutavel. E proibido reinterpretar, redefinir metricas ou escolher subperiodos apos ver os resultados. PARCIAL e INCONCLUSIVO sao resultados legitimos.",
+  "registered_at": "2026-06-05",
+  "registered_before_execution": true
+}

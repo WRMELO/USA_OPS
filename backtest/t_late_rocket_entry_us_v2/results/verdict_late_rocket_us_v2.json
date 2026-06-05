@@ -1,0 +1,71 @@
+{
+  "task_id": "T-LATE-ROCKET-ENTRY-US-V2",
+  "criteria_file": "backtest/t_late_rocket_entry_us_v2/decision_criterion_late_rocket_us_v2.json",
+  "final_verdict": "PARCIAL",
+  "best_arm": "Arm_A_1.00",
+  "best_arm_threshold": 1.0,
+  "checks": {
+    "arm_better_tail": true,
+    "arm_better_sharpe": true,
+    "arm_acceptable_veto": true
+  },
+  "stability_check": {
+    "SW1": {
+      "checks": {
+        "arm_better_tail": true,
+        "arm_better_sharpe": true,
+        "arm_acceptable_veto": true
+      },
+      "baseline_metrics": {
+        "mean_cvar5": -0.13951014299732026,
+        "mean_sharpe_cost_adj": -1.1528826029827928,
+        "mean_veto_rate": 0.0,
+        "baseline_cvar5": -0.13951014299732026,
+        "baseline_sharpe": -1.1528826029827928
+      },
+      "best_arm_metrics": {
+        "mean_cvar5": -0.12522001624079368,
+        "mean_sharpe_cost_adj": -0.4767689363580755,
+        "mean_veto_rate": 0.20111308677098153,
+        "baseline_cvar5": -0.13951014299732026,
+        "baseline_sharpe": -1.1528826029827928
+      }
+    },
+    "SW2": {
+      "checks": {
+        "arm_better_tail": true,
+        "arm_better_sharpe": true,
+        "arm_acceptable_veto": false
+      },
+      "baseline_metrics": {
+        "mean_cvar5": -0.2200980754898428,
+        "mean_sharpe_cost_adj": 0.07001083085947582,
+        "mean_veto_rate": 0.0,
+        "baseline_cvar5": -0.2200980754898428,
+        "baseline_sharpe": 0.07001083085947582
+      },
+      "best_arm_metrics": {
+        "mean_cvar5": -0.17806611478843687,
+        "mean_sharpe_cost_adj": 1.3879157619947036,
+        "mean_veto_rate": 0.3742973286875726,
+        "baseline_cvar5": -0.2200980754898428,
+        "baseline_sharpe": 0.07001083085947582
+      }
+    }
+  },
+  "baseline_metrics_holdout": {
+    "mean_cvar5": -0.2062330342645285,
+    "mean_sharpe_cost_adj": -0.39006782042966315,
+    "mean_veto_rate": 0.0,
+    "baseline_cvar5": -0.2062330342645285,
+    "baseline_sharpe": -0.39006782042966315
+  },
+  "best_arm_metrics_holdout": {
+    "mean_cvar5": -0.16951883714109833,
+    "mean_sharpe_cost_adj": 0.6498902125583934,
+    "mean_veto_rate": 0.2924999999999999,
+    "baseline_cvar5": -0.2062330342645285,
+    "baseline_sharpe": -0.39006782042966315
+  },
+  "max_veto_rate_constraint": 0.35
+}

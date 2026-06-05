@@ -1,0 +1,27 @@
+{
+  "task_id": "T-LATE-ROCKET-ENTRY-US-V1",
+  "criteria_file": "backtest/t_late_rocket_entry_us/decision_criterion_late_rocket_us.json",
+  "final_verdict": "CONFIRMA_SINAL_US",
+  "best_arm": "Arm_A_1.00",
+  "best_arm_threshold": 1.0,
+  "checks": {
+    "arm_better_tail": true,
+    "arm_better_sharpe": true,
+    "arm_acceptable_veto": true
+  },
+  "baseline_metrics_holdout": {
+    "mean_cvar5_holdout": -0.2062330342645285,
+    "mean_sharpe_cost_adj_holdout": -0.39006782042966315,
+    "mean_veto_rate_holdout": 0.0,
+    "baseline_cvar5_holdout": -0.2062330342645285,
+    "baseline_sharpe_holdout": -0.39006782042966315
+  },
+  "best_arm_metrics_holdout": {
+    "mean_cvar5_holdout": -0.16951883714109833,
+    "mean_sharpe_cost_adj_holdout": 0.6498902125583934,
+    "mean_veto_rate_holdout": 0.2924999999999999,
+    "baseline_cvar5_holdout": -0.2062330342645285,
+    "baseline_sharpe_holdout": -0.39006782042966315
+  },
+  "max_veto_rate_constraint": 0.35
+}
