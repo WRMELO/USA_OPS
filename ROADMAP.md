@@ -21,6 +21,7 @@
 | T-LATE-ROCKET-ENTRY-US-V2 | Ablation V2 com anchor operacional real, arm SPC combinado e subjanelas SW1/SW2 | DONE (PARCIAL) | D-112; veredito PARCIAL - HOLDOUT PASS, SW1 PASS, SW2 falhou em veto excessivo (37.4%>35%); gate nao promovido ao motor |
 | T-LATE-ROCKET-ENTRY-US-V3 | V3 condicional para reduzir veto excessivo no regime recente (SW2) e revalidar criterio <=35% | BLOCKED | D-112; bloqueado ate evidenciar mean_veto_rate <= 35% em SW2 para considerar abertura de motor |
 | T-EXEC-COMPLETION-US-V2 | Experimento D+1 com baseline por construcao em C4, 5 bracos e exemplo real de completude | DONE | D-114; veredito MELHORA_EXECUCAO; politica vencedora A1D |
+| T-SKILL-ANALISTA-USA-A1D-V1 | Curadoria da politica A1D D+1 na skill `analista-usa` + fechamento de rastreabilidade | DONE | D-115; skill consultiva atualizada com Passo 4c e gate do Passo 5 |
 | T-SPC-BC-MOTOR-US | Implementar blocked_bc no motor US: gate de entrada (pipeline/09_decide.py) e release de quarentena (pipeline/painel_diario.py). BLOQUEADO - criterio de desbloqueio (IMPLEMENTAR_BC em T-088C) nao foi atingido; nova hipotese e novo experimento com criterio pre-registrado sao necessarios para reabrir esta frente | BLOCKED | D-079, D-078, D-077, D-076, D-070, D-066, RENDA_OPS D-088, D-090 |
 
 ## Phase 0 — Fundação

@@ -2,6 +2,7 @@
 
 ## 2026-06-08
 
+- docs(curadoria): T-SKILL-ANALISTA-USA-A1D-V1 - fecha a rastreabilidade da política A1D D+1 na skill `analista-usa` com D-115 registrado e skill consultiva atualizada com Passo 4c + gate do Passo 5. Artefatos: `.cursor/skills/analista-usa/SKILL.md`, `DECISION_LOG.md`. Decision: D-115
 - feat: T-EXEC-COMPLETION-US-V2 - baseline por construcao em C4, validacao dual HOLDOUT+SW_RECENT e politica D+1 utilizavel. Artefatos: backtest/t_exec_completion_us/run_t_exec_completion_us_v2.py, backtest/t_exec_completion_us/results/verdict_v2.json, backtest/t_exec_completion_us/results/curve_v2_*.csv, DECISION_LOG.md (ref: D-114)
 
 ## 2026-03-07
