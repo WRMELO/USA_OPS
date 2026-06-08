@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-06-08
+
+- feat: T-EXEC-COMPLETION-US-V2 - baseline por construcao em C4, validacao dual HOLDOUT+SW_RECENT e politica D+1 utilizavel. Artefatos: backtest/t_exec_completion_us/run_t_exec_completion_us_v2.py, backtest/t_exec_completion_us/results/verdict_v2.json, backtest/t_exec_completion_us/results/curve_v2_*.csv, DECISION_LOG.md (ref: D-114)
+
 ## 2026-03-07
 
 - chore: initial commit — estrutura do repo operacional US (Russell 1000 + SmallCap 600)

@@ -1,0 +1,212 @@
+{
+  "task_id": "T-EXEC-COMPLETION-US-V2",
+  "generated_at": "2026-06-08T13:34:46.445537+00:00",
+  "holdout_period": {
+    "start": "2023-01-02",
+    "end": "2026-03-16",
+    "days": 447
+  },
+  "sw_recent_period": {
+    "start": "2024-07-01",
+    "end": "2026-03-16",
+    "days": 428
+  },
+  "params": {
+    "variant_baseline": "C4",
+    "top_n": 20,
+    "buffer_k": 10,
+    "rebalance_cadence": 10,
+    "friction_one_way_bps": 2.5,
+    "settlement_days": 1,
+    "base_capital": 100000.0,
+    "k_damp": 0.0,
+    "max_weight_cap": 0.06,
+    "min_market_cap": 300000000.0,
+    "median_scored_tickers_pre_filter": 1788.0,
+    "median_scored_tickers_post_filter": 1091.5
+  },
+  "baseline_gap_diagnostic": {
+    "arm0_cagr_holdout_pct": 61.698535,
+    "winner_cagr_pct": 42.1353,
+    "delta_cagr_pct": 19.563235,
+    "arm0_mdd_holdout_pct": -34.169362,
+    "winner_mdd_pct": -40.1213,
+    "delta_mdd_pct": 5.951938
+  },
+  "arms": [
+    {
+      "arm": "ARM_0",
+      "completion_mode": "none",
+      "cagr_holdout_pct": 61.698535,
+      "mdd_holdout_pct": -34.169362,
+      "cagr_recent_pct": 64.794833,
+      "mdd_recent_pct": -34.169362,
+      "delta_cagr_holdout_vs_ARM0": 0.0,
+      "delta_mdd_holdout_vs_ARM0": 0.0,
+      "delta_cagr_recent_vs_ARM0": 0.0,
+      "delta_mdd_recent_vs_ARM0": 0.0,
+      "n_deferred_buy_days": 0,
+      "n_skipped_r001": 0,
+      "n_substitute_a2": 0,
+      "n_a2d_substitute_slots": 0,
+      "verdict": "BASELINE"
+    },
+    {
+      "arm": "ARM_A1",
+      "completion_mode": "A1",
+      "cagr_holdout_pct": 64.330294,
+      "mdd_holdout_pct": -37.413555,
+      "cagr_recent_pct": 67.59706,
+      "mdd_recent_pct": -37.413555,
+      "delta_cagr_holdout_vs_ARM0": 2.631759,
+      "delta_mdd_holdout_vs_ARM0": -3.244193,
+      "delta_cagr_recent_vs_ARM0": 2.802227,
+      "delta_mdd_recent_vs_ARM0": -3.244193,
+      "n_deferred_buy_days": 44,
+      "n_skipped_r001": 62,
+      "n_substitute_a2": 0,
+      "n_a2d_substitute_slots": 0,
+      "verdict": "MELHORA"
+    },
+    {
+      "arm": "ARM_A2",
+      "completion_mode": "A2",
+      "cagr_holdout_pct": 62.730101,
+      "mdd_holdout_pct": -37.245634,
+      "cagr_recent_pct": 65.892977,
+      "mdd_recent_pct": -37.245634,
+      "delta_cagr_holdout_vs_ARM0": 1.031565,
+      "delta_mdd_holdout_vs_ARM0": -3.076273,
+      "delta_cagr_recent_vs_ARM0": 1.098144,
+      "delta_mdd_recent_vs_ARM0": -3.076273,
+      "n_deferred_buy_days": 44,
+      "n_skipped_r001": 64,
+      "n_substitute_a2": 17,
+      "n_a2d_substitute_slots": 0,
+      "verdict": "MELHORA"
+    },
+    {
+      "arm": "ARM_A1D",
+      "completion_mode": "A1D",
+      "cagr_holdout_pct": 65.795194,
+      "mdd_holdout_pct": -36.795516,
+      "cagr_recent_pct": 69.157713,
+      "mdd_recent_pct": -36.795516,
+      "delta_cagr_holdout_vs_ARM0": 4.096659,
+      "delta_mdd_holdout_vs_ARM0": -2.626154,
+      "delta_cagr_recent_vs_ARM0": 4.36288,
+      "delta_mdd_recent_vs_ARM0": -2.626154,
+      "n_deferred_buy_days": 44,
+      "n_skipped_r001": 62,
+      "n_substitute_a2": 0,
+      "n_a2d_substitute_slots": 0,
+      "verdict": "MELHORA"
+    },
+    {
+      "arm": "ARM_A2D",
+      "completion_mode": "A2D",
+      "cagr_holdout_pct": 62.733833,
+      "mdd_holdout_pct": -37.945259,
+      "cagr_recent_pct": 65.896951,
+      "mdd_recent_pct": -37.945259,
+      "delta_cagr_holdout_vs_ARM0": 1.035298,
+      "delta_mdd_holdout_vs_ARM0": -3.775898,
+      "delta_cagr_recent_vs_ARM0": 1.102118,
+      "delta_mdd_recent_vs_ARM0": -3.775898,
+      "n_deferred_buy_days": 44,
+      "n_skipped_r001": 63,
+      "n_substitute_a2": 0,
+      "n_a2d_substitute_slots": 19,
+      "verdict": "MELHORA"
+    }
+  ],
+  "global_verdict": "MELHORA_EXECUCAO",
+  "verdict_criteria_snapshot": {
+    "holdout_start": "2023-01-02",
+    "holdout_end": "2026-03-16",
+    "sw_recent_start": "2024-07-01",
+    "sw_recent_end": "2026-03-16",
+    "delta_cagr_threshold_holdout_pct": 1.0,
+    "delta_mdd_threshold_holdout_pct": -5.0,
+    "delta_cagr_threshold_recent_pct": 0.0,
+    "delta_mdd_threshold_recent_pct": -7.5,
+    "verdict_MELHORA": "holdout PASS e sw_recent PASS",
+    "verdict_PARCIAL": "holdout PASS e sw_recent nao PASS",
+    "verdict_NEUTRO": "|delta_cagr_holdout| <= 1.0 sem degradacao severa de MDD",
+    "verdict_PIORA": "holdout degradou alem dos limites",
+    "verdict_INCONCLUSIVO": "demais casos",
+    "_note": "Criterios pre-registrados antes da execucao \u2014 NAO ALTERAR pos-run"
+  },
+  "politica_vencedora": {
+    "arm": "ARM_A1D",
+    "completion_mode": "A1D",
+    "verdict": "MELHORA",
+    "specification": [
+      "Janela estrita de completude: apenas D+1 apos rebalance.",
+      "Fonte de tickers: lista travada do rebalance (nao usar top20 do dia).",
+      "Aplicar veto R-001 antes de qualquer compra em D+1.",
+      "Em D+1, atuar somente na pending_list; se ticker pendente estiver INSTAVEL (R-001), reservar slot sem substituicao.",
+      "Usar todo cash_free liquidado no dia (incluindo origem defensiva)."
+    ]
+  },
+  "exemplo_real": {
+    "rebalance_date": "2026-06-01",
+    "d_plus1_date": "2026-06-02",
+    "locked_tickers": [
+      "HYLN",
+      "MRVL",
+      "MXL",
+      "PENG",
+      "SNDK",
+      "VPG",
+      "VSH",
+      "SATL",
+      "NBIS",
+      "STM",
+      "FLEX",
+      "RDW",
+      "TH",
+      "KOPN",
+      "NVTS",
+      "LQDA",
+      "LUNR",
+      "HUT",
+      "SPIR",
+      "PLUG"
+    ],
+    "instavel_vetado": [
+      "MRVL",
+      "PENG",
+      "STM"
+    ],
+    "already_held_at_full_weight": [
+      "FLEX",
+      "HUT",
+      "KOPN",
+      "LQDA",
+      "NBIS",
+      "SATL",
+      "TH"
+    ],
+    "compraveis": [
+      "HYLN",
+      "MXL",
+      "SNDK",
+      "VPG",
+      "VSH",
+      "RDW",
+      "NVTS",
+      "LUNR",
+      "SPIR",
+      "PLUG"
+    ],
+    "cash_available_d_plus1": 46596.85,
+    "cash_accounting_d_plus1": 0.0,
+    "policy_instruction": "Comprar os tickers compraveis proporcionalmente ao cash_free disponivel, na ordem da locked_list, respeitando max_weight_cap=6%",
+    "o_que_foi_feito": [
+      "FCEL 482@24.64",
+      "SANM 42@278.36"
+    ],
+    "contraste": "Nenhuma compra seguiu a lista travada do rebalance"
+  }
+}
