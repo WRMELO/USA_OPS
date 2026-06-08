@@ -1,0 +1,89 @@
+{
+  "task_id": "T-EXEC-COMPLETION-US-V1",
+  "generated_at": "2026-06-08T13:01:54.298313+00:00",
+  "holdout_period": {
+    "start": "2023-01-02",
+    "end": "2026-03-16",
+    "days": 447
+  },
+  "params": {
+    "top_n": 20,
+    "buffer_k": 10,
+    "rebalance_cadence": 10,
+    "friction_one_way_bps": 2.5,
+    "settlement_days": 1,
+    "base_capital": 100000.0,
+    "k_damp": 0.0,
+    "max_weight_cap": 0.06,
+    "min_market_cap": 300000000.0,
+    "median_scored_tickers_pre_filter": 1788.0,
+    "median_scored_tickers_post_filter": 1091.5
+  },
+  "arms": [
+    {
+      "arm": "ARM_0",
+      "completion_mode": "none",
+      "cagr_pct": 61.698535,
+      "mdd_pct": -34.169362,
+      "delta_cagr_vs_ARM0": 0.0,
+      "delta_mdd_vs_ARM0": 0.0,
+      "n_deferred_buy_days": 0,
+      "n_skipped_r001": 0,
+      "n_substitute_a2": 0,
+      "verdict": "BASELINE"
+    },
+    {
+      "arm": "ARM_A1",
+      "completion_mode": "A1",
+      "cagr_pct": 64.330294,
+      "mdd_pct": -37.413555,
+      "delta_cagr_vs_ARM0": 2.631759,
+      "delta_mdd_vs_ARM0": -3.244193,
+      "n_deferred_buy_days": 44,
+      "n_skipped_r001": 62,
+      "n_substitute_a2": 0,
+      "verdict": "MELHORA"
+    },
+    {
+      "arm": "ARM_A2",
+      "completion_mode": "A2",
+      "cagr_pct": 62.733833,
+      "mdd_pct": -37.945259,
+      "delta_cagr_vs_ARM0": 1.035298,
+      "delta_mdd_vs_ARM0": -3.775898,
+      "n_deferred_buy_days": 44,
+      "n_skipped_r001": 63,
+      "n_substitute_a2": 19,
+      "verdict": "MELHORA"
+    },
+    {
+      "arm": "ARM_A1D",
+      "completion_mode": "A1D",
+      "cagr_pct": 65.795194,
+      "mdd_pct": -36.795516,
+      "delta_cagr_vs_ARM0": 4.096659,
+      "delta_mdd_vs_ARM0": -2.626154,
+      "n_deferred_buy_days": 44,
+      "n_skipped_r001": 62,
+      "n_substitute_a2": 0,
+      "verdict": "MELHORA"
+    }
+  ],
+  "global_verdict": "MELHORA_EXECUCAO",
+  "verdict_criteria_snapshot": {
+    "holdout_start": "2023-01-02",
+    "holdout_end": "2026-03-16",
+    "delta_cagr_threshold_pct": 1.0,
+    "delta_mdd_threshold_pct": -5.0,
+    "verdict_MELHORA": "delta_cagr > +1.0 AND delta_mdd > -5.0",
+    "verdict_NEUTRO": "|delta_cagr| <= 1.0",
+    "verdict_PIORA": "delta_cagr < -1.0 OR delta_mdd < -5.0",
+    "verdict_INCONCLUSIVO": "demais casos"
+  },
+  "notes": [
+    "ARM_0 reproduz comportamento atual: sem tentativa de completude D+1.",
+    "A1 nao usa o caixa liquidado no dia vindo de vendas defensivas para completar pendencias do rebalance.",
+    "A1D permite uso completo do caixa liquidado no dia, incluindo origem defensiva.",
+    "A2 tenta substituicao pela ordem da lista travada do proprio rebalance."
+  ]
+}
