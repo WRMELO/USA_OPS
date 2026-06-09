@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-06-09
+
+- fix(motor): T-SDC-CHART-BASE1-MARKETDAY-AXIS-V1 — eixo temporal do grafico Base 1 passa a ser indexado por `market_day/ref_day` (R-022), preservando corte ledger por `exec_day` e calculo patrimonial. Decision: D-116 / SALA D-055. Tag prevista: v1.13.0-motor-us.
+
 ## 2026-06-08
 
 - docs(curadoria): T-SKILL-ANALISTA-USA-A1D-V1 - fecha a rastreabilidade da política A1D D+1 na skill `analista-usa` com D-115 registrado e skill consultiva atualizada com Passo 4c + gate do Passo 5. Artefatos: `.cursor/skills/analista-usa/SKILL.md`, `DECISION_LOG.md`. Decision: D-115

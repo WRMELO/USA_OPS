@@ -115,7 +115,7 @@ CTO orienta → Architect planeja → Owner autoriza → Executor implementa →
 
 ### 6.6 Blindagem do Motor Operacional (D-039)
 
-**Arquivos protegidos** (auditados e selados em `v1.9.0-motor-us`):
+**Arquivos protegidos** (auditados e selados em `v1.13.0-motor-us`):
 
 | Arquivo | Função | Auditorias |
 |---------|--------|------------|
@@ -129,8 +129,8 @@ CTO orienta → Architect planeja → Owner autoriza → Executor implementa →
 
 1. Alterações nestes arquivos exigem ciclo completo: `Architect → Executor → Auditor duplo (Gemini + Kimi) → Curator`, com autorização explícita do Owner.
 2. Um **pre-commit hook** no git bloqueia commits que alterem esses arquivos. Para sobrepor, usar: `MOTOR_OVERRIDE=1 git commit -m "descricao"`.
-3. A tag `v1.8.0-motor-us` marca o snapshot auditado atual. Para restaurar: `git checkout v1.8.0-motor-us -- <arquivo>`.
-4. Novas versões do motor devem gerar nova tag (`v1.6.0-motor-us`, etc.) após novo ciclo completo de auditoria.
+3. A tag `v1.13.0-motor-us` marca o snapshot auditado atual. Para restaurar: `git checkout v1.13.0-motor-us -- <arquivo>`.
+4. Novas versões do motor devem gerar nova tag (`v1.14.0-motor-us`, etc.) após novo ciclo completo de auditoria.
 
 #### 6.6.1 Protecao do SSOT append-only
 
