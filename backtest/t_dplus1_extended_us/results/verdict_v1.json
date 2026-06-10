@@ -1,0 +1,133 @@
+{
+  "task_id": "T-DPLUS1-EXTENDED-US-V1",
+  "generated_at": "2026-06-10T15:26:41.076571+00:00",
+  "holdout_period": {
+    "start": "2023-01-02",
+    "end": "2026-03-16"
+  },
+  "sw_recent_period": {
+    "start": "2024-07-01",
+    "end": "2026-03-16"
+  },
+  "params": {
+    "variant_baseline": "C4",
+    "top_n": 20,
+    "buffer_k": 10,
+    "rebalance_cadence": 10,
+    "friction_one_way_bps": 2.5,
+    "settlement_days": 1,
+    "base_capital": 100000.0,
+    "k_damp": 0.0,
+    "max_weight_cap": 0.06,
+    "min_market_cap": 300000000.0,
+    "median_scored_tickers_pre_filter": 1790.0,
+    "median_scored_tickers_post_filter": 1092.0
+  },
+  "modeling_notes": [
+    "Veto duro modelado: R-001 via _spc_instavel.",
+    "Nelson/WE e R-037 permanecem fora do motor do experimento porque sao consultivos/Plano B na skill vigente.",
+    "ARM_V0 aplica A1D no D+1 e ranking vivo em D+2..D+9.",
+    "ARM_V1 aplica apenas locked_list do rebalance em D+1..D+9."
+  ],
+  "baseline_gap_diagnostic": {
+    "arm0_cagr_holdout_pct": 52.744125,
+    "winner_cagr_pct": 42.1353,
+    "delta_cagr_pct": 10.608825,
+    "arm0_mdd_holdout_pct": -34.291155,
+    "winner_mdd_pct": -40.1213,
+    "delta_mdd_pct": 5.830145
+  },
+  "arms": [
+    {
+      "arm": "ARM_0",
+      "policy": "C4_produtivo_sem_completude_inter_rebalance",
+      "cagr_holdout_pct": 52.744125,
+      "mdd_holdout_pct": -34.291155,
+      "cagr_recent_pct": 55.007313,
+      "mdd_recent_pct": -34.291155,
+      "days_holdout": 445,
+      "days_recent": 428,
+      "counters": {
+        "n_inter_rebalance_buy_days": 0,
+        "n_skipped_r001": 0,
+        "n_live_ranking_buys": 0,
+        "n_locked_buys": 0,
+        "n_defensive_sell_25": 0,
+        "n_defensive_sell_50": 0,
+        "n_defensive_sell_100": 0,
+        "n_quarantine_entries": 0
+      }
+    },
+    {
+      "arm": "ARM_V0",
+      "policy": "A1D_D+1_e_ranking_vivo_D+2_ate_D+9",
+      "cagr_holdout_pct": 73.907293,
+      "mdd_holdout_pct": -37.428738,
+      "cagr_recent_pct": 77.39599,
+      "mdd_recent_pct": -37.428738,
+      "days_holdout": 445,
+      "days_recent": 428,
+      "counters": {
+        "n_inter_rebalance_buy_days": 165,
+        "n_skipped_r001": 861,
+        "n_live_ranking_buys": 264,
+        "n_locked_buys": 480,
+        "n_defensive_sell_25": 38,
+        "n_defensive_sell_50": 34,
+        "n_defensive_sell_100": 111,
+        "n_quarantine_entries": 163
+      },
+      "delta_cagr_holdout_vs_arm0": 21.163168,
+      "delta_mdd_holdout_vs_arm0": -3.137583,
+      "delta_cagr_recent_vs_arm0": 22.388677,
+      "delta_mdd_recent_vs_arm0": -3.137583
+    },
+    {
+      "arm": "ARM_V1",
+      "policy": "lista_travada_estendida_D+1_ate_D+9",
+      "cagr_holdout_pct": 68.190282,
+      "mdd_holdout_pct": -38.530671,
+      "cagr_recent_pct": 71.33666,
+      "mdd_recent_pct": -38.530671,
+      "days_holdout": 445,
+      "days_recent": 428,
+      "counters": {
+        "n_inter_rebalance_buy_days": 210,
+        "n_skipped_r001": 369,
+        "n_live_ranking_buys": 0,
+        "n_locked_buys": 1099,
+        "n_defensive_sell_25": 37,
+        "n_defensive_sell_50": 33,
+        "n_defensive_sell_100": 104,
+        "n_quarantine_entries": 153
+      },
+      "delta_cagr_holdout_vs_arm0": 15.446157,
+      "delta_mdd_holdout_vs_arm0": -4.239516,
+      "delta_cagr_recent_vs_arm0": 16.329347,
+      "delta_mdd_recent_vs_arm0": -4.239516
+    }
+  ],
+  "primary_delta": {
+    "delta_cagr_holdout_v1_minus_v0": -5.717011,
+    "delta_mdd_holdout_v1_minus_v0": -1.101933,
+    "delta_cagr_recent_v1_minus_v0": -6.05933,
+    "delta_mdd_recent_v1_minus_v0": -1.101933
+  },
+  "global_verdict": "MELHORA_V0",
+  "verdict_criteria_snapshot": {
+    "holdout_start": "2023-01-02",
+    "holdout_end": "2026-03-16",
+    "sw_recent_start": "2024-07-01",
+    "sw_recent_end": "2026-03-16",
+    "primary_comparison": "ARM_V1 - ARM_V0",
+    "delta_cagr_threshold_holdout_pct": 1.0,
+    "delta_mdd_threshold_holdout_pct": -5.0,
+    "delta_cagr_threshold_recent_pct": 0.0,
+    "delta_mdd_threshold_recent_pct": -7.5,
+    "verdict_MELHORA_V1": "V1 supera V0 em HOLDOUT e SW_RECENT sem degradacao severa de MDD",
+    "verdict_MELHORA_V0": "V0 supera V1 em HOLDOUT e SW_RECENT sem degradacao severa de MDD",
+    "verdict_NEUTRO": "|delta_cagr_holdout(V1-V0)| <= 1.0 sem degradacao severa de MDD",
+    "verdict_INCONCLUSIVO": "demais casos",
+    "_note": "Criterios pre-registrados antes da execucao \u2014 NAO ALTERAR pos-run"
+  }
+}

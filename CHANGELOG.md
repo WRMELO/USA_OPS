@@ -2,6 +2,7 @@
 
 ## 2026-06-10
 
+- feat(backtest): T-DPLUS1-EXTENDED-US-V1 — compara V0 (A1D D+1 + ranking vivo D+2..D+9) vs V1 (lista travada estendida D+1..D+9) para alocacao de caixa livre inter-rebalance; veredito pre-registrado `MELHORA_V0`. Decision: D-118 / SALA D-057.
 - feat: T-SDC-FRED-API-ROBUSTNESS-STAGNATION-ALARM-V1 — FRED passa a usar API oficial com `FRED_API_KEY` como fonte primaria no macro US, mantendo CSV publico como fallback secundario e emitindo WARNING/notify-send para series stale acima de 3 pregoes. Decision: D-117 / SALA D-056.
 
 ## 2026-06-09
