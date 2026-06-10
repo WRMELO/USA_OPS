@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-06-10
+
+- feat: T-SDC-FRED-API-ROBUSTNESS-STAGNATION-ALARM-V1 — FRED passa a usar API oficial com `FRED_API_KEY` como fonte primaria no macro US, mantendo CSV publico como fallback secundario e emitindo WARNING/notify-send para series stale acima de 3 pregoes. Decision: D-117 / SALA D-056.
+
 ## 2026-06-09
 
 - fix(motor): T-SDC-CHART-BASE1-MARKETDAY-AXIS-V1 — eixo temporal do grafico Base 1 passa a ser indexado por `market_day/ref_day` (R-022), preservando corte ledger por `exec_day` e calculo patrimonial. Decision: D-116 / SALA D-055. Tag prevista: v1.13.0-motor-us.

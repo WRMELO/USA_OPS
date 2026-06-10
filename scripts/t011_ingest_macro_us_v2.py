@@ -4,11 +4,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+from dotenv import load_dotenv
 
 
 BASE_SERIES = [
@@ -20,6 +22,7 @@ BASE_SERIES = [
     "hy_oas",
     "ig_oas",
 ]
+STAGNATION_ALERT_SESSIONS = 3
 
 
 def _sha256(path: Path) -> str:
@@ -73,9 +76,41 @@ def _build_features(df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     return out, feature_cols
 
 
+def _macro_stagnation_warnings(
+    fetched: dict[str, pd.DataFrame],
+    calendar: pd.DataFrame,
+    tolerance_sessions: int = STAGNATION_ALERT_SESSIONS,
+) -> list[str]:
+    calendar_days = sorted(pd.to_datetime(calendar["date"], errors="coerce").dropna().dt.normalize().unique().tolist())
+    if not calendar_days:
+        return []
+    max_day = pd.Timestamp(calendar_days[-1]).normalize()
+    warnings: list[str] = []
+    for alias in BASE_SERIES:
+        raw = fetched.get(alias, pd.DataFrame()).copy()
+        if raw.empty or "date" not in raw.columns:
+            warnings.append(f"FRED macro stale: {alias} sem observacoes validas.")
+            continue
+        raw["date"] = pd.to_datetime(raw["date"], errors="coerce").dt.normalize()
+        obs = raw.dropna(subset=["date"])
+        obs = obs[obs["date"] <= max_day]
+        if obs.empty:
+            warnings.append(f"FRED macro stale: {alias} sem observacoes ate {max_day.date()}.")
+            continue
+        last_obs = pd.Timestamp(obs["date"].max()).normalize()
+        missing_sessions = sum(1 for d in calendar_days if last_obs < pd.Timestamp(d).normalize() <= max_day)
+        if missing_sessions > tolerance_sessions:
+            warnings.append(
+                f"FRED macro stale: {alias} ultima observacao {last_obs.date()} "
+                f"({missing_sessions} pregoes atras; limite={tolerance_sessions})."
+            )
+    return warnings
+
+
 def main() -> None:
     args = parse_args()
     workspace = Path(args.workspace).resolve()
+    load_dotenv(workspace / ".env")
     sys.path.insert(0, str(workspace))
     in_calendar = workspace / args.in_trading_calendar
     out_macro = workspace / args.out_macro_ssot
@@ -95,6 +130,10 @@ def main() -> None:
 
     fred = FredAdapter(timeout_seconds=args.timeout_seconds, max_retries=args.max_retries)
     fetched = fred.fetch_all()
+    stagnation_warnings = _macro_stagnation_warnings(fetched, calendar)
+    for warning in stagnation_warnings:
+        print(f"[WARN] {warning}")
+        subprocess.run(["notify-send", "USA OPS", warning], check=False)
 
     merged = calendar.copy()
     for alias in BASE_SERIES:
@@ -168,6 +207,7 @@ def main() -> None:
             "features_shift1_first_row_all_nulls": gate_shift1_first_row_nulls,
             "features_date_max_gte_calendar_date_max_minus_1d": gate_coverage_d_minus_1,
         },
+        "stagnation_warnings": stagnation_warnings,
         "outputs": {
             "macro_us_path": str(out_macro),
             "macro_features_path": str(out_features),
