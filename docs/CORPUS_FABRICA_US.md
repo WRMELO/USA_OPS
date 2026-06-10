@@ -312,6 +312,7 @@ ______________________________________________________________________
 | E-US-19 | Rebalance por `day_idx % cadence` em produção | Índice dependente do tamanho histórico | Rebalance perdido sem intervenção manual | D-043 |
 | E-US-20 | Mudança de path sem atualizar leitores | Escopo sem mapeamento downstream | `/painel` 404 após task tecnicamente “verde” | D-042 / R-023 |
 | E-US-21 | Base 1 com base fixa no primeiro ponto | Formulação matemática inadequada para fluxo de caixa | Distorção do gráfico em eventos de aporte/retirada | D-057/D-058 |
+| E-US-24 | Baseline de pesquisa lido do SSOT vivo mutável | `canonical`/`scores` reescritos por ingest | Baseline não reprodutível entre execuções | D-119 |
 
 ### 5.3 Padrões de falha recorrentes
 
@@ -324,6 +325,7 @@ ______________________________________________________________________
 | Mudança de escrita sem mapear leitores | Gerador atualizado, consumidor desatualizado | E-US-20 | R-023 |
 | Governança contornada por automação | Override sem autorização explícita do Owner | E-US-22 | R-024, R-025 |
 | Veredito de estudo sem fechamento pos-resultado | Task que planeja e executa estudo grava status futuro e nao inclui passo explicito de fechamento pos-veredito | E-US-23 | Incluir passo obrigatorio de fechamento documental do veredito apos auditoria em estudos read-only |
+| SSOT vivo como baseline de pesquisa | Backtest lê `canonical`/`scores` mutáveis em vez de snapshot congelado | E-US-24 | R-041 + dataset congelado (`research_dataset_us`) |
 
 ______________________________________________________________________
 

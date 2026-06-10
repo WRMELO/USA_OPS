@@ -13,3 +13,7 @@ logs/
 backtest/t_rebalance_weakness_us/results/observations_*.csv
 backtest/t088b_spc_enriched_ablation_us_fixed/results/observations_*.csv
 backtest/t088c_spc_enriched_ablation_us_parity/results/observations_*.csv
+!backtest/research_dataset_us/
+!backtest/research_dataset_us/*.parquet
+!backtest/research_dataset_us/**/*.json
+!backtest/research_dataset_us/*.py

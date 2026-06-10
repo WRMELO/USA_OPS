@@ -87,6 +87,16 @@ CTO orienta → Architect planeja → Owner autoriza → Executor implementa →
 - Reconciliação semanal: regenerar `operational_window` a partir do `canonical` atualizado.
 - Recuperação de gaps: se o pipeline falhar num dia, no dia seguinte a ingestão incremental busca todos os dias faltantes automaticamente (date_max+1 até D-1).
 
+#### 6.2.2 Dataset de pesquisa congelado (research_dataset_us)
+
+Para experimentos offline de motor, `backtest/research_dataset_us/` é o snapshot congelado e versionado dos insumos de pesquisa (`canonical_us.parquet`, `macro_us.parquet`, `scores_m3_us.parquet`) com `manifest.json` e SHA256.
+
+Este diretório é exceção deliberada à regra geral de que dados Parquet são regeneráveis e excluídos do git: o objetivo é garantir reprodutibilidade de baseline em backtests. O SSOT vivo em `data/ssot/` continua sendo a fonte operacional; ele não deve ser usado como baseline de pesquisa em experimentos de motor.
+
+Backtests de motor que dependem de `backtest/run_backtest_variants_us.py` devem apontar `US_RESEARCH_DATASET_DIR=backtest/research_dataset_us` ou passar paths explícitos para `load_inputs()`. Antes de executar, devem validar `manifest.json` e SHA256 via `backtest/research_dataset_us/verify_dataset.py`.
+
+Novo freeze ou troca de versão do dataset exige ciclo formal, novo manifesto e registro em `DECISION_LOG.md`.
+
 ### 6.3 Ambiente
 
 - Python via `.venv/` local ao workspace.

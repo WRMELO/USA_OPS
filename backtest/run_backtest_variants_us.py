@@ -6,6 +6,7 @@ from pathlib import Path
 import argparse
 import hashlib
 import json
+import os
 
 import numpy as np
 import pandas as pd
@@ -73,10 +74,21 @@ def load_blacklist(path: Path) -> set[str]:
     return out
 
 
-def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    canonical = pd.read_parquet(IN_CANONICAL).copy()
-    macro = pd.read_parquet(IN_MACRO).copy()
-    scores = pd.read_parquet(IN_SCORES).copy()
+def load_inputs(
+    canonical_path: str | Path | None = None,
+    macro_path: str | Path | None = None,
+    scores_path: str | Path | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    dataset_dir = os.environ.get("US_RESEARCH_DATASET_DIR")
+    if dataset_dir:
+        base_dir = Path(dataset_dir)
+        canonical_path = canonical_path or (base_dir / "canonical_us.parquet")
+        macro_path = macro_path or (base_dir / "macro_us.parquet")
+        scores_path = scores_path or (base_dir / "scores_m3_us.parquet")
+
+    canonical = pd.read_parquet(Path(canonical_path) if canonical_path else IN_CANONICAL).copy()
+    macro = pd.read_parquet(Path(macro_path) if macro_path else IN_MACRO).copy()
+    scores = pd.read_parquet(Path(scores_path) if scores_path else IN_SCORES).copy()
 
     canonical["date"] = pd.to_datetime(canonical["date"], errors="coerce").dt.normalize()
     macro["date"] = pd.to_datetime(macro["date"], errors="coerce").dt.normalize()
