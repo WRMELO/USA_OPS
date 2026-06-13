@@ -900,6 +900,82 @@ def _build_sell_suggestions(
     return out
 
 
+def _build_rebalance_sell_suggestions(
+    decision: dict[str, Any],
+    holdings_qty: dict[str, int],
+    prices_d1: dict[str, float],
+    total_ativo: float,
+) -> list[dict[str, Any]]:
+    if not bool(decision.get("is_rebalance_day", False)):
+        return []
+
+    selected_raw = decision.get("selected_tickers", [])
+    target_weights_raw = decision.get("target_weights", {})
+    if not isinstance(selected_raw, list) or not isinstance(target_weights_raw, dict):
+        return []
+
+    selected = {str(t).upper().strip() for t in selected_raw if str(t).strip()}
+    target_weights = {
+        str(k).upper().strip(): _safe_float(v, 0.0)
+        for k, v in target_weights_raw.items()
+        if str(k).strip()
+    }
+    if not selected or not target_weights:
+        return []
+
+    cfg_path = ROOT / "config" / "winner_us.json"
+    cfg = _read_json(cfg_path)
+    ws = cfg.get("winner_config_snapshot", {})
+    max_cap = _safe_float(ws.get("max_weight_cap", 0.06), 0.06)
+    top_n = max(1, _safe_int(ws.get("top_n", 20), 20))
+    target_w_default = 1.0 / float(top_n)
+
+    out: list[dict[str, Any]] = []
+    for tk_raw, qty_raw in holdings_qty.items():
+        tk = str(tk_raw).upper().strip()
+        qty = _safe_int(qty_raw, 0)
+        if not tk or qty <= 0:
+            continue
+
+        px = _safe_float(prices_d1.get(tk, 0.0), 0.0)
+        if px <= 0:
+            continue
+
+        val = qty * px
+        carga = (val / total_ativo) if total_ativo > 0 else 0.0
+        if tk not in selected:
+            out.append(
+                {
+                    "ticker": tk,
+                    "sell_pct": 100.0,
+                    "close_d1": px,
+                    "reason": "REBALANCE: fora da lista travada - venda total",
+                    "qty_sell": qty,
+                }
+            )
+            continue
+
+        if carga > max_cap:
+            target_w = _safe_float(target_weights.get(tk, target_w_default), target_w_default)
+            qty_target = math.floor(total_ativo * target_w / px) if px > 0 else 0
+            qty_sell = max(0, qty - qty_target)
+            if qty_sell > 0:
+                out.append(
+                    {
+                        "ticker": tk,
+                        "sell_pct": round((qty_sell / qty) * 100.0, 1),
+                        "close_d1": px,
+                        "reason": (
+                            f"REBALANCE: aparo - carga {carga * 100:.1f}% > {max_cap * 100:.0f}% "
+                            f"(aparar ate {target_w * 100:.0f}%)"
+                        ),
+                        "qty_sell": qty_sell,
+                    }
+                )
+
+    return sorted(out, key=lambda x: -_safe_float(x.get("sell_pct", 0.0), 0.0))
+
+
 def _make_positions_snapshot(lots: list[Lot]) -> list[dict[str, Any]]:
     out = []
     for lot in lots:
@@ -961,6 +1037,7 @@ def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[s
     cash_prev = compute_cash(cutoff_day)
     cash_free_calc = _safe_float(cash_prev.get("cash_free", 0.0), 0.0)
     cash_acc_calc = _safe_float(cash_prev.get("cash_accounting", 0.0), 0.0)
+    total_ativo_calc = total_current + cash_free_calc + cash_acc_calc
 
     total_bought_row = (
         "<tr class='total-row'>"
@@ -1016,10 +1093,13 @@ def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[s
         "d1_real_day": d1_real_day.isoformat() if d1_real_day else "",
         "cash_free_prev": cash_free_calc,
         "cash_accounting_prev": cash_acc_calc,
+        "cash_free": cash_free_calc,
+        "cash_acc": cash_acc_calc,
         "holdings_qty": holdings_qty,
         "prices_d1": prices_d1,
         "lots_snapshot": _make_positions_snapshot(lots),
         "carteira_valor_d1": total_current,
+        "total_ativo": total_ativo_calc,
         "pending_sales": _pending_sales_for_transfer(exec_day),
         "sells_in_settlement": _sells_in_settlement_for_display(exec_day),
         "aporte_acumulado": aporte_acc,
@@ -1061,10 +1141,27 @@ def build_painel(exec_day: date) -> Path:
     if not rows_info_top:
         rows_info_top.append("<tr><td colspan='3'>Top-20 indisponivel (sem decisao).</td></tr>")
 
+    prices_all = {**ctx["prices_d1"], **prices_top}
     sell_suggestions = _build_sell_suggestions(
         holdings_qty=ctx["holdings_qty"],
-        prices_d1={**ctx["prices_d1"], **prices_top},
+        prices_d1=prices_all,
         as_of_day=d1,
+    )
+    total_ativo = _safe_float(ctx.get("total_ativo", 0.0), 0.0)
+    if total_ativo <= 0:
+        total_ativo = (
+            sum(
+                _safe_int(qty, 0) * _safe_float(prices_all.get(str(tk).upper().strip(), 0.0), 0.0)
+                for tk, qty in ctx["holdings_qty"].items()
+            )
+            + _safe_float(ctx.get("cash_free", ctx.get("cash_free_prev", 0.0)), 0.0)
+            + _safe_float(ctx.get("cash_acc", ctx.get("cash_accounting_prev", 0.0)), 0.0)
+        )
+    rebalance_sell_suggestions = _build_rebalance_sell_suggestions(
+        decision=decision,
+        holdings_qty=ctx["holdings_qty"],
+        prices_d1=prices_all,
+        total_ativo=total_ativo,
     )
     rows_sell = []
     for s in sell_suggestions:
@@ -1078,6 +1175,18 @@ def build_painel(exec_day: date) -> Path:
         )
     if not rows_sell:
         rows_sell.append("<tr><td colspan='4'>Nenhuma venda sugerida para D-1.</td></tr>")
+
+    rows_sell_rebalance = []
+    for s in rebalance_sell_suggestions:
+        rows_sell_rebalance.append(
+            "<tr>"
+            f"<td>{s['ticker']}</td>"
+            f"<td style='text-align:right'>{_fmt_pct(_safe_float(s.get('sell_pct', 0.0), 0.0))}</td>"
+            f"<td style='text-align:right'>{_fmt_int(_safe_int(s.get('qty_sell', 0), 0))}</td>"
+            f"<td style='text-align:right'>{_fmt_money(_safe_float(s.get('close_d1', 0.0), 0.0))}</td>"
+            f"<td>{s.get('reason', '')}</td>"
+            "</tr>"
+        )
 
     action_rows: list[dict[str, Any]] = []
     action_tickers = [
@@ -1223,6 +1332,13 @@ input, select {{ width:100%; padding:6px; border:1px solid #cbd5e1; border-radiu
             <tr><th>Ticker</th><th>% Venda</th><th>Fechamento D-1</th><th>Razao tecnica</th></tr>
             {''.join(rows_sell)}
           </table>
+          {(
+            "<h3>Vendas de Rebalance D0 (ajuste a lista travada)</h3>"
+            "<table>"
+            "<tr><th>Ticker</th><th>% Venda</th><th>Qtd</th><th>Fechamento D-1</th><th>Razao</th></tr>"
+            + "".join(rows_sell_rebalance)
+            + "</table>"
+          ) if rebalance_sell_suggestions else ""}
         </div>
       </div>
     </div>
