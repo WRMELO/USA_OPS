@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-06-27
+
+- feat(T-SDC-ANALISTA-USA-CANONICAL-LAYER-V1): cria `lib/spc.py` (portado de `RENDA_OPS/lib/spc.py`, com B+C consultivo) e `pipeline/analise_us.py` (camada canonica que produz `data/ssot/contexto_analista_us.json`). Skill `analista-usa` refatorada para Passo 0b obrigatorio. SALA D-077 / USA D-121.
+
 ## 2026-06-13
 
 - feat(motor): T-REBALANCE-D0-RECONCILIATION-US-V1 — adiciona reconciliacao D0 de rebalance no painel US com `_build_rebalance_sell_suggestions` (venda total para holdings fora da lista travada e aparo acima de `max_weight_cap=6%`), mantendo tabela SPC defensiva separada de "Vendas de Rebalance D0". Skill `analista-usa` atualizada com Passo 2b e prioridade de vendas D0 no Passo 9. Rastreabilidade: SALA D-062 / USA D-120 / R-042. Tag de motor prevista: `v1.14.0-motor-us` (pos-auditoria).
