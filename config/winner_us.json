@@ -191,7 +191,7 @@
       "backtest/results/t018_ablation_summary.json": "4dec78a4cd0c8926e17c91e47ffe03b27a7ce924084898df63ee99ec92d1c309",
       "backtest/results/t021_concentration_report.json": "556e64d58a0051b2a7383146680455b03a2ef6f2e132a7898a4d6d61fc090b12",
       "backtest/results/acid_analysis_us.json": "aa275b1d27d644105a0f64605332f23fcad7f00e35bdf30bb3fb11ba462e3bab",
-      "backtest/results/curve_C4_K10.csv": "c3883ec64826b5885fd49a76a7d48ee682b61eb1a99ae84e63edb38378af82d0",
+      "backtest/results/curve_C4_K10.csv": "41a47e687a9d53458d688a6400b6ddaabf8084523da83eca823e471f7571d1f1",
       "backtest/results/events_concentration_trims.csv": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
       "backtest/results/events_defensive_sells.csv": "8187d44c974b238692c4f244fd7901c48de9f6c950b908ed61fe41bd5316008b"
     }
@@ -209,7 +209,8 @@
     "D-018",
     "D-019",
     "D-020",
-    "D-021"
+    "D-021",
+    "USA D-122"
   ],
   "traceability": {
     "supersedes_implicit_memory_only": true,
