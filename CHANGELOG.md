@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-02
+
+- fix(T-USA-RESEED-WINNER-C4-V1): reseed de `data/daily/winner_curve_us.parquet` com base C4 canonica e re-selagem do hash de `backtest/results/curve_C4_K10.csv` em `config/winner_us.json`. Mantem 70 linhas `pipeline_step10` intactas e fecha a reconciliação em `PASS`. Decision: D-122 / SALA D-081. Tag: `v1.15.0-motor-us`.
+
 ## 2026-06-27
 
 - feat(T-SDC-ANALISTA-USA-CANONICAL-LAYER-V1): cria `lib/spc.py` (portado de `RENDA_OPS/lib/spc.py`, com B+C consultivo) e `pipeline/analise_us.py` (camada canonica que produz `data/ssot/contexto_analista_us.json`). Skill `analista-usa` refatorada para Passo 0b obrigatorio. SALA D-077 / USA D-121.
