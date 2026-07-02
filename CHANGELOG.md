@@ -2,6 +2,7 @@
 
 ## 2026-07-02
 
+- docs(curadoria): T-SDC-USA-LIVE-REAL-TEST-PREP-V2 - espelha D-123/D-124, registra o regime `LIVE-REAL-TEST` e a cotizacao plena da Base 1 para a passagem ao real US. Artefatos: `DECISION_LOG.md`. Decision: D-123 / D-124.
 - fix(T-USA-RESEED-WINNER-C4-V1): reseed de `data/daily/winner_curve_us.parquet` com base C4 canonica e re-selagem do hash de `backtest/results/curve_C4_K10.csv` em `config/winner_us.json`. Mantem 70 linhas `pipeline_step10` intactas e fecha a reconciliação em `PASS`. Decision: D-122 / SALA D-081. Tag: `v1.15.0-motor-us`.
 
 ## 2026-06-27
