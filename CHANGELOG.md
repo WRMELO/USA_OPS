@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-03
+
+- fix(motor): T-COTIZACAO-BASE1-US-BR-V1 — Base 1 passa a usar cotizacao plena no `pipeline/painel_diario.py`: aportes/retiradas externos alteram quantidade de cotas, proventos permanecem como retorno interno/caixa e a rentabilidade acumulada do painel passa a seguir o preco da cota. Decision: D-125 / SALA D-084 / USA D-124. Tag prevista: `v1.16.0-motor-us`.
+
 ## 2026-07-02
 
 - docs(curadoria): T-SDC-USA-LIVE-REAL-TEST-PREP-V2 - espelha D-123/D-124, registra o regime `LIVE-REAL-TEST` e a cotizacao plena da Base 1 para a passagem ao real US. Artefatos: `DECISION_LOG.md`. Decision: D-123 / D-124.

@@ -290,6 +290,20 @@ def _extract_cash_movements(day_payload: dict[str, Any]) -> tuple[float, float]:
     return aportes, retiradas
 
 
+def _extract_external_flow(day_payload: dict[str, Any]) -> tuple[float, float]:
+    """Fluxo externo para cotizacao (D-084/D-124); proventos sao retorno interno."""
+    aportes = 0.0
+    retiradas = 0.0
+    for mv in day_payload.get("cash_movements", []):
+        typ = str(mv.get("type", "")).upper().strip()
+        val = _safe_float(mv.get("value", mv.get("valor", 0.0)), 0.0)
+        if typ in {"APORTE", "DEPOSITO"}:
+            aportes += val
+        elif typ in {"RETIRADA", "SAQUE"}:
+            retiradas += val
+    return aportes, retiradas
+
+
 def _extract_transfers(day_payload: dict[str, Any]) -> float:
     total = 0.0
     for tr in day_payload.get("cash_transfers", []):
@@ -583,7 +597,7 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
             }
         )
 
-    # Aportes/retiradas via ledger SSOT (paridade D-095 BR); fallback legado para cash_movements de boletins
+    # Fluxos externos via ledger SSOT (D-084/D-124); proventos sao retorno interno.
     try:
         _ledger_events = read_all_events()
         _use_ledger = len(_ledger_events) > 0
@@ -593,7 +607,7 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
 
     cum_aportes = 0.0
     cum_retiradas = 0.0
-    base_patrimonio_by_rec: list[float] = []
+    external_flow_cum_by_rec: list[float] = []
     for rec in ordered:
         ref_d = rec.get("ref_day") or rec.get("exec_day")
         # exec_day e a data em que o caixa entrou/saiu; usar como corte para eventos do ledger (D-040/D-069)
@@ -602,8 +616,7 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
             cum_aportes = sum(
                 float(ev.amount)
                 for ev in _ledger_events
-                if ev.type in {EventType.APORTE, EventType.DIVIDENDO}
-                and ev.exec_date <= _cutoff
+                if ev.type == EventType.APORTE and ev.exec_date <= _cutoff
             )
             cum_retiradas = sum(
                 float(ev.amount)
@@ -611,12 +624,12 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
                 if ev.type == EventType.RETIRADA and ev.exec_date <= _cutoff
             )
         else:
-            aporte, retirada = _extract_cash_movements(rec.get("payload", {}))
+            aporte, retirada = _extract_external_flow(rec.get("payload", {}))
             cum_aportes += aporte
             cum_retiradas += retirada
-        base_patrimonio_by_rec.append(cum_aportes - cum_retiradas)
+        external_flow_cum_by_rec.append(cum_aportes - cum_retiradas)
 
-    if not base_patrimonio_by_rec or base_patrimonio_by_rec[0] <= 0:
+    if not external_flow_cum_by_rec or max(external_flow_cum_by_rec) <= 1e-9:
         return pd.DataFrame(columns=["date", "total_ativo", "base1", "daily_var_pct"])
 
     tickers: set[str] = set()
@@ -645,6 +658,9 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
             by_ticker[tk] = sub
 
     rows: list[dict[str, Any]] = []
+    cota_price_prev: float | None = None
+    cota_qty_prev = 0.0
+    total_ativo_prev: float | None = None
     for idx, rec in enumerate(ordered):
         ref_ts = pd.Timestamp(rec["ref_day"])
         total_mkt = 0.0
@@ -676,21 +692,41 @@ def _build_real_base1_series(as_of_day: date) -> pd.DataFrame:
                     px = _safe_float(sub_until.iloc[-1]["close_operational"], px)
             total_mkt += qtd * px
         total_ativo = total_mkt + _safe_float(rec["cash_free"], 0.0) + _safe_float(rec["cash_acc"], 0.0)
+        ext_flow_cum = external_flow_cum_by_rec[idx]
+        prev_ext_flow_cum = external_flow_cum_by_rec[idx - 1] if idx > 0 else 0.0
+        ext_flow_day = ext_flow_cum - prev_ext_flow_cum
+        cota_price: float | None = None
+        if cota_price_prev is None:
+            if ext_flow_day > 1e-9:
+                cota_qty_prev = ext_flow_day / 100.0
+                if cota_qty_prev > 1e-9:
+                    cota_price = total_ativo / cota_qty_prev
+        elif total_ativo_prev is not None and total_ativo_prev > 1e-9:
+            nav_pre_flow = total_ativo - ext_flow_day
+            cota_price = cota_price_prev * (nav_pre_flow / total_ativo_prev)
+            if cota_price > 1e-9:
+                cota_qty_prev += ext_flow_day / cota_price
+        if cota_price is not None:
+            cota_price_prev = cota_price
+            total_ativo_prev = total_ativo
         plot_day = rec["ref_day"]
         rows.append(
             {
                 "date": pd.Timestamp(plot_day),
                 "total_ativo": total_ativo,
-                "base_patrimonio": base_patrimonio_by_rec[idx],
+                "cota_price": cota_price,
             }
         )
 
     out = pd.DataFrame(rows).sort_values("date").drop_duplicates(subset=["date"], keep="last")
     if out.empty:
         return pd.DataFrame(columns=["date", "total_ativo", "base1", "daily_var_pct"])
-    out["base1"] = out["total_ativo"] / out["base_patrimonio"]
+    out = out.dropna(subset=["cota_price"]).copy()
+    if out.empty:
+        return pd.DataFrame(columns=["date", "total_ativo", "base1", "daily_var_pct"])
+    out["base1"] = out["cota_price"] / 100.0
     out["daily_var_pct"] = out["base1"].pct_change() * 100.0
-    out = out.drop(columns=["base_patrimonio"])
+    out = out.drop(columns=["cota_price"])
     return out.reset_index(drop=True)
 
 
@@ -1087,6 +1123,11 @@ def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[s
         elif ev.type == EventType.RETIRADA:
             retirada_acc += _safe_float(ev.amount, 0.0)
 
+    _base1_prev_series = _build_real_base1_series(as_of_day=cutoff_day)
+    cota_price_prev = None
+    if not _base1_prev_series.empty:
+        cota_price_prev = _safe_float(_base1_prev_series.iloc[-1]["base1"], 0.0) * 100.0
+
     report_ctx = {
         "d1": d1.isoformat(),
         "d1_br": _fmt_date_br(d1),
@@ -1104,6 +1145,7 @@ def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[s
         "sells_in_settlement": _sells_in_settlement_for_display(exec_day),
         "aporte_acumulado": aporte_acc,
         "retirada_acumulada": retirada_acc,
+        "cota_price_prev": cota_price_prev,
         "corporate_actions": corporate_actions,
     }
     return tables_html, report_ctx, warnings
@@ -1437,6 +1479,7 @@ const PREV_ACC = {ctx["cash_accounting_prev"]};
 const CARTEIRA_D1 = {ctx["carteira_valor_d1"]};
 const APORTE_ACC = {ctx["aporte_acumulado"]};
 const RETIRADA_ACC = {ctx["retirada_acumulada"]};
+const COTA_PRICE_PREV = {json.dumps(ctx.get("cota_price_prev"))};
 const ACTION_ROWS = {json.dumps(action_rows, ensure_ascii=False)};
 const SNAPSHOT_D1 = {json.dumps(ctx["lots_snapshot"], ensure_ascii=False)};
 const PENDING_SALES = {json.dumps(ctx["pending_sales"], ensure_ascii=False)};
@@ -1649,7 +1692,17 @@ function recalc() {{
   const totalAtivo = carteiraD + free + acc;
   const basePatrimonio = (APORTE_ACC + aporte) - (RETIRADA_ACC + retirada);
   const resultadoAcc = totalAtivo - basePatrimonio;
-  const rentAcc = basePatrimonio > 0 ? (resultadoAcc / basePatrimonio) * 100.0 : 0.0;
+  const externalFlowCota =
+    cashMovs.filter(x => ['APORTE','DEPOSITO'].includes(x.type)).reduce((a,b) => a + b.value, 0) -
+    cashMovs.filter(x => ['RETIRADA','SAQUE'].includes(x.type)).reduce((a,b) => a + b.value, 0);
+  const navPrevCota = CARTEIRA_D1 + PREV_FREE + PREV_ACC;
+  const navPreFlowCota = totalAtivo - externalFlowCota;
+  let rentAcc;
+  if (COTA_PRICE_PREV !== null && navPrevCota > 0) {{
+    rentAcc = COTA_PRICE_PREV * (navPreFlowCota / navPrevCota) - 100.0;
+  }} else {{
+    rentAcc = basePatrimonio > 0 ? (resultadoAcc / basePatrimonio) * 100.0 : 0.0;
+  }}
 
   document.getElementById('dfc_free_open').textContent = moneyUSD(PREV_FREE);
   document.getElementById('dfc_transfer').textContent = moneyUSD(transfer);
