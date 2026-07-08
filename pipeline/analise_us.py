@@ -260,10 +260,10 @@ def _compute_persistencia(ticker: str, as_of_day: date, cadence: int = 10) -> in
     window = eligible[: max(int(cadence), 1)]
     count = 0
     for _, payload in window:
-        top20 = payload.get("top20_by_score", []) or []
+        operational = payload.get("operational_ranking", []) or payload.get("portfolio", []) or []
         tickers = {
             str(item.get("ticker", "")).upper().strip()
-            for item in top20
+            for item in operational
             if isinstance(item, dict)
         }
         if tk in tickers:
@@ -331,6 +331,7 @@ def build_context(market_day: date) -> dict[str, Any]:
     action = str(daily_doc.get("action", "MERCADO")).upper()
     top20_by_score = daily_doc.get("top20_by_score", []) or []
     selected_tickers = [str(t).upper().strip() for t in (daily_doc.get("selected_tickers", []) or []) if str(t).strip()]
+    operational_raw = daily_doc.get("operational_ranking", []) or daily_doc.get("portfolio", []) or []
     target_weights: dict[str, float] = {}
     for tk, w in (daily_doc.get("target_weights", {}) or {}).items():
         key = str(tk).upper().strip()
@@ -339,18 +340,20 @@ def build_context(market_day: date) -> dict[str, Any]:
         target_weights[key] = _safe_float(w, 0.0)
 
     master_entries = []
-    for row in top20_by_score:
+    for pos, row in enumerate(operational_raw, 1):
         if not isinstance(row, dict):
             continue
         tk = str(row.get("ticker", "")).upper().strip()
         if not tk:
             continue
-        rank = pd.to_numeric(row.get("m3_rank", row.get("rank")), errors="coerce")
+        rank = pd.to_numeric(row.get("rank", row.get("m3_rank", pos)), errors="coerce")
+        m3_rank = pd.to_numeric(row.get("m3_rank", row.get("rank", pos)), errors="coerce")
         score = pd.to_numeric(row.get("score_m3"), errors="coerce")
         master_entries.append(
             {
                 "ticker": tk,
                 "m3_rank": int(rank) if pd.notna(rank) else -1,
+                "raw_m3_rank": int(m3_rank) if pd.notna(m3_rank) else -1,
                 "score_m3": float(score) if pd.notna(score) else None,
             }
         )
@@ -526,7 +529,8 @@ def build_context(market_day: date) -> dict[str, Any]:
         },
         "master": {
             "date": str(daily_doc.get("target_date", daily_doc.get("date", ""))),
-            "top20_by_score": master_entries,
+            "operational_ranking": master_entries,
+            "top20_by_score": top20_by_score,
             "selected_tickers": selected_tickers,
             "target_weights": target_weights,
         },

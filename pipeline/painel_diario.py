@@ -1159,9 +1159,7 @@ def build_painel(exec_day: date) -> Path:
     decision_date = d1.isoformat()
 
     portfolio_active = decision.get("portfolio", [])
-    top20_info = decision.get("top20_by_score", [])
-    use_top20_info = bool(top20_info)
-    source_rows = top20_info if use_top20_info else portfolio_active
+    source_rows = decision.get("operational_ranking", []) or portfolio_active
     top_tickers = [str(x.get("ticker", "")).upper().strip() for x in source_rows if str(x.get("ticker", "")).strip()]
     prices_top = get_latest_prices(top_tickers, as_of_day=d1)
     score_map = _load_score_map(d1)
@@ -1169,10 +1167,7 @@ def build_painel(exec_day: date) -> Path:
     rows_info_top = []
     for p in source_rows[:20]:
         t = str(p.get("ticker", "")).upper().strip()
-        if use_top20_info:
-            score = _safe_float(p.get("score_m3"), 0.0)
-        else:
-            score = _safe_float(score_map.get(t, 0.0), 0.0)
+        score = _safe_float(p.get("score_m3", score_map.get(t, 0.0)), 0.0)
         rows_info_top.append(
             "<tr>"
             f"<td>{t}</td>"
@@ -1181,7 +1176,7 @@ def build_painel(exec_day: date) -> Path:
             "</tr>"
         )
     if not rows_info_top:
-        rows_info_top.append("<tr><td colspan='3'>Top-20 indisponivel (sem decisao).</td></tr>")
+        rows_info_top.append("<tr><td colspan='3'>Lista operacional indisponivel (sem decisao).</td></tr>")
 
     prices_all = {**ctx["prices_d1"], **prices_top}
     sell_suggestions = _build_sell_suggestions(
@@ -1362,7 +1357,7 @@ input, select {{ width:100%; padding:6px; border:1px solid #cbd5e1; border-radiu
       <div class="section-title">Sessao Boletim - Informacao</div>
       <div class="info-grid">
         <div>
-          <h3>Top-20 para compra (D-1)</h3>
+          <h3>Top-20 para compra — lista operacional</h3>
           <table class="top10-table">
             <tr><th>Ticker</th><th>M3</th><th>Fechamento D-1</th></tr>
             {''.join(rows_info_top)}

@@ -110,7 +110,11 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
         try:
             cached = json.loads(decision_path.read_text(encoding="utf-8"))
             cached_ref = str(cached.get("scores_reference_date_d_minus_1", "")).strip()
-            if cached_ref == str(prev_dt.date()):
+            if (
+                cached_ref == str(prev_dt.date())
+                and int(cached.get("ranking_schema_version", 0) or 0) >= 2
+                and bool(cached.get("operational_ranking"))
+            ):
                 return cached
             # Cache com referência defasada — recomputar
         except Exception:
@@ -175,6 +179,27 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
     if s > 0:
         weights = {k: float(v / s) for k, v in weights.items()}
 
+    score_by_ticker = {
+        str(row["ticker"]).upper().strip(): row
+        for _, row in day_scores.set_index("ticker", drop=False).iterrows()
+    }
+    operational_ranking: list[dict[str, object]] = []
+    for rank, ticker in enumerate(selected, 1):
+        tk = str(ticker).upper().strip()
+        row = score_by_ticker.get(tk)
+        score = pd.to_numeric(row.get("score_m3") if row is not None else None, errors="coerce")
+        m3_rank = pd.to_numeric(row.get("m3_rank") if row is not None else rank, errors="coerce")
+        operational_ranking.append(
+            {
+                "rank": rank,
+                "ticker": tk,
+                "m3_rank": int(float(m3_rank)) if pd.notna(m3_rank) else rank,
+                "score_m3": float(score) if pd.notna(score) else None,
+                "target_weight": float(weights.get(tk, 0.0)),
+                "bucket": "LISTA_OPERACIONAL_COMPRA",
+            }
+        )
+
     defensive_actions: list[dict] = []
     action = "REBALANCE" if is_rebalance_day else "HOLD"
 
@@ -188,7 +213,9 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
         "action": action,
         "is_rebalance_day": bool(is_rebalance_day),
         "rebalance_trigger_reason": rebalance_trigger_reason,
+        "ranking_schema_version": 2,
         "selected_tickers": selected,
+        "operational_ranking": operational_ranking,
         "top20_by_score": top20_by_score,
         "target_weights": weights,
         "portfolio": [{"ticker": t, "target_weight": float(weights[t])} for t in selected],
