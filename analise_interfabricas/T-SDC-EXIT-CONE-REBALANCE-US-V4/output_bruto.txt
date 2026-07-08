@@ -1,0 +1,12 @@
+=== T-SDC-EXIT-CONE-REBALANCE-US-V4 ===
+Gate 1: checking frozen dataset hashes
+Gate 1 status: PASS
+Preparing inputs from frozen dataset
+Running unmodified C4 baseline
+Gate 2 status: PASS max_rel_abs_diff=0.0
+Running candidate C4_CONE_MU_150
+Running candidate C4_CONE_MU_200
+Running candidate C4_CONE_MU_250
+Running candidate C4_CONE_ZERO_150
+Running candidate C4_CONE_ZERO_200
+Running candidate C4_CONE_ZERO_250

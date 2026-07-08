@@ -1,5 +1,10 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-08
+
+- docs(curadoria): T-SDC-EXIT-CONE-REBALANCE-US-V4 - fecha a rastreabilidade do replay read-only do cone de trajetria inter-rebalance no Forno US com Gate 1/2 reconciliados, 6 comparacoes executadas e relatorio final `INCONCLUSIVO` em todos os bracos. Artefatos: `analise_interfabricas/T-SDC-EXIT-CONE-REBALANCE-US-V4/preregistro.md`, `analise_interfabricas/T-SDC-EXIT-CONE-REBALANCE-US-V4/run_exit_cone_rebalance_v4.py`, `analise_interfabricas/T-SDC-EXIT-CONE-REBALANCE-US-V4/resultados_raw.json`, `analise_interfabricas/T-SDC-EXIT-CONE-REBALANCE-US-V4/resultados.md`, `analise_interfabricas/T-SDC-EXIT-CONE-REBALANCE-US-V4/output_bruto.txt`. Decision: D-092.
+- docs(curadoria): T-SDC-EXIT-MECHANISMS-REPLAY-US-V3 - fecha a rastreabilidade do replay read-only dos mecanismos de saida no Forno US com Gate 1/2 reconciliados, 10 comparacoes executadas e relatorio final `INCONCLUSIVO` em todos os bracos. Artefatos: `analise_interfabricas/T-SDC-EXIT-MECHANISMS-REPLAY-US-V3/preregistro.md`, `analise_interfabricas/T-SDC-EXIT-MECHANISMS-REPLAY-US-V3/run_exit_mechanisms_replay_v3.py`, `analise_interfabricas/T-SDC-EXIT-MECHANISMS-REPLAY-US-V3/resultados_raw.json`, `analise_interfabricas/T-SDC-EXIT-MECHANISMS-REPLAY-US-V3/resultados.md`, `analise_interfabricas/T-SDC-EXIT-MECHANISMS-REPLAY-US-V3/output_bruto.txt`. Decision: D-091.
+
 ## 2026-07-03
 
 - fix(motor): T-COTIZACAO-BASE1-US-BR-V1 — Base 1 passa a usar cotizacao plena no `pipeline/painel_diario.py`: aportes/retiradas externos alteram quantidade de cotas, proventos permanecem como retorno interno/caixa e a rentabilidade acumulada do painel passa a seguir o preco da cota. Decision: D-125 / SALA D-084 / USA D-124. Tag prevista: `v1.16.0-motor-us`.
