@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-09
+
+- feat(motor): T-PAINEL-SUBTOTAL-TICKER-US-V1 — adiciona linha de subtotal agregado por ticker (Layout B) acima dos lotes individuais nas tabelas `Carteira Comprada` e `Carteira Atual (D-1)` do painel US, preservando Total Geral, linhas de lote e logica operacional. Decision: D-126. Tag prevista: `v1.18.0-motor-us`.
+
 ## 2026-07-08
 
 - feat(motor): T-SDC-RANKING-UNIFICATION-PHASE2-BRUS-V1 — unifica a fonte operacional de ranking US em `pipeline/09_decide.py`, `pipeline/painel_diario.py` e `pipeline/analise_us.py`, persistindo `operational_ranking` e mantendo `top20_by_score` apenas como dado tecnico legado. Artefatos: `pipeline/09_decide.py`, `pipeline/painel_diario.py`, `pipeline/analise_us.py`, `DECISION_LOG.md`, `REGRAS_OPERACIONAIS.md`. Decision: D-095. Tag prevista: `v1.17.0-motor-us`.

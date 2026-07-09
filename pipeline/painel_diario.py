@@ -1043,6 +1043,10 @@ def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[s
 
     rows_bought = []
     rows_current = []
+    lot_rows_bought: dict[str, list[str]] = {}
+    lot_rows_current: dict[str, list[str]] = {}
+    ticker_order: list[str] = []
+    ticker_totals: dict[str, dict[str, float]] = {}
     holdings_qty: dict[str, int] = {}
     for lot in lots:
         curr_px = _safe_float(prices_d1.get(lot.ticker, lot.buy_price), lot.buy_price)
@@ -1052,7 +1056,14 @@ def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[s
         w_cur = (curr_val / total_current * 100.0) if total_current > 0 else 0.0
         ret_log = (math.log(curr_val / buy_val) * 100.0) if buy_val > 0 and curr_val > 0 else 0.0
         holdings_qty[lot.ticker] = holdings_qty.get(lot.ticker, 0) + lot.qtd
-        rows_bought.append(
+        if lot.ticker not in ticker_totals:
+            ticker_order.append(lot.ticker)
+            ticker_totals[lot.ticker] = {"qty": 0.0, "buy_val": 0.0, "curr_val": 0.0, "curr_px": curr_px}
+        ticker_totals[lot.ticker]["qty"] += float(lot.qtd)
+        ticker_totals[lot.ticker]["buy_val"] += buy_val
+        ticker_totals[lot.ticker]["curr_val"] += curr_val
+        ticker_totals[lot.ticker]["curr_px"] = curr_px
+        lot_rows_bought.setdefault(lot.ticker, []).append(
             "<tr>"
             f"<td>{lot.ticker}</td><td>{_fmt_date_br(lot.buy_date)}</td><td style='text-align:right'>{_fmt_int(lot.qtd)}</td>"
             f"<td style='text-align:right'>{_fmt_money(lot.buy_price)}</td>"
@@ -1060,7 +1071,7 @@ def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[s
             f"<td style='text-align:right'>{_fmt_pct(w_buy)}</td>"
             "</tr>"
         )
-        rows_current.append(
+        lot_rows_current.setdefault(lot.ticker, []).append(
             "<tr>"
             f"<td>{lot.ticker}</td><td>{_fmt_date_br(lot.buy_date)}</td><td style='text-align:right'>{_fmt_int(lot.qtd)}</td>"
             f"<td style='text-align:right'>{_fmt_money(curr_px)}</td>"
@@ -1069,6 +1080,35 @@ def _build_tables_and_cards(exec_day: date) -> tuple[str, dict[str, Any], list[s
             f"<td style='text-align:right'>{_fmt_pct(ret_log)}</td>"
             "</tr>"
         )
+
+    for tk in ticker_order:
+        agg = ticker_totals[tk]
+        qty_total = int(agg["qty"])
+        buy_val_total = agg["buy_val"]
+        curr_val_total = agg["curr_val"]
+        avg_buy = buy_val_total / qty_total if qty_total > 0 else 0.0
+        w_buy_total = (buy_val_total / total_buy * 100.0) if total_buy > 0 else 0.0
+        w_cur_total = (curr_val_total / total_current * 100.0) if total_current > 0 else 0.0
+        ret_log_total = (math.log(curr_val_total / buy_val_total) * 100.0) if buy_val_total > 0 and curr_val_total > 0 else 0.0
+        rows_bought.append(
+            "<tr class='subtotal-row'>"
+            f"<td><strong>{tk}</strong></td><td>-</td><td style='text-align:right'><strong>{_fmt_int(qty_total)}</strong></td>"
+            f"<td style='text-align:right'><strong>{_fmt_money(avg_buy)}</strong></td>"
+            f"<td style='text-align:right'><strong>{_fmt_money(buy_val_total)}</strong></td>"
+            f"<td style='text-align:right'><strong>{_fmt_pct(w_buy_total)}</strong></td>"
+            "</tr>"
+        )
+        rows_bought.extend(lot_rows_bought.get(tk, []))
+        rows_current.append(
+            "<tr class='subtotal-row'>"
+            f"<td><strong>{tk}</strong></td><td>-</td><td style='text-align:right'><strong>{_fmt_int(qty_total)}</strong></td>"
+            f"<td style='text-align:right'><strong>{_fmt_money(agg['curr_px'])}</strong></td>"
+            f"<td style='text-align:right'><strong>{_fmt_money(curr_val_total)}</strong></td>"
+            f"<td style='text-align:right'><strong>{_fmt_pct(w_cur_total)}</strong></td>"
+            f"<td style='text-align:right'><strong>{_fmt_pct(ret_log_total)}</strong></td>"
+            "</tr>"
+        )
+        rows_current.extend(lot_rows_current.get(tk, []))
 
     cash_prev = compute_cash(cutoff_day)
     cash_free_calc = _safe_float(cash_prev.get("cash_free", 0.0), 0.0)
@@ -1299,6 +1339,7 @@ h1 {{ margin:0; font-size:24px; color:#0f172a; }}
 table {{ width:100%; border-collapse: collapse; font-size:13px; table-layout:fixed; }}
 th {{ background:#0f172a; color:white; padding:7px; text-align:left; }}
 td {{ border-bottom:1px solid #e5e7eb; padding:6px 7px; }}
+.subtotal-row td {{ background:#eef6ff; border-top:1px solid #bfdbfe; border-bottom:1px solid #bfdbfe; }}
 .total-row td {{ background:#f8fafc; border-top:2px solid #cbd5e1; }}
 .total-row .total-title {{ white-space:nowrap; font-weight:700; }}
 .section-title {{ font-size:18px; margin-bottom:10px; color:#0f172a; }}
