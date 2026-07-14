@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-14
+
+- fix(analista-usa): T-SDC-ANALISE-US-CICLOS-ACESO-FIX-V1 — adiciona `ciclos_aceso` aos holdings do contexto canônico em `pipeline/analise_us.py` com semântica alinhada ao BR (pregões desde `purchase_date` até `market_day`), preservando escopo estrito sem ajuste de liquidez. Artefatos: `pipeline/analise_us.py`, `data/ssot/contexto_analista_us.json`, `DECISION_LOG.md`, `CHANGELOG.md`. Decision: D-127 (ref cruzada: SALA D-101).
+
 ## 2026-07-09
 
 - feat(motor): T-PAINEL-SUBTOTAL-TICKER-US-V1 — adiciona linha de subtotal agregado por ticker (Layout B) acima dos lotes individuais nas tabelas `Carteira Comprada` e `Carteira Atual (D-1)` do painel US, preservando Total Geral, linhas de lote e logica operacional. Decision: D-126. Tag prevista: `v1.18.0-motor-us`.

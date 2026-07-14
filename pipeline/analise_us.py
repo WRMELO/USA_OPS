@@ -370,6 +370,7 @@ def build_context(market_day: date) -> dict[str, Any]:
 
     cash_free = _safe_float(real_doc.get("cash_free", 0.0))
     cash_acc = _safe_float(real_doc.get("cash_accounting", 0.0))
+    trading_days_all = _load_trading_days_us()
 
     holdings_out: list[dict[str, Any]] = []
     total_mkt = 0.0
@@ -384,17 +385,15 @@ def build_context(market_day: date) -> dict[str, Any]:
         value = qty * close_d1
         total_mkt += value
 
+        try:
+            ign_date = date.fromisoformat(purchase_date) if purchase_date else None
+        except Exception:
+            ign_date = None
+
         heat_pct = ((close_d1 / avg_cost) - 1.0) * 100.0 if avg_cost > 0 else 0.0
-        if purchase_date and not df_tk.empty:
-            try:
-                ign_date = date.fromisoformat(purchase_date)
-            except Exception:
-                ign_date = None
-            if ign_date is not None:
-                df_since = df_tk[df_tk["date"] >= pd.Timestamp(ign_date)]
-                peak_close = _safe_float(df_since["close_operational"].max(), close_d1) if not df_since.empty else close_d1
-            else:
-                peak_close = close_d1
+        if ign_date is not None and not df_tk.empty:
+            df_since = df_tk[df_tk["date"] >= pd.Timestamp(ign_date)]
+            peak_close = _safe_float(df_since["close_operational"].max(), close_d1) if not df_since.empty else close_d1
         else:
             peak_close = close_d1
 
@@ -420,6 +419,9 @@ def build_context(market_day: date) -> dict[str, Any]:
                 "spc_rules_fired": spc_rules,
                 "nelson_we_flags": nelson_flags,
                 "carga_termica_pct": 0.0,
+                "ciclos_aceso": len([d for d in trading_days_all if ign_date is not None and ign_date <= d <= market_day])
+                if ign_date is not None
+                else 0,
                 "purchase_date": purchase_date,
             }
         )
