@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-15
+
+- feat(scripts): T-SDC-LIVE-REAL-CUTOVER-RUNBOOK-US-V1 — cria `scripts/live_real_cutover.py` (subcomandos `init-cutover`, `freeze-dryrun`, `record-buy`, `emit-boletim`) e `tests/test_live_real_cutover.py` para autoria/teste da F-16 com dados sintéticos e guard de idempotência; não executa corte real nem grava `data/live_real_test/` em produção. Decision: D-128 (ref cruzada: SALA D-103).
+
 ## 2026-07-14
 
 - fix(analista-usa): T-SDC-ANALISE-US-CICLOS-ACESO-FIX-V1 — adiciona `ciclos_aceso` aos holdings do contexto canônico em `pipeline/analise_us.py` com semântica alinhada ao BR (pregões desde `purchase_date` até `market_day`), preservando escopo estrito sem ajuste de liquidez. Artefatos: `pipeline/analise_us.py`, `data/ssot/contexto_analista_us.json`, `DECISION_LOG.md`, `CHANGELOG.md`. Decision: D-127 (ref cruzada: SALA D-101).
