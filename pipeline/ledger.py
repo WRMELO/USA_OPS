@@ -22,6 +22,7 @@ class EventType(str, Enum):
     BUY = "BUY"
     SELL = "SELL"
     SETTLEMENT = "SETTLEMENT"
+    FEE = "FEE"
     CORRECTION = "CORRECTION"
 
 
@@ -218,6 +219,14 @@ def is_duplicate(event: LedgerEvent) -> bool:
             if same_amount and ((event.ref_id and same_ref) or (not event.ref_id and same_reason)):
                 return True
             continue
+        # Corretagem segue o mesmo contrato de unicidade de SETTLEMENT.
+        if event.type == EventType.FEE:
+            same_amount = abs(ev.amount - event.amount) <= 0.01
+            same_ref = (ev.ref_id or "") == (event.ref_id or "")
+            same_reason = (ev.reason or "") == (event.reason or "")
+            if same_amount and ((event.ref_id and same_ref) or (not event.ref_id and same_reason)):
+                return True
+            continue
         # BUY/SELL.
         if (
             (ev.ticker or "") == (event.ticker or "")
@@ -367,7 +376,7 @@ def compute_cash(as_of_date: date) -> dict[str, float]:
     for ev in events:
         if ev.type in {EventType.APORTE, EventType.DIVIDENDO, EventType.SETTLEMENT}:
             free += float(ev.amount)
-        elif ev.type in {EventType.RETIRADA, EventType.BUY}:
+        elif ev.type in {EventType.RETIRADA, EventType.BUY, EventType.FEE}:
             free -= float(ev.amount)
 
     settled, unmatched_total = _settled_amounts(events, as_of_date)

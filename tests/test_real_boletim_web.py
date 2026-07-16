@@ -1,0 +1,166 @@
+from __future__ import annotations
+
+import json
+from datetime import date
+from pathlib import Path
+
+import pipeline.real_boletim_web as real_boletim_web
+
+
+def _count_lines(path: Path) -> int:
+    if not path.exists():
+        return 0
+    return len(path.read_text(encoding="utf-8").splitlines())
+
+
+def test_add_operation_roundtrip_persists_only_draft(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    exec_day = date(2026, 7, 16)
+
+    real_boletim_web.add_operation(
+        exec_day,
+        tipo="COMPRA",
+        ticker="MRVI",
+        qtd=10,
+        preco=7.0,
+        corretagem=2.5,
+        preco_sombra=6.9,
+    )
+
+    payload = real_boletim_web.load_draft(exec_day)
+    assert len(payload["operations"]) == 1
+    assert payload["operations"][0]["ticker"] == "MRVI"
+    assert not (tmp_path / "drafts" / "ledger_real.jsonl").exists()
+
+
+def test_remove_operation_keeps_remaining_rows(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    exec_day = date(2026, 7, 16)
+
+    draft = real_boletim_web.add_operation(
+        exec_day,
+        tipo="COMPRA",
+        ticker="MRVI",
+        qtd=10,
+        preco=7.0,
+        corretagem=2.5,
+        preco_sombra=6.9,
+    )
+    draft = real_boletim_web.add_operation(
+        exec_day,
+        tipo="VENDA",
+        ticker="HPP",
+        qtd=2,
+        preco=16.0,
+        corretagem=1.2,
+        preco_sombra=15.8,
+    )
+    op_ids = [op["id"] for op in draft["operations"]]
+    assert len(op_ids) == 2
+
+    updated = real_boletim_web.remove_operation(exec_day, op_ids[0])
+    assert len(updated["operations"]) == 1
+    assert updated["operations"][0]["id"] == op_ids[1]
+
+
+def test_apply_draft_to_ledger_creates_buy_fee_and_shadow_and_preserves_ssot(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    exec_day = date(2026, 7, 16)
+    ledger_dir = tmp_path / "live_real"
+
+    ssot_path = real_boletim_web.ROOT / "data" / "ssot" / "ledger.jsonl"
+    ssot_before = _count_lines(ssot_path)
+
+    operations = [
+        {
+            "id": "op-1",
+            "type": "COMPRA",
+            "ticker": "MRVI",
+            "qtd": 10,
+            "preco": 7.0,
+            "corretagem": 2.5,
+            "preco_sombra": 6.8,
+        }
+    ]
+
+    result = real_boletim_web.apply_draft_to_ledger(exec_day, ledger_dir, operations)
+    assert len(result["events_created"]) >= 3
+
+    real_ledger_path = ledger_dir / "ledger_real.jsonl"
+    shadow_ledger_path = ledger_dir / "ledger_shadow.jsonl"
+    assert real_ledger_path.exists()
+    assert shadow_ledger_path.exists()
+
+    real_events = [
+        json.loads(line)
+        for line in real_ledger_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    shadow_events = [
+        json.loads(line)
+        for line in shadow_ledger_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    buys = [ev for ev in real_events if ev.get("type") == "BUY"]
+    fees = [ev for ev in real_events if ev.get("type") == "FEE"]
+    assert len(buys) == 1
+    assert len(fees) == 1
+    assert float(fees[0]["amount"]) == 2.5
+    assert fees[0]["ref_id"] == buys[0]["id"]
+    assert any(ev.get("type") == "BUY" for ev in shadow_events)
+
+    expected_real_path = ledger_dir / "ledger_real.jsonl"
+    assert real_boletim_web.ledger_mod.LEDGER_PATH == expected_real_path
+
+    ssot_after = _count_lines(ssot_path)
+    assert ssot_after == ssot_before
+
+
+def test_close_day_generates_artifacts_and_archives_draft(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    exec_day = date(2026, 7, 16)
+    ledger_dir = tmp_path / "live_real"
+
+    real_boletim_web.add_operation(
+        exec_day,
+        tipo="COMPRA",
+        ticker="MRVI",
+        qtd=5,
+        preco=7.0,
+        corretagem=2.5,
+        preco_sombra=6.9,
+    )
+    draft_file = real_boletim_web.draft_path(exec_day)
+    assert draft_file.exists()
+
+    out = real_boletim_web.close_day(exec_day, ledger_dir)
+    assert Path(out["boletim_path"]).exists()
+    assert Path(out["friction_report_path"]).exists()
+    assert out["archived_draft_path"] is not None
+    assert Path(out["archived_draft_path"]).exists()
+    assert not draft_file.exists()
+
+
+def test_render_live_html_orders_by_m3_rank():
+    view = {
+        "today": "2026-07-16",
+        "market_day": "2026-07-15",
+        "cash_free": 18018.34,
+        "cash_accounting": 0.0,
+        "positions": [],
+        "held_set": [],
+        "top_operational": [
+            {"ticker": "ZZZZ", "m3_rank": 9, "score_m3": 1.0, "close_d1": 10.0},
+            {"ticker": "AAAA", "m3_rank": 1, "score_m3": 2.0, "close_d1": 20.0},
+        ],
+        "target_weights": {"ZZZZ": 0.03, "AAAA": 0.05},
+        "forno": {},
+        "draft": {"operations": []},
+        "closed_boletim_exists": False,
+    }
+    html = real_boletim_web.render_live_html(view)
+    assert "Top-20 operacional (m3_rank)" in html
+    assert "M3 Rank" in html
+    assert html.index("AAAA") < html.index("ZZZZ")
+

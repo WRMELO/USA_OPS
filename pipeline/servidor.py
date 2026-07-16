@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
 
@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from pipeline import run_daily
 from pipeline import painel_diario as _painel_diario_mod
+from pipeline import real_boletim_web
 from pipeline.ledger import (
     EventType,
     append_event,
@@ -52,111 +53,6 @@ def _real_test_active() -> bool:
     except Exception:
         return False
     return False
-
-
-def _real_boletim_payload_path(today: date) -> tuple[Path, str] | None:
-    real_dir = ROOT / "data" / "live_real_test"
-    abertura_path = real_dir / f"abertura_{today.isoformat()}.json"
-    if abertura_path.exists():
-        return abertura_path, "abertura"
-    fechamento_path = real_dir / f"{today.isoformat()}.json"
-    if fechamento_path.exists():
-        return fechamento_path, "fechamento"
-    return None
-
-
-def _render_real_boletim_html(payload: dict[str, Any], today: date, kind: str) -> str:
-    def _fmt_usd(value: Any) -> str:
-        try:
-            return f"$ {float(value):,.2f}"
-        except Exception:
-            return "$ 0.00"
-
-    def _fmt_pct(value: Any) -> str:
-        try:
-            return f"{float(value) * 100:.2f}%"
-        except Exception:
-            return "0.00%"
-
-    banner = "Boletim de abertura (analise do dia)" if kind == "abertura" else "Boletim de fechamento"
-    title = f"Boletim Real — LIVE-REAL-TEST — {today.isoformat()}"
-    cash_free = _fmt_usd(payload.get("cash_free", 0.0))
-    cash_accounting = _fmt_usd(payload.get("cash_accounting", 0.0))
-
-    top_operational = payload.get("top_operational", [])
-    top_rows: list[str] = []
-    if top_operational:
-        for row in top_operational:
-            m3_rank_val = row.get("m3_rank", "")
-            top_rows.append(
-                "<tr>"
-                f"<td>{row.get('rank', '')}</td>"
-                f"<td>{m3_rank_val}</td>"
-                f"<td>{str(row.get('ticker', '')).upper()}</td>"
-                f"<td style='text-align:right'>{float(row.get('score_m3', 0.0) or 0.0):.4f}</td>"
-                f"<td style='text-align:right'>{_fmt_pct(row.get('target_weight', 0.0))}</td>"
-                f"<td style='text-align:right'>{_fmt_usd(row.get('close_d1', 0.0))}</td>"
-                "</tr>"
-            )
-    else:
-        top_rows.append("<tr><td colspan='6'>Top-20 nao disponivel neste boletim.</td></tr>")
-
-    positions = payload.get("positions_snapshot", [])
-    pos_rows: list[str] = []
-    if positions:
-        for row in positions:
-            pos_rows.append(
-                "<tr>"
-                f"<td>{str(row.get('ticker', '')).upper()}</td>"
-                f"<td>{row.get('data_compra', '')}</td>"
-                f"<td style='text-align:right'>{int(row.get('qtd', 0) or 0)}</td>"
-                f"<td style='text-align:right'>{_fmt_usd(row.get('preco_compra', 0.0))}</td>"
-                "</tr>"
-            )
-    else:
-        pos_rows.append(
-            "<tr><td colspan='4'>Nenhuma posicao registrada ainda — carteira comprada zerada.</td></tr>"
-        )
-
-    return f"""<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8" />
-  <title>{title}</title>
-  <style>
-    body {{ font-family: Arial, sans-serif; margin: 18px; color: #111827; background: #f9fafb; }}
-    .card {{ background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; margin: 10px 0; }}
-    .banner {{ font-weight: 700; color: #1d4ed8; margin-bottom: 8px; }}
-    table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
-    th {{ text-align: left; background: #0f172a; color: #fff; padding: 7px; }}
-    td {{ border-bottom: 1px solid #e5e7eb; padding: 6px 7px; }}
-    .muted {{ color: #4b5563; font-size: 12px; }}
-  </style>
-</head>
-<body>
-  <h1>{title}</h1>
-  <div class="card">
-    <div class="banner">{banner}</div>
-    <p><strong>Caixa Livre:</strong> {cash_free}</p>
-    <p><strong>Caixa Contabil:</strong> {cash_accounting}</p>
-  </div>
-  <div class="card">
-    <h3>Top-20 operacional</h3>
-    <table>
-      <tr><th>Rank</th><th>M3 Rank</th><th>Ticker</th><th>Score M3</th><th>Peso-Alvo(%)</th><th>Fechamento D-1</th></tr>
-      {''.join(top_rows)}
-    </table>
-  </div>
-  <div class="card">
-    <h3>Carteira comprada</h3>
-    <table>
-      <tr><th>Ticker</th><th>Data Compra</th><th>Qtd</th><th>Preco Compra</th></tr>
-      {''.join(pos_rows)}
-    </table>
-  </div>
-  <p class="muted">Registro de ordens via atalho USA_REGISTRAR_ORDEM. Encerramento do dia via atalho USA_ENCERRAR_DIA. Historico dry-run continua disponivel em /painel/&lt;data&gt;.</p>
-</body>
-</html>"""
 
 
 @dataclass
@@ -312,18 +208,9 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 return
             if path == "/painel":
                 if _real_test_active():
-                    target = _real_boletim_payload_path(today)
-                    if target is None:
-                        self._respond_html(
-                            "<h3>"
-                            f"Regime LIVE-REAL-TEST ativo, mas o boletim de hoje ainda nao foi emitido. Rode: ./.venv/bin/python scripts/live_real_cutover.py emit-abertura --exec-date {today.isoformat()}"
-                            "</h3>",
-                            code=200,
-                        )
-                        return
-                    payload_path, kind = target
-                    payload = json.loads(payload_path.read_text(encoding="utf-8"))
-                    self._respond_html(_render_real_boletim_html(payload, today, kind), code=200)
+                    view = real_boletim_web.load_live_view(today, ROOT / "data" / "live_real_test")
+                    html = real_boletim_web.render_live_html(view)
+                    self._respond_html(html, code=200)
                     return
                 panel = _panel_path(_painel_diario_mod.get_d_minus_1(today))
                 if not panel.exists():
@@ -365,6 +252,99 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
             parsed = urlparse(self.path)
             path = parsed.path
             today = self._today()
+
+            def _read_form_payload() -> dict[str, str]:
+                length = int(self.headers.get("Content-Length", "0"))
+                body = self.rfile.read(length).decode("utf-8", errors="ignore")
+                parsed_form = parse_qs(body, keep_blank_values=True)
+                return {k: (v[0] if v else "") for k, v in parsed_form.items()}
+
+            if path == "/painel/rascunho":
+                form = _read_form_payload()
+                raw_exec_day = str(form.get("exec_day", "")).strip()
+                try:
+                    exec_day = date.fromisoformat(raw_exec_day)
+                except ValueError:
+                    self._respond_html("<h3>exec_day invalido.</h3>", code=400)
+                    return
+                if exec_day != today:
+                    self._respond_html("<h3>Somente o painel do dia atual pode salvar rascunho.</h3>", code=403)
+                    return
+
+                tipo = str(form.get("tipo", "")).upper().strip()
+                ticker = str(form.get("ticker", "")).upper().strip()
+                try:
+                    qtd = int(float(str(form.get("qtd", "0") or "0")))
+                    preco = float(str(form.get("preco", "0") or "0"))
+                    raw_corretagem = str(form.get("corretagem", "")).strip()
+                    corretagem = float(raw_corretagem) if raw_corretagem else 2.50
+                    raw_preco_sombra = str(form.get("preco_sombra", "")).strip()
+                    preco_sombra = float(raw_preco_sombra) if raw_preco_sombra else None
+                except ValueError:
+                    self._respond_html("<h3>Campos numericos invalidos.</h3>", code=400)
+                    return
+
+                if tipo not in {"COMPRA", "VENDA"} or not ticker or qtd <= 0 or preco <= 0:
+                    self._respond_html("<h3>Dados da operacao invalidos.</h3>", code=400)
+                    return
+                if corretagem < 0:
+                    self._respond_html("<h3>Corretagem invalida.</h3>", code=400)
+                    return
+
+                try:
+                    real_boletim_web.add_operation(
+                        exec_day,
+                        tipo=tipo,
+                        ticker=ticker,
+                        qtd=qtd,
+                        preco=preco,
+                        corretagem=corretagem,
+                        preco_sombra=preco_sombra,
+                    )
+                except ValueError as exc:
+                    self._respond_html(f"<h3>{str(exc)}</h3>", code=400)
+                    return
+                self._redirect("/painel")
+                return
+
+            if path == "/painel/rascunho/remover":
+                form = _read_form_payload()
+                raw_exec_day = str(form.get("exec_day", "")).strip()
+                row_id = str(form.get("row_id", "")).strip()
+                try:
+                    exec_day = date.fromisoformat(raw_exec_day)
+                except ValueError:
+                    self._respond_html("<h3>exec_day invalido.</h3>", code=400)
+                    return
+                if exec_day != today:
+                    self._respond_html("<h3>Somente o painel do dia atual pode alterar rascunho.</h3>", code=403)
+                    return
+                if not row_id:
+                    self._respond_html("<h3>row_id obrigatorio.</h3>", code=400)
+                    return
+                real_boletim_web.remove_operation(exec_day, row_id)
+                self._redirect("/painel")
+                return
+
+            if path == "/painel/encerrar":
+                form = _read_form_payload()
+                raw_exec_day = str(form.get("exec_day", "")).strip()
+                confirmar = str(form.get("confirmar", "")).strip().lower()
+                try:
+                    exec_day = date.fromisoformat(raw_exec_day)
+                except ValueError:
+                    self._respond_html("<h3>exec_day invalido.</h3>", code=400)
+                    return
+                if exec_day != today:
+                    self._respond_html("<h3>Somente o painel do dia atual pode encerrar.</h3>", code=403)
+                    return
+                if confirmar != "sim":
+                    self._respond_html("<h3>Confirmacao obrigatoria para encerrar o dia.</h3>", code=400)
+                    return
+                real_boletim_web.close_day(exec_day, ROOT / "data" / "live_real_test")
+                self._redirect("/painel")
+                return
+
             if path != "/salvar":
                 self._respond_json({"ok": False, "error": "Rota nao encontrada"}, code=404)
                 return

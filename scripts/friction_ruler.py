@@ -170,13 +170,16 @@ def cmd_record_shadow_buy(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_emit_friction_report(args: argparse.Namespace) -> int:
-    ledger_dir = _resolve_dir(args.ledger_dir, DEFAULT_LEDGER_DIR)
-    real_dir = _resolve_dir(args.real_dir, DEFAULT_REAL_DIR)
-    as_of = args.as_of_date
+def build_friction_report_payload(
+    as_of: date,
+    ledger_dir: Path | None = None,
+    real_dir: Path | None = None,
+) -> dict[str, Any]:
+    resolved_ledger_dir = ledger_dir if ledger_dir is not None else DEFAULT_LEDGER_DIR
+    resolved_real_dir = real_dir if real_dir is not None else DEFAULT_REAL_DIR
 
-    real_ledger_path = _configure_real_ledger(ledger_dir)
-    shadow_ledger_path = _configure_shadow_ledger(ledger_dir)
+    real_ledger_path = _configure_real_ledger(resolved_ledger_dir)
+    shadow_ledger_path = _configure_shadow_ledger(resolved_ledger_dir)
 
     real_buys = _buy_events_until(real_ledger_path, as_of)
     shadow_buys = _buy_events_until(shadow_ledger_path, as_of)
@@ -237,7 +240,7 @@ def cmd_emit_friction_report(args: argparse.Namespace) -> int:
     real_positions = export_snapshot(as_of)
     real_cash = compute_cash(as_of)
 
-    dryrun_file = _find_latest_dryrun_boletim(real_dir, as_of)
+    dryrun_file = _find_latest_dryrun_boletim(resolved_real_dir, as_of)
     dryrun_source_missing = dryrun_file is None
     dryrun_source_file: str | None = None
     dryrun_cash_free: float | None = None
@@ -253,7 +256,7 @@ def cmd_emit_friction_report(args: argparse.Namespace) -> int:
         if isinstance(positions_snapshot, list):
             dryrun_n_positions = len(positions_snapshot)
 
-    payload: dict[str, Any] = {
+    return {
         "as_of_date": as_of.isoformat(),
         "generated_at": datetime.now(tz=UTC).isoformat(),
         "n_real_buy_events": len(real_buys),
@@ -286,6 +289,12 @@ def cmd_emit_friction_report(args: argparse.Namespace) -> int:
         ),
     }
 
+def cmd_emit_friction_report(args: argparse.Namespace) -> int:
+    ledger_dir = _resolve_dir(args.ledger_dir, DEFAULT_LEDGER_DIR)
+    real_dir = _resolve_dir(args.real_dir, DEFAULT_REAL_DIR)
+    as_of = args.as_of_date
+
+    payload = build_friction_report_payload(as_of, ledger_dir=ledger_dir, real_dir=real_dir)
     out_file = ledger_dir / f"friction_report_{as_of.isoformat()}.json"
     _json_dump(out_file, payload)
     print(f"OK: relatorio de friccao gravado em {out_file}")

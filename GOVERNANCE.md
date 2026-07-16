@@ -231,6 +231,43 @@ Top-20 de abertura/painel deixa de usar `rank` alfabetico e passa a seguir
 `m3_rank`, preservando `operational_ranking` persistido pelo motor como fonte
 unica. Nenhum arquivo blindado de `§6.6` foi tocado.
 
+### 6.10 Boletim web primário LIVE-REAL-TEST (`/painel`) com rascunho e fechamento definitivo (D-136)
+
+A partir de D-136, o endpoint `/painel` no regime LIVE-REAL-TEST deixa de ser
+apenas leitor de snapshots e passa a ser a **interface primária operacional**
+do dia, com três estados explícitos:
+
+1. **Rascunho intermediário** (`data/live_real_test/draft_<exec_day>.json`):
+   acumula operações (`COMPRA`/`VENDA`) com corretagem e preço-sombra sem tocar
+   o ledger definitivo.
+2. **Aplicação definitiva no ledger** (evento a evento, no encerramento):
+   cada operação do rascunho vira evento em `ledger_real.jsonl` (`BUY`/`SELL` +
+   `FEE` para corretagem) e, quando houver preço-sombra, evento espelho em
+   `ledger_shadow.jsonl`.
+3. **Fechamento do dia**: gera os artefatos derivados
+   `data/live_real_test/<exec_day>.json` (boletim real-only) e
+   `data/live_real_test/friction_report_<exec_day>.json`, depois arquiva o
+   rascunho como `draft_<exec_day>_encerrado_<HHMMSS>.json`.
+
+**Contrato de integridade**:
+
+- `draft_*.json` é artefato intermediário operacional; **não** é SSOT nem
+  substitui o ledger.
+- O SSOT financeiro do regime real continua sendo `ledger_real.jsonl` (mais
+  `ledger_shadow.jsonl` para o gêmeo sombra).
+- Corretagem real deve ser registrada como `EventType.FEE`, impactando
+  diretamente `cash_free`.
+- O fechamento definitivo é atômico no sentido funcional: aplica ledger real +
+  sombra, emite boletim/fricção e só então arquiva o rascunho.
+
+**Fallback oficial preservado**:
+
+- `scripts/registrar_ordem_real.sh` e `scripts/encerrar_dia_real.sh` seguem
+  válidos como plano B operacional.
+- A existência do fallback não altera o papel de `/painel` como primário.
+
+Ref: SALA D-111, USA D-136, D-133, D-132, R-018, R-020, R-049, R-050.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.

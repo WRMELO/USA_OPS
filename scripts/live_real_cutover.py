@@ -168,15 +168,45 @@ def cmd_record_buy(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_emit_boletim(args: argparse.Namespace) -> int:
+def cmd_record_fee(args: argparse.Namespace) -> int:
     ledger_dir = _resolve_dir(args.ledger_dir, DEFAULT_LEDGER_DIR)
     _configure_target_ledger(ledger_dir)
 
-    exec_day = args.exec_date
+    amount = float(args.amount or 0.0)
+    if amount <= 0:
+        print("ERRO: --amount deve ser maior que zero.", file=sys.stderr)
+        return 2
+
+    ref_id = str(args.ref_id or "").strip() or None
+    ticker = str(args.ticker or "").upper().strip() or None
+    reason = str(args.reason or "").strip() or "LIVE-REAL-TEST fee manual"
+
+    event = create_event(
+        EventType.FEE,
+        args.exec_date,
+        amount,
+        ticker=ticker,
+        ref_id=ref_id,
+        reason=reason,
+    )
+
+    if is_duplicate(event):
+        print("SKIP: FEE duplicada detectada; nenhum evento novo gravado.")
+        return 0
+
+    append_event(event)
+    print(
+        f"OK: FEE registrada amount={amount:.2f} ticker={(ticker or 'N/A')} ref_id={(ref_id or 'N/A')}"
+    )
+    return 0
+
+
+def build_boletim_payload(exec_day: date, ledger_dir: Path | None = None) -> dict[str, Any]:
+    if ledger_dir is not None:
+        _configure_target_ledger(ledger_dir)
     snapshot = export_snapshot(exec_day)
     cash = ledger.compute_cash(exec_day)
-
-    payload: dict[str, Any] = {
+    return {
         "exec_day": exec_day.isoformat(),
         "date": exec_day.isoformat(),
         "reference_decision": exec_day.isoformat(),
@@ -192,7 +222,11 @@ def cmd_emit_boletim(args: argparse.Namespace) -> int:
         "caixa_liquidando": float(cash.get("cash_accounting", 0.0)),
     }
 
-    out_file = ledger_dir / f"{exec_day.isoformat()}.json"
+
+def cmd_emit_boletim(args: argparse.Namespace) -> int:
+    ledger_dir = _resolve_dir(args.ledger_dir, DEFAULT_LEDGER_DIR)
+    payload = build_boletim_payload(args.exec_date, ledger_dir=ledger_dir)
+    out_file = ledger_dir / f"{args.exec_date.isoformat()}.json"
     _json_dump(out_file, payload)
     print(f"OK: boletim real-only gravado em {out_file}")
     return 0
@@ -357,6 +391,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Diretorio do ledger real (default: data/live_real_test).",
     )
     p_buy.set_defaults(handler=cmd_record_buy)
+
+    p_fee = sub.add_parser("record-fee", help="Registra FEE real no ledger de teste.")
+    p_fee.add_argument("--amount", type=float, required=True)
+    p_fee.add_argument("--ticker", type=str, default=None)
+    p_fee.add_argument("--ref-id", type=str, default=None)
+    p_fee.add_argument("--exec-date", type=_parse_iso_date, required=True, help="Data YYYY-MM-DD.")
+    p_fee.add_argument("--reason", type=str, default=None)
+    p_fee.add_argument(
+        "--ledger-dir",
+        type=str,
+        default=None,
+        help="Diretorio do ledger real (default: data/live_real_test).",
+    )
+    p_fee.set_defaults(handler=cmd_record_fee)
 
     p_emit = sub.add_parser("emit-boletim", help="Emite boletim real-only do ledger de teste.")
     p_emit.add_argument("--exec-date", type=_parse_iso_date, required=True, help="Data YYYY-MM-DD.")
