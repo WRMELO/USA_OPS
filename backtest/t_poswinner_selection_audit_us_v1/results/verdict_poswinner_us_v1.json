@@ -1,0 +1,40 @@
+{
+  "task_id": "T-SDC-POSWINNER-SELECTION-AUDIT-US-V1",
+  "criterion_file": "backtest/t_poswinner_selection_audit_us_v1/decision_criterion_poswinner_selection_audit_us_v1.json",
+  "fronts": {
+    "frente1_horizonte_score": {
+      "Arm_RecentSlopeVeto": {
+        "arm": "Arm_RecentSlopeVeto",
+        "verdict": "INCONCLUSIVO",
+        "reason": "criterios de dominancia/favorecimento nao satisfeitos"
+      },
+      "Arm_ShortTermScore": {
+        "arm": "Arm_ShortTermScore",
+        "verdict": "INCONCLUSIVO",
+        "reason": "criterios de dominancia/favorecimento nao satisfeitos"
+      }
+    },
+    "frente2_piso_tamanho": {
+      "Arm_150M": {
+        "arm": "Arm_150M",
+        "verdict": "FAVORECIDO_BASELINE",
+        "reason": "massa bootstrap >=90% contra o arm em >=2 metricas com materialidade"
+      },
+      "Arm_75M": {
+        "arm": "Arm_75M",
+        "verdict": "FAVORECIDO_BASELINE",
+        "reason": "massa bootstrap >=90% contra o arm em >=2 metricas com materialidade"
+      }
+    }
+  },
+  "late_rocket_diagnostic": {
+    "verdict": "INCONCLUSIVO",
+    "reason": "sem evidencias suficientes de dominancia/favorecimento"
+  },
+  "notes": [
+    "Estudo read-only. Nenhuma mudanca de motor aplicada.",
+    "REPL/SMWB julho/2026 estao fora da amostra quantitativa por limite do dataset congelado.",
+    "A comparacao entre fases compartilha historico de precos e nao e totalmente independente.",
+    "Dataset congelado nao possui coluna de volume/ADV para teste de liquidez na Frente 2."
+  ]
+}

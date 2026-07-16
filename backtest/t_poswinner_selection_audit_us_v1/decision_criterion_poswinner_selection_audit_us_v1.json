@@ -1,0 +1,96 @@
+{
+  "task_id": "T-SDC-POSWINNER-SELECTION-AUDIT-US-V1",
+  "study_type": "read_only_preregistered_diagnostic",
+  "hypothesis_frente1_horizonte_score": "No holdout, variantes com filtro de desaceleracao recente e/ou score com componente curto de retorno (ret10) melhoram simultaneamente tail-risk (CVaR5), Sharpe ajustado por custo e CAGR proxy versus o baseline C4 atual.",
+  "hypothesis_frente2_piso_tamanho": "No holdout, pisos alternativos de market cap (150M e 75M) podem melhorar desempenho ajustado a risco versus o baseline de 300M sem ultrapassar limite de rotacao aceitavel.",
+  "dataset": {
+    "name": "research_dataset_us",
+    "version": "v1",
+    "freeze_asof": "2026-06-09",
+    "loader_route": "US_RESEARCH_DATASET_DIR=backtest/research_dataset_us",
+    "validation_gate": "backtest/research_dataset_us/verify_dataset.py deve retornar status OK antes de executar qualquer analise",
+    "out_of_sample_note": "Casos REPL e SMWB de julho/2026 ficam fora da amostra quantitativa por estarem apos freeze_asof; entram apenas como motivacao qualitativa."
+  },
+  "windows": {
+    "train_end": "2022-12-30",
+    "holdout_start": "2023-01-02",
+    "holdout_end": "2026-06-09",
+    "subwindows": {
+      "SW1": {
+        "start": "2023-01-02",
+        "end": "2024-06-30"
+      },
+      "SW2": {
+        "start": "2024-07-01",
+        "end": "2026-06-09"
+      }
+    }
+  },
+  "runtime_params": {
+    "top_n": 20,
+    "rebalance_cadence": 10,
+    "rebalance_anchor_date": "2026-04-16",
+    "skip_initial_rebalances": 20,
+    "friction_one_way_rate": 0.00025,
+    "max_veto_rate": 0.35,
+    "max_turnover_rate": 0.35,
+    "n_bootstrap": 5000,
+    "late_rocket_ret62_threshold": 0.8
+  },
+  "arms": {
+    "frente1_horizonte_score": {
+      "Baseline": "Selecao operacional C4 atual com score_m3 = z_m0 + z_ret - z_vol, min_market_cap=300M.",
+      "Arm_RecentSlopeVeto": "Mesma elegibilidade do Baseline + veto de candidato com ret_62(d_prev) >= 0.80 e ret10(d_prev) < 0 antes da selecao top_n.",
+      "Arm_ShortTermScore": "Mesma elegibilidade do Baseline, mas usa score alternativo score_m3_alt = z_ret10 + z_ret - z_vol, onde ret10 e soma dos log-retornos de 10 pregoes e z_ret10 e z-score cross-sectional diario."
+    },
+    "frente2_piso_tamanho": {
+      "Baseline_300M": "Selecao operacional C4 atual com min_market_cap=300M.",
+      "Arm_150M": "Mesma regra de score do baseline, alterando elegibilidade para min_market_cap=150M.",
+      "Arm_75M": "Mesma regra de score do baseline, alterando elegibilidade para min_market_cap=75M."
+    }
+  },
+  "diagnostics": {
+    "z_m0_z_ret_redundancy": "Correlacao de Pearson cross-sectional entre z_m0 e z_ret por pregao com minimo de 30 tickers scorados.",
+    "late_rocket_forward_behavior": "No top-20 baseline por ciclo, classificar ticker como late_rocket se ret_62(d_prev) >= 0.80 e medir forward_logret de d_prev para d_prev_next. Comparar media late_rocket vs non_late_rocket por ciclo."
+  },
+  "metrics": {
+    "mean_cvar5_holdout": "Media do CVaR5 (percentil 5 do log_ret_arm_cost_adj por ciclo) no HOLDOUT.",
+    "mean_sharpe_cost_adj_holdout": "Media do Sharpe anualizado de log_ret_arm_cost_adj por ciclo no HOLDOUT.",
+    "mean_cagr_proxy_holdout": "Media anualizada de log_ret_arm_cost_adj/holding_days * 252 no HOLDOUT.",
+    "mean_veto_rate_or_turnover_holdout": "Arm_RecentSlopeVeto usa veto_rate medio; demais arms usam turnover_rate medio no HOLDOUT.",
+    "bootstrap_paired_cycles": "Bootstrap pareado por ciclo com 5000 reamostragens para deltas de metricas versus baseline correspondente."
+  },
+  "r048_single_factory_adaptation": {
+    "metricas_decompostas": [
+      "delta_sharpe_cost_adj",
+      "delta_cvar5",
+      "delta_cagr_proxy"
+    ],
+    "sub_periodos": [
+      "SW1",
+      "SW2"
+    ],
+    "materialidade": {
+      "sharpe_abs_min": 0.3,
+      "cagr_abs_min": 0.03,
+      "late_rocket_mean_diff_abs_min": 0.01
+    },
+    "notes": "DOMINA_FORTE exige IC95 inteiramente favoravel em todas as metricas decompostas, concordancia de sinal em SW1 e SW2 e gate operacional de veto/turnover. FAVORECIDO exige massa bootstrap >=90% a favor com materialidade declarada."
+  },
+  "verdict_rules_arms": {
+    "DOMINA_FORTE": "IC95(delta_sharpe_cost_adj) > 0, IC95(delta_cvar5) > 0 e IC95(delta_cagr_proxy) > 0 no HOLDOUT; sinal positivo das tres metricas em SW1 e SW2; e media de veto_rate/turnover_rate <= limite do arm.",
+    "FAVORECIDO_ARM": "Massa bootstrap de delta>0 >= 0.90 em pelo menos duas das tres metricas no HOLDOUT, sem metrica com massa bootstrap de delta<0 > 0.60, com materialidade (|delta_sharpe|>=0.30 ou |delta_cagr|>=0.03), e gate operacional respeitado.",
+    "FAVORECIDO_BASELINE": "Massa bootstrap de delta<0 >= 0.90 em pelo menos duas das tres metricas no HOLDOUT, com materialidade (|delta_sharpe|>=0.30 ou |delta_cagr|>=0.03).",
+    "INCONCLUSIVO": "Qualquer caso fora das condicoes acima."
+  },
+  "verdict_rules_late_rocket_diagnostic": {
+    "metric": "mean_paired_diff_forward_logret = mean(late_rocket) - mean(non_late_rocket) por ciclo no holdout",
+    "DOMINA_FORTE": "IC95(mean_paired_diff_forward_logret) inteiramente abaixo de 0 no HOLDOUT, media <= -0.01 e sinal negativo em SW1 e SW2.",
+    "FAVORECIDO_ARM": "Massa bootstrap de diff<0 >= 0.90 e |media|>=0.01 no HOLDOUT.",
+    "FAVORECIDO_BASELINE": "Massa bootstrap de diff>0 >= 0.90 e |media|>=0.01 no HOLDOUT.",
+    "INCONCLUSIVO": "Qualquer caso fora das condicoes acima."
+  },
+  "post_hoc_prohibition": "O criterio acima e fixo e imutavel. E proibido reinterpretar, redefinir metricas ou escolher subperiodos apos ver os resultados. PARCIAL e INCONCLUSIVO sao resultados legitimos.",
+  "registered_at": "2026-07-16",
+  "registered_before_execution": true
+}
