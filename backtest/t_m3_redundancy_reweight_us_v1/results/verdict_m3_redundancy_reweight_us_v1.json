@@ -1,0 +1,27 @@
+{
+  "task_id": "T-SDC-M3-REDUNDANCY-REWEIGHT-US-V1",
+  "criterion_file": "backtest/t_m3_redundancy_reweight_us_v1/decision_criterion_m3_redundancy_reweight_us_v1.json",
+  "fronts": {
+    "score_horizon_dedup": {
+      "Arm_Dedup1x1": {
+        "arm": "Arm_Dedup1x1",
+        "verdict": "INCONCLUSIVO",
+        "reason": "criterios de dominancia/favorecimento nao satisfeitos"
+      },
+      "Arm_DedupVolTilt": {
+        "arm": "Arm_DedupVolTilt",
+        "verdict": "INCONCLUSIVO",
+        "reason": "criterios de dominancia/favorecimento nao satisfeitos"
+      }
+    }
+  },
+  "late_rocket_diagnostic": {
+    "verdict": "INCONCLUSIVO",
+    "reason": "sem evidencias suficientes de dominancia/favorecimento"
+  },
+  "notes": [
+    "Estudo read-only. Nenhuma mudanca de motor aplicada.",
+    "Frente de piso de tamanho nao foi reaberta nesta task.",
+    "A comparacao entre fases compartilha historico de precos e nao e totalmente independente."
+  ]
+}

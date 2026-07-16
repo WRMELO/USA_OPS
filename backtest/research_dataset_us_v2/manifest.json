@@ -1,0 +1,89 @@
+{
+  "task_id": "T-RESEARCH-DATASET-FREEZE-US-V2",
+  "dataset_version": "v2",
+  "freeze_asof": "2026-07-15",
+  "window": {
+    "start": "2021-01-01",
+    "end": "2026-07-15"
+  },
+  "created_at_utc": "2026-07-16T19:27:41.129431+00:00",
+  "git_commit": "f9b4e8c315d1afae18a13da5e0593edaa9d15535",
+  "git_describe": "v1.7.0-motor-us-96-gf9b4e8c",
+  "files": {
+    "canonical_us.parquet": {
+      "sha256": "d108c949576f4d7a8b7e718e355719fddf25826e5f606b54693a51e1ac706bd9",
+      "size_bytes": 190064614
+    },
+    "macro_us.parquet": {
+      "sha256": "adde074e44bc87bb949edb52bdf765cfcb325ed28c9d2dcaf2711b24b6b4fdde",
+      "size_bytes": 16251
+    },
+    "scores_m3_us.parquet": {
+      "sha256": "2f407f8de535bf3aa2fe53e9d4ae0ad43f25895aef0ff4ac3a379de35dc84ebe",
+      "size_bytes": 46368117
+    }
+  },
+  "tables": {
+    "canonical": {
+      "n_rows": 2314335,
+      "date_min": "2021-01-04",
+      "date_max": "2026-07-15",
+      "columns": [
+        "date",
+        "ticker",
+        "close_raw",
+        "close_operational",
+        "market_cap",
+        "split_factor",
+        "i_value",
+        "i_ucl",
+        "i_lcl",
+        "mr_value",
+        "mr_ucl",
+        "xbar_value",
+        "xbar_ucl",
+        "xbar_lcl",
+        "r_value",
+        "r_ucl"
+      ],
+      "n_tickers": 1985
+    },
+    "macro": {
+      "n_rows": 504,
+      "date_min": "2024-07-11",
+      "date_max": "2026-07-15",
+      "columns": [
+        "date",
+        "vix_close",
+        "usd_index_broad",
+        "ust_10y_yield",
+        "ust_2y_yield",
+        "fed_funds_rate",
+        "hy_oas",
+        "ig_oas"
+      ]
+    },
+    "scores": {
+      "n_rows": 799150,
+      "date_min": "2024-10-08",
+      "date_max": "2026-07-15",
+      "columns": [
+        "date",
+        "ticker",
+        "score_m0",
+        "ret_62",
+        "vol_62",
+        "z_m0",
+        "z_ret",
+        "z_vol",
+        "score_m3",
+        "m3_rank"
+      ],
+      "n_tickers": 1985
+    }
+  },
+  "notes": [
+    "Dataset congelado para reprodutibilidade de backtests US.",
+    "Fonte original: SSOT vivo no momento do freeze; insumos historicos do selamento de marco nao sao recuperaveis por git."
+  ]
+}
