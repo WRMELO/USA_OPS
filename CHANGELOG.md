@@ -2,6 +2,7 @@
 
 ## 2026-07-15
 
+- feat(scripts): T-SDC-FRICTION-RULER-F17-US-V1 — cria `scripts/friction_ruler.py` (`record-shadow-buy`, `emit-friction-report`) e `tests/test_friction_ruler.py` para autoria/teste da F-17 (régua de fricção Opção 1 dry-run paralelo + Opção 2 gêmeo sombra) com dados sintéticos; não executa corte real nem grava `data/live_real_test/` em produção. Decision: D-129 (ref cruzada: SALA D-104).
 - feat(scripts): T-SDC-LIVE-REAL-CUTOVER-RUNBOOK-US-V1 — cria `scripts/live_real_cutover.py` (subcomandos `init-cutover`, `freeze-dryrun`, `record-buy`, `emit-boletim`) e `tests/test_live_real_cutover.py` para autoria/teste da F-16 com dados sintéticos e guard de idempotência; não executa corte real nem grava `data/live_real_test/` em produção. Decision: D-128 (ref cruzada: SALA D-103).
 
 ## 2026-07-14
