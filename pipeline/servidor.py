@@ -87,9 +87,11 @@ def _render_real_boletim_html(payload: dict[str, Any], today: date, kind: str) -
     top_rows: list[str] = []
     if top_operational:
         for row in top_operational:
+            m3_rank_val = row.get("m3_rank", "")
             top_rows.append(
                 "<tr>"
                 f"<td>{row.get('rank', '')}</td>"
+                f"<td>{m3_rank_val}</td>"
                 f"<td>{str(row.get('ticker', '')).upper()}</td>"
                 f"<td style='text-align:right'>{float(row.get('score_m3', 0.0) or 0.0):.4f}</td>"
                 f"<td style='text-align:right'>{_fmt_pct(row.get('target_weight', 0.0))}</td>"
@@ -97,7 +99,7 @@ def _render_real_boletim_html(payload: dict[str, Any], today: date, kind: str) -
                 "</tr>"
             )
     else:
-        top_rows.append("<tr><td colspan='5'>Top-20 nao disponivel neste boletim.</td></tr>")
+        top_rows.append("<tr><td colspan='6'>Top-20 nao disponivel neste boletim.</td></tr>")
 
     positions = payload.get("positions_snapshot", [])
     pos_rows: list[str] = []
@@ -141,7 +143,7 @@ def _render_real_boletim_html(payload: dict[str, Any], today: date, kind: str) -
   <div class="card">
     <h3>Top-20 operacional</h3>
     <table>
-      <tr><th>Rank</th><th>Ticker</th><th>Score M3</th><th>Peso-Alvo(%)</th><th>Fechamento D-1</th></tr>
+      <tr><th>Rank</th><th>M3 Rank</th><th>Ticker</th><th>Score M3</th><th>Peso-Alvo(%)</th><th>Fechamento D-1</th></tr>
       {''.join(top_rows)}
     </table>
   </div>

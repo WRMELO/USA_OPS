@@ -85,3 +85,25 @@ def test_render_real_boletim_html_contains_expected_markers():
     html = servidor._render_real_boletim_html(payload, date(2026, 7, 16), "abertura")
     assert "LIVE-REAL-TEST" in html
     assert "Nenhuma posicao registrada ainda" in html
+
+
+def test_render_real_boletim_html_shows_m3_rank_column():
+    servidor = _load_servidor_module()
+    payload = {
+        "cash_free": 20008.72,
+        "cash_accounting": 0.0,
+        "top_operational": [
+            {
+                "rank": 1,
+                "m3_rank": 45,
+                "ticker": "FCEL",
+                "score_m3": 2.51,
+                "target_weight": 0.05,
+                "close_d1": 20.25,
+            }
+        ],
+        "positions_snapshot": [],
+    }
+    html = servidor._render_real_boletim_html(payload, date(2026, 7, 16), "abertura")
+    assert "M3 Rank" in html
+    assert ">45<" in html

@@ -269,9 +269,9 @@ def test_emit_abertura_happy_path(tmp_path):
         "is_rebalance_day": False,
         "action": "HOLD",
         "operational_ranking": [
-            {"rank": 2, "ticker": "ZZZTEST2", "score_m3": 3.5, "target_weight": 0.05, "bucket": "LISTA"},
-            {"rank": 1, "ticker": "ZZZTEST1", "score_m3": 4.2, "target_weight": 0.07, "bucket": "LISTA"},
-            {"rank": 3, "ticker": "ZZZTEST3", "score_m3": 2.1, "target_weight": 0.04, "bucket": "LISTA"},
+            {"rank": 2, "m3_rank": 1, "ticker": "ZZZTEST2", "score_m3": 3.5, "target_weight": 0.05, "bucket": "LISTA"},
+            {"rank": 1, "m3_rank": 3, "ticker": "ZZZTEST1", "score_m3": 4.2, "target_weight": 0.07, "bucket": "LISTA"},
+            {"rank": 3, "m3_rank": 2, "ticker": "ZZZTEST3", "score_m3": 2.1, "target_weight": 0.04, "bucket": "LISTA"},
         ],
     }
     decision_file = tmp_path / "decision_2026-07-16.json"
@@ -298,3 +298,58 @@ def test_emit_abertura_happy_path(tmp_path):
     assert abs(float(opening_payload["cash_accounting"]) - 0.0) < 1e-9
     assert len(opening_payload["top_operational"]) == 3
     assert all(float(row["close_d1"]) == 0.0 for row in opening_payload["top_operational"])
+    tickers_in_order = [row["ticker"] for row in opening_payload["top_operational"]]
+    assert tickers_in_order == ["ZZZTEST2", "ZZZTEST3", "ZZZTEST1"]
+    assert [row["rank"] for row in opening_payload["top_operational"]] == [1, 2, 3]
+    assert [row["m3_rank"] for row in opening_payload["top_operational"]] == [1, 2, 3]
+
+
+def test_emit_abertura_falls_back_to_rank_when_m3_rank_absent(tmp_path):
+    ledger_dir = tmp_path / "live_real"
+    rc_init = cutover.main(
+        [
+            "init-cutover",
+            "--exec-date",
+            "2026-07-16",
+            "--aporte",
+            "20008.72",
+            "--ledger-dir",
+            str(ledger_dir),
+            "--confirm",
+        ]
+    )
+    assert rc_init == 0
+
+    decision_payload = {
+        "scores_reference_date_d_minus_1": "2026-07-15",
+        "is_rebalance_day": False,
+        "action": "HOLD",
+        "operational_ranking": [
+            {"rank": 2, "ticker": "ZZZTEST2", "score_m3": 3.5, "target_weight": 0.05, "bucket": "LISTA"},
+            {"rank": 1, "ticker": "ZZZTEST1", "score_m3": 4.2, "target_weight": 0.07, "bucket": "LISTA"},
+            {"rank": 3, "ticker": "ZZZTEST3", "score_m3": 2.1, "target_weight": 0.04, "bucket": "LISTA"},
+        ],
+    }
+    decision_file = tmp_path / "decision_2026-07-16.json"
+    decision_file.write_text(json.dumps(decision_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    rc_opening = cutover.main(
+        [
+            "emit-abertura",
+            "--exec-date",
+            "2026-07-16",
+            "--ledger-dir",
+            str(ledger_dir),
+            "--decision-file",
+            str(decision_file),
+        ]
+    )
+    assert rc_opening == 0
+
+    opening_payload_path = ledger_dir / "abertura_2026-07-16.json"
+    opening_payload = json.loads(opening_payload_path.read_text(encoding="utf-8"))
+    assert [row["ticker"] for row in opening_payload["top_operational"]] == [
+        "ZZZTEST1",
+        "ZZZTEST2",
+        "ZZZTEST3",
+    ]

@@ -222,6 +222,15 @@ politica pendente.
 
 Ref: SALA D-107; USA D-132; R-018; R-020; R-049; R-050.
 
+**Nota 2026-07-16 (D-133/SALA D-108)**: `pipeline/analise_us.py` passa a
+detectar o regime LIVE-REAL-TEST pelo `ledger_real.jsonl` (evento `APORTE`) e,
+quando ativo, ler caixa/posicoes diretamente do livro real
+`data/live_real_test/ledger_real.jsonl` para gerar
+`data/ssot/contexto_analista_us.json` (Analista real-aware). A ordenacao do
+Top-20 de abertura/painel deixa de usar `rank` alfabetico e passa a seguir
+`m3_rank`, preservando `operational_ranking` persistido pelo motor como fonte
+unica. Nenhum arquivo blindado de `§6.6` foi tocado.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.

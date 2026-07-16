@@ -246,13 +246,15 @@ def cmd_emit_abertura(args: argparse.Namespace) -> int:
         print("ERRO: decision file sem 'scores_reference_date_d_minus_1'.", file=sys.stderr)
         return 2
 
-    def _rank_value(row: dict[str, Any]) -> int:
-        try:
-            return int(row.get("rank"))
-        except (TypeError, ValueError):
-            return 10**9
+    def _true_rank_value(row: dict[str, Any]) -> int:
+        for key in ("m3_rank", "rank"):
+            try:
+                return int(row.get(key))
+            except (TypeError, ValueError):
+                continue
+        return 10**9
 
-    top_rows = sorted(operational_ranking, key=_rank_value)[: int(args.top_n)]
+    top_rows = sorted(operational_ranking, key=_true_rank_value)[: int(args.top_n)]
     tickers = [
         str(row.get("ticker", "")).upper().strip()
         for row in top_rows
@@ -261,13 +263,14 @@ def cmd_emit_abertura(args: argparse.Namespace) -> int:
     prices = get_latest_prices(tickers, as_of_day=market_day)
 
     top_operational: list[dict[str, Any]] = []
-    for row in top_rows:
+    for display_rank, row in enumerate(top_rows, start=1):
         ticker = str(row.get("ticker", "")).upper().strip()
         if not ticker:
             continue
         top_operational.append(
             {
-                "rank": _rank_value(row),
+                "rank": display_rank,
+                "m3_rank": _true_rank_value(row),
                 "ticker": ticker,
                 "score_m3": float(row.get("score_m3", 0.0) or 0.0),
                 "target_weight": float(row.get("target_weight", 0.0) or 0.0),

@@ -22,6 +22,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from pipeline import ledger as _ledger_mod  # noqa: E402
 from lib.spc import spc_status_and_rules as _spc_status_and_rules  # noqa: E402
 from lib.trading_calendar import next_session as _next_session  # noqa: E402
 from lib.trading_calendar import sessions_in_range as _sessions_in_range  # noqa: E402
@@ -119,6 +120,46 @@ def _load_latest_real(as_of_day: date) -> dict[str, Any] | None:
         return None
     candidates.sort(key=lambda x: x[0], reverse=True)
     return json.loads(candidates[0][1].read_text(encoding="utf-8"))
+
+
+def _default_real_ledger_path() -> Path:
+    return ROOT / "data" / "live_real_test" / "ledger_real.jsonl"
+
+
+def _real_test_active(ledger_path: Path) -> bool:
+    if not ledger_path.exists():
+        return False
+    try:
+        with ledger_path.open("r", encoding="utf-8") as fp:
+            for raw_line in fp:
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except Exception:
+                    continue
+                if str(payload.get("type", "")).upper() == "APORTE":
+                    return True
+    except Exception:
+        return False
+    return False
+
+
+def _load_real_ledger_doc(ledger_path: Path, exec_day: date) -> dict[str, Any]:
+    previous_path = _ledger_mod.LEDGER_PATH
+    try:
+        _ledger_mod.LEDGER_PATH = ledger_path
+        cash = _ledger_mod.compute_cash(exec_day)
+        snapshot = _ledger_mod.export_snapshot(exec_day)
+    finally:
+        _ledger_mod.LEDGER_PATH = previous_path
+
+    return {
+        "positions_snapshot": snapshot,
+        "cash_free": float(cash.get("cash_free", 0.0)),
+        "cash_accounting": float(cash.get("cash_accounting", 0.0)),
+    }
 
 
 def _load_last_rebalance() -> dict[str, Any]:
@@ -311,7 +352,12 @@ def _normalize_positions(positions_snapshot: list[dict[str, Any]]) -> list[dict[
     return sorted(out, key=lambda x: x["ticker"])
 
 
-def build_context(market_day: date) -> dict[str, Any]:
+def build_context(
+    market_day: date,
+    real_test: str = "auto",
+    ledger_path: Path | None = None,
+    exec_day: date | None = None,
+) -> dict[str, Any]:
     cfg_path = ROOT / "config" / "winner_us.json"
     cfg = json.loads(cfg_path.read_text(encoding="utf-8")) if cfg_path.exists() else {}
     wcfg = cfg.get("winner_config_snapshot", {})
@@ -326,7 +372,19 @@ def build_context(market_day: date) -> dict[str, Any]:
 
     daily_doc = _load_latest_daily(market_day) or {}
     prev_daily_doc = _load_prev_day_daily(market_day) or {}
-    real_doc = _load_latest_real(market_day) or {}
+    real_ledger_path = ledger_path or _default_real_ledger_path()
+    if real_test == "on":
+        real_test_active = True
+    elif real_test == "off":
+        real_test_active = False
+    else:
+        real_test_active = _real_test_active(real_ledger_path)
+
+    real_test_exec_day = exec_day or _next_session(market_day, exchange="XNYS")
+    if real_test_active:
+        real_doc = _load_real_ledger_doc(real_ledger_path, real_test_exec_day)
+    else:
+        real_doc = _load_latest_real(market_day) or {}
 
     action = str(daily_doc.get("action", "MERCADO")).upper()
     top20_by_score = daily_doc.get("top20_by_score", []) or []
@@ -346,13 +404,14 @@ def build_context(market_day: date) -> dict[str, Any]:
         tk = str(row.get("ticker", "")).upper().strip()
         if not tk:
             continue
-        rank = pd.to_numeric(row.get("rank", row.get("m3_rank", pos)), errors="coerce")
+        display_rank = pd.to_numeric(row.get("rank", pos), errors="coerce")
         m3_rank = pd.to_numeric(row.get("m3_rank", row.get("rank", pos)), errors="coerce")
         score = pd.to_numeric(row.get("score_m3"), errors="coerce")
         master_entries.append(
             {
                 "ticker": tk,
-                "m3_rank": int(rank) if pd.notna(rank) else -1,
+                "rank": int(display_rank) if pd.notna(display_rank) else -1,
+                "m3_rank": int(m3_rank) if pd.notna(m3_rank) else -1,
                 "raw_m3_rank": int(m3_rank) if pd.notna(m3_rank) else -1,
                 "score_m3": float(score) if pd.notna(score) else None,
             }
@@ -517,6 +576,11 @@ def build_context(market_day: date) -> dict[str, Any]:
     return {
         "market_day": str(market_day),
         "generated_at": str(pd.Timestamp.now(tz="UTC").isoformat()),
+        "real_test": {
+            "active": real_test_active,
+            "exec_day": str(real_test_exec_day) if real_test_active else None,
+            "ledger_source": str(real_ledger_path) if real_test_active else str(ROOT / "data" / "real"),
+        },
         "forno": {
             "action": action,
             "top_n": top_n,
@@ -552,6 +616,17 @@ def build_context(market_day: date) -> dict[str, Any]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Gera contexto canonico para Analista US.")
     parser.add_argument("--date", help="market_day YYYY-MM-DD (default: ultimo pregao no operational window)")
+    parser.add_argument(
+        "--real-test",
+        choices=["auto", "on", "off"],
+        default="auto",
+        help="Seleciona a fonte de caixa/posicoes: auto (detecta ledger real), on (forca ledger real), off (forca dry-run).",
+    )
+    parser.add_argument(
+        "--ledger-dir",
+        default=None,
+        help="Diretorio do ledger real (default: data/live_real_test).",
+    )
     args = parser.parse_args()
 
     if args.date:
@@ -563,14 +638,22 @@ def main() -> None:
             sys.exit(1)
         market_day = max(trading_days)
 
+    ledger_path: Path | None = None
+    if args.ledger_dir:
+        ledger_dir = Path(args.ledger_dir)
+        if not ledger_dir.is_absolute():
+            ledger_dir = (ROOT / ledger_dir).resolve()
+        ledger_path = ledger_dir / "ledger_real.jsonl"
+
     print(f"Calculando contexto US para market_day={market_day} ...")
-    ctx = build_context(market_day)
+    ctx = build_context(market_day, real_test=args.real_test, ledger_path=ledger_path)
 
     out_path = ROOT / "data" / "ssot" / "contexto_analista_us.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(ctx, indent=2, default=str, ensure_ascii=False), encoding="utf-8")
 
     print(f"OK -> {out_path}")
+    print(f"  real_test_active={ctx['real_test']['active']}")
     print(f"  is_rebalance_day={ctx['forno']['is_rebalance_day']}")
     print(f"  cycles_to_next_rebalance={ctx['forno']['cycles_to_next_rebalance']}")
     print(f"  next_rebalance_date={ctx['forno']['next_rebalance_date']}")
