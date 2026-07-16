@@ -1012,6 +1012,165 @@ def _build_rebalance_sell_suggestions(
     return sorted(out, key=lambda x: -_safe_float(x.get("sell_pct", 0.0), 0.0))
 
 
+def _build_rebalance_buy_suggestions(
+    decision: dict[str, Any],
+    holdings_qty: dict[str, int],
+    prices_d1: dict[str, float],
+    total_ativo: float,
+    cash_available: float,
+) -> list[dict[str, Any]]:
+    if not bool(decision.get("is_rebalance_day", False)):
+        return []
+
+    selected_raw = decision.get("selected_tickers", [])
+    target_weights_raw = decision.get("target_weights", {})
+    ranking_raw = decision.get("operational_ranking", [])
+    if not isinstance(selected_raw, list) or not isinstance(target_weights_raw, dict):
+        return []
+
+    selected = [str(t).upper().strip() for t in selected_raw if str(t).strip()]
+    selected_set = set(selected)
+    target_weights = {
+        str(k).upper().strip(): _safe_float(v, 0.0)
+        for k, v in target_weights_raw.items()
+        if str(k).strip()
+    }
+    if not selected_set:
+        return []
+
+    ranking_tickers: list[str] = []
+    if isinstance(ranking_raw, list):
+        for row in ranking_raw:
+            tk = str((row or {}).get("ticker", "")).upper().strip()
+            if tk and tk in selected_set and tk not in ranking_tickers:
+                ranking_tickers.append(tk)
+    if not ranking_tickers:
+        ranking_tickers = [tk for tk in selected if tk not in ranking_tickers]
+
+    cfg_path = ROOT / "config" / "winner_us.json"
+    cfg = _read_json(cfg_path)
+    ws = cfg.get("winner_config_snapshot", {})
+    top_n = max(1, _safe_int(ws.get("top_n", 20), 20))
+    target_w_default = 1.0 / float(top_n)
+
+    remaining_cash = max(_safe_float(cash_available, 0.0), 0.0)
+    out: list[dict[str, Any]] = []
+    for tk in ranking_tickers:
+        px = _safe_float(prices_d1.get(tk, 0.0), 0.0)
+        if px <= 0:
+            continue
+        target_w = _safe_float(target_weights.get(tk, target_w_default), target_w_default)
+        if target_w <= 0:
+            continue
+
+        qty_target = math.floor(total_ativo * target_w / px) if total_ativo > 0 else 0
+        qty_current = _safe_int(holdings_qty.get(tk, 0), 0)
+        qty_buy = max(0, qty_target - qty_current)
+        if qty_buy <= 0:
+            continue
+
+        max_affordable = math.floor(remaining_cash / px) if remaining_cash > 0 else 0
+        if max_affordable <= 0:
+            continue
+
+        qty_exec = min(qty_buy, max_affordable)
+        if qty_exec <= 0:
+            continue
+
+        remaining_cash -= qty_exec * px
+        out.append(
+            {
+                "ticker": tk,
+                "qty_buy": qty_exec,
+                "close_d1": px,
+                "target_weight": target_w,
+                "reason": "REBALANCE: recomposicao da lista travada por target_weight",
+            }
+        )
+    return out
+
+
+def compute_dryrun_autosave_operations(exec_day: date) -> dict[str, Any]:
+    decision = _read_json(ROOT / "data" / "daily" / f"decision_{exec_day.isoformat()}.json")
+    _, ctx, _ = _build_tables_and_cards(exec_day)
+    d1 = get_d_minus_1(exec_day)
+    trade_day = _resolve_trade_day(exec_day)
+
+    portfolio_active = decision.get("portfolio", [])
+    source_rows = decision.get("operational_ranking", []) or portfolio_active
+    top_tickers = [str(x.get("ticker", "")).upper().strip() for x in source_rows if str(x.get("ticker", "")).strip()]
+    prices_top = get_latest_prices(top_tickers, as_of_day=d1)
+    prices_all = {**ctx.get("prices_d1", {}), **prices_top}
+
+    total_ativo = _safe_float(ctx.get("total_ativo", 0.0), 0.0)
+    if total_ativo <= 0:
+        holdings_qty = ctx.get("holdings_qty", {})
+        total_ativo = (
+            sum(
+                _safe_int(qty, 0) * _safe_float(prices_all.get(str(tk).upper().strip(), 0.0), 0.0)
+                for tk, qty in holdings_qty.items()
+            )
+            + _safe_float(ctx.get("cash_free", ctx.get("cash_free_prev", 0.0)), 0.0)
+            + _safe_float(ctx.get("cash_acc", ctx.get("cash_accounting_prev", 0.0)), 0.0)
+        )
+
+    operations: list[dict[str, Any]] = []
+    if bool(decision.get("is_rebalance_day", False)):
+        holdings_after_sell = {
+            str(tk).upper().strip(): _safe_int(qty, 0)
+            for tk, qty in ctx.get("holdings_qty", {}).items()
+            if str(tk).strip()
+        }
+        rebalance_sells = _build_rebalance_sell_suggestions(
+            decision=decision,
+            holdings_qty=holdings_after_sell,
+            prices_d1=prices_all,
+            total_ativo=total_ativo,
+        )
+
+        sells_value = 0.0
+        for s in rebalance_sells:
+            tk = str(s.get("ticker", "")).upper().strip()
+            qty_sell = _safe_int(s.get("qty_sell", 0), 0)
+            px = _safe_float(s.get("close_d1", prices_all.get(tk, 0.0)), 0.0)
+            if not tk or qty_sell <= 0 or px <= 0:
+                continue
+            qty_before = _safe_int(holdings_after_sell.get(tk, 0), 0)
+            qty_exec = min(qty_sell, qty_before)
+            if qty_exec <= 0:
+                continue
+            holdings_after_sell[tk] = qty_before - qty_exec
+            operations.append({"type": "VENDA", "ticker": tk, "qtd": qty_exec, "preco": px})
+            sells_value += qty_exec * px
+
+        cash_available = (
+            _safe_float(ctx.get("cash_free", ctx.get("cash_free_prev", 0.0)), 0.0)
+            + _safe_float(ctx.get("cash_acc", ctx.get("cash_accounting_prev", 0.0)), 0.0)
+            + sells_value
+        )
+        rebalance_buys = _build_rebalance_buy_suggestions(
+            decision=decision,
+            holdings_qty=holdings_after_sell,
+            prices_d1=prices_all,
+            total_ativo=total_ativo,
+            cash_available=cash_available,
+        )
+        for b in rebalance_buys:
+            tk = str(b.get("ticker", "")).upper().strip()
+            qty_buy = _safe_int(b.get("qty_buy", 0), 0)
+            px = _safe_float(b.get("close_d1", prices_all.get(tk, 0.0)), 0.0)
+            if not tk or qty_buy <= 0 or px <= 0:
+                continue
+            operations.append({"type": "COMPRA", "ticker": tk, "qtd": qty_buy, "preco": px})
+
+    return {
+        "exec_day": exec_day.isoformat(),
+        "market_day": d1.isoformat(),
+        "trade_day": trade_day.isoformat(),
+        "operations": operations,
+    }
+
+
 def _make_positions_snapshot(lots: list[Lot]) -> list[dict[str, Any]]:
     out = []
     for lot in lots:

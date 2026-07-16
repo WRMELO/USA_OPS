@@ -139,9 +139,9 @@ def run(
     if ingest_only:
         total_steps = 5
     elif decision_only or full:
-        total_steps = 13
+        total_steps = 14
     else:
-        total_steps = 9
+        total_steps = 10
 
     def _step(n: int, label: str) -> None:
         logger.info(label)
@@ -234,6 +234,18 @@ def run(
         else:
             panel_path = _load_step("painel_diario").run(target_date=run_date)
             logger.info("Daily panel generated at: %s", panel_path)
+
+        _step(base_n + 8, "Step 13: Autosave dry-run US...")
+        if dry_run:
+            logger.info("[DRY-RUN] Step 13: Autosave dry-run US...")
+        else:
+            try:
+                from pipeline import dryrun_autosave
+
+                autosave_results = dryrun_autosave.autosave_pending_days(as_of=run_date + timedelta(days=1))
+                logger.info("Autosave dry-run concluido: %s dia(s) processado(s).", len(autosave_results))
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Autosave dry-run falhou (nao bloqueante): %s", exc)
 
         logger.info("=== Pipeline completed successfully ===")
         return decision

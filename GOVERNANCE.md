@@ -125,11 +125,11 @@ Novo freeze ou troca de versão do dataset exige ciclo formal, novo manifesto e 
 
 ### 6.6 Blindagem do Motor Operacional (D-039)
 
-**Arquivos protegidos** (auditados e selados em `v1.14.0-motor-us`):
+**Arquivos protegidos** (auditados e selados em `v1.19.0-motor-us`):
 
 | Arquivo | Função | Auditorias |
 |---------|--------|------------|
-| `pipeline/painel_diario.py` | Venda defensiva SPC, Base 1 patrimônio real, duplo-caixa, resolução de datas para pregão real | Phase 5 completa, D-027, D-033, D-038 |
+| `pipeline/painel_diario.py` | Venda defensiva SPC, Base 1 patrimônio real, duplo-caixa, resolução de datas para pregão real e reconciliação D0 de rebalance (sell+buy) para autosave dry-run | Phase 5 completa, D-027, D-033, D-038, D-137 |
 | `pipeline/02_ingest_prices_us.py` | Ingestão Polygon.io (OHLCV, dividendos, splits) | Phase 1 v2, D-007, D-026 |
 | `pipeline/04_build_canonical.py` | Build canonical + operational_window | Phase 1 v2, D-026 |
 | `pipeline/09_decide.py` | Motor C4 puro (TopN=20, Cad=10, K=10, cap=6%, min_market_cap=300M) | Phase 3-4, D-021, D-029, D-033, D-044, D-065 |
@@ -139,8 +139,8 @@ Novo freeze ou troca de versão do dataset exige ciclo formal, novo manifesto e 
 
 1. Alterações nestes arquivos exigem ciclo completo: `Architect → Executor → Auditor duplo (Gemini + Kimi) → Curator`, com autorização explícita do Owner.
 2. Um **pre-commit hook** no git bloqueia commits que alterem esses arquivos. Para sobrepor, usar: `MOTOR_OVERRIDE=1 git commit -m "descricao"`.
-3. A tag `v1.14.0-motor-us` marca o snapshot auditado atual. Para restaurar: `git checkout v1.14.0-motor-us -- <arquivo>`.
-4. Novas versões do motor devem gerar nova tag (`v1.15.0-motor-us`, etc.) após novo ciclo completo de auditoria.
+3. A tag `v1.19.0-motor-us` marca o snapshot auditado atual. Para restaurar: `git checkout v1.19.0-motor-us -- <arquivo>`.
+4. Novas versões do motor devem gerar nova tag (`v1.20.0-motor-us`, etc.) após novo ciclo completo de auditoria.
 
 #### 6.6.1 Protecao do SSOT append-only
 
@@ -216,11 +216,11 @@ dry-run.
 | Boletim real de abertura | `data/live_real_test/abertura_<exec_day>.json` | `emit-abertura` (novo, manual por ora -- ver F-18) |
 | Boletim real de fechamento | `data/live_real_test/<exec_day>.json` | `emit-boletim` (atalho USA_ENCERRAR_DIA) |
 
-Autosave do dry-run e automacao diaria do `emit-abertura` permanecem fora de
-escopo desta decisao -- ver `TEMAS_PARA_ACAO.MD` F-18 (SALA) para a decisao de
-politica pendente.
+Autosave do dry-run foi desmembrado para a F-18 e concluido na frente de
+autosave autonomo (`SALA D-112` / `USA D-137`). A automacao diaria do
+`emit-abertura` (frente 1 da F-18) permanece pendente no backlog.
 
-Ref: SALA D-107; USA D-132; R-018; R-020; R-049; R-050.
+Ref: SALA D-107, SALA D-112; USA D-132, USA D-137; R-018; R-020; R-049; R-050.
 
 **Nota 2026-07-16 (D-133/SALA D-108)**: `pipeline/analise_us.py` passa a
 detectar o regime LIVE-REAL-TEST pelo `ledger_real.jsonl` (evento `APORTE`) e,
@@ -267,6 +267,29 @@ do dia, com três estados explícitos:
 - A existência do fallback não altera o papel de `/painel` como primário.
 
 Ref: SALA D-111, USA D-136, D-133, D-132, R-018, R-020, R-049, R-050.
+
+### 6.11 Autosave autonomo do dry-run US (F-18, D-137)
+
+O ciclo diario US passa a executar autosave autonomo do dry-run apos a etapa de
+decisao/painel (`pipeline/run_daily.py`), sem acao manual do Owner para
+preenchimento de rebalance:
+
+- `pipeline/painel_diario.py` expõe `compute_dryrun_autosave_operations`,
+  mecanizando reconciliacao D0 de rebalance com vendas (fora da lista travada e
+  aparo por carga) e compras por `target_weight`, respeitando ordem de
+  `operational_ranking` e caixa disponivel (com fill parcial no ultimo ticker,
+  quando necessario).
+- `pipeline/servidor.py` extrai a logica de persistencia de `/salvar` para
+  `apply_boletim_operations(payload)`, preservando a restricao "somente hoje"
+  no endpoint HTTP e habilitando reuso interno pelo autosave.
+- `pipeline/dryrun_autosave.py` executa catch-up idempotente por `market_day`,
+  grava `data/real/<market_day>.json` apenas quando ausente e registra trilha
+  append-only em `data/daily/autosave_log.jsonl`.
+
+Escopo: frente 2 da F-18 (autosave do dry-run). A frente 1 (automacao diaria do
+`emit-abertura`) segue pendente.
+
+Ref: SALA D-112, USA D-137, R-049, R-050.
 
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 

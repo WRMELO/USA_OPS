@@ -180,6 +180,165 @@ def _start_job(mode: str, target_day: date) -> bool:
     return True
 
 
+def apply_boletim_operations(payload: dict[str, Any]) -> dict[str, Any]:
+    payload_date = str(payload.get("exec_day", payload.get("date", ""))).strip()
+    try:
+        save_day = date.fromisoformat(payload_date)
+    except ValueError as exc:
+        raise ValueError("Campo 'exec_day/date' invalido") from exc
+
+    real_dir = ROOT / "data" / "real"
+    market_day_raw = str(payload.get("market_day", "")).strip()
+    if market_day_raw:
+        try:
+            market_day = date.fromisoformat(market_day_raw)
+        except ValueError:
+            market_day = save_day
+    else:
+        market_day = save_day
+
+    cycle_dir = ROOT / "data" / "cycles" / market_day.isoformat()
+    real_dir.mkdir(parents=True, exist_ok=True)
+    cycle_dir.mkdir(parents=True, exist_ok=True)
+
+    # SSOT imutavel: primeiro grava eventos no ledger (D-045).
+    ops = payload.get("operations", [])
+    for op in ops:
+        typ = str(op.get("type", "")).upper().strip()
+        tk = str(op.get("ticker", "")).upper().strip()
+        qtd = int(op.get("qtd", 0) or 0)
+        preco = float(op.get("preco", 0.0) or 0.0)
+        if not tk or qtd <= 0 or preco <= 0:
+            continue
+        amount = qtd * preco
+        if typ == "COMPRA":
+            ev = create_event(EventType.BUY, exec_date=save_day, amount=amount, ticker=tk, qtd=qtd, price=preco)
+        elif typ == "VENDA":
+            ev = create_event(EventType.SELL, exec_date=save_day, amount=amount, ticker=tk, qtd=qtd, price=preco)
+        else:
+            continue
+        if not is_duplicate(ev):
+            append_event(ev)
+
+    cash_movements = payload.get("cash_movements", [])
+    for mv in cash_movements:
+        typ = str(mv.get("type", "")).upper().strip()
+        val = float(mv.get("value", mv.get("valor", 0.0)) or 0.0)
+        desc = str(mv.get("description", "")).strip() or None
+        if val <= 0:
+            continue
+        if typ in {"APORTE", "DEPOSITO"}:
+            ev = create_event(EventType.APORTE, exec_date=save_day, amount=val, reason=desc)
+            if not is_duplicate(ev):
+                append_event(ev)
+        elif typ in {"DIVIDENDO", "JCP", "BONIFICACAO", "BONUS", "SUBSCRICAO"}:
+            ev = create_event(EventType.DIVIDENDO, exec_date=save_day, amount=val, reason=desc)
+            if not is_duplicate(ev):
+                append_event(ev)
+        elif typ in {"RETIRADA", "SAQUE"}:
+            ev = create_event(EventType.RETIRADA, exec_date=save_day, amount=val, reason=desc)
+            if not is_duplicate(ev):
+                append_event(ev)
+
+    # Transferências usam ref_id quando possível.
+    pend_by_ref = {p.get("ref"): p for p in pending_settlements(save_day)}
+    cash_transfers = payload.get("cash_transfers", [])
+    for tr in cash_transfers:
+        val = float(tr.get("value", tr.get("valor", 0.0)) or 0.0)
+        note = str(tr.get("note", tr.get("ref", ""))).strip()
+        if val <= 0:
+            continue
+        ref_id = note if note in pend_by_ref else None
+        ev = create_event(
+            EventType.SETTLEMENT,
+            exec_date=save_day,
+            settle_date=save_day,
+            amount=val,
+            ref_id=ref_id,
+            reason=note or "cash_transfer",
+        )
+        if not is_duplicate(ev):
+            append_event(ev)
+
+    # Boletim salvo vira artefato derivado do ledger.
+    cash = compute_cash(save_day)
+    derived_payload = {
+        "date": payload.get("date", save_day.isoformat()),
+        "reference_decision": payload.get("reference_decision", market_day.isoformat()),
+        "exec_day": save_day.isoformat(),
+        "market_day": market_day.isoformat(),
+        "trade_day": str(payload.get("trade_day", save_day.isoformat())),
+        "operations": ops,
+        "cash_movements": cash_movements,
+        "cash_transfers": cash_transfers,
+        "cash_free": float(cash.get("cash_free", 0.0)),
+        "cash_accounting": float(cash.get("cash_accounting", 0.0)),
+        "caixa_liquido_real": payload.get("caixa_liquido_real", None),
+        "positions_snapshot": export_snapshot(save_day),
+        "cash_balance": float(cash.get("cash_free", 0.0)),
+        "caixa_liquidando": float(cash.get("cash_accounting", 0.0)),
+    }
+
+    out_real = real_dir / f"{market_day.isoformat()}.json"
+    out_cycle = cycle_dir / "boletim_preenchido.json"
+    content = json.dumps(derived_payload, ensure_ascii=False, indent=2)
+    out_real.write_text(content, encoding="utf-8")
+    out_cycle.write_text(content, encoding="utf-8")
+    try:
+        decision_path = ROOT / "data" / "daily" / f"decision_{save_day.isoformat()}.json"
+        if decision_path.exists():
+            decision_payload = json.loads(decision_path.read_text(encoding="utf-8"))
+            if bool(decision_payload.get("is_rebalance_day", False)):
+                rebalance_dt_raw = str(decision_payload.get("scores_reference_date_d_minus_1", "")).strip()
+                if rebalance_dt_raw:
+                    date.fromisoformat(rebalance_dt_raw)
+                    last_rebalance_path = ROOT / "data" / "daily" / "last_rebalance.json"
+                    last_rebalance_path.parent.mkdir(parents=True, exist_ok=True)
+                    last_rebalance_payload = {
+                        "last_rebalance_dt": rebalance_dt_raw,
+                        "updated_at": datetime.now(tz=timezone.utc).isoformat(),
+                    }
+                    last_rebalance_path.write_text(
+                        json.dumps(last_rebalance_payload, indent=2, ensure_ascii=False),
+                        encoding="utf-8",
+                    )
+    except Exception:
+        pass
+    paths = [str(out_cycle.relative_to(ROOT)), str(out_real.relative_to(ROOT))]
+    # Auto-commit e auto-push do ledger SSOT apos salvar o boletim (D-037, R-030).
+    # Falha no commit/push NAO bloqueia o 200 OK: registra no log e continua.
+    try:
+        import logging
+        import subprocess
+
+        ledger_rel = "data/ssot/ledger.jsonl"
+        add_cmd = ["git", "-C", str(ROOT), "add", "-f", ledger_rel]
+        add_run = subprocess.run(add_cmd, capture_output=True, text=True, timeout=15)
+        if add_run.returncode == 0:
+            commit_msg = f"feat(ledger): auto-commit boletim {save_day.isoformat()}"
+            commit_cmd = ["git", "-C", str(ROOT), "commit", "-m", commit_msg]
+            commit_run = subprocess.run(commit_cmd, capture_output=True, text=True, timeout=15)
+            commit_stdout = (commit_run.stdout or "").lower()
+            commit_stderr = (commit_run.stderr or "").lower()
+            if commit_run.returncode == 0:
+                push_cmd = ["git", "-C", str(ROOT), "push"]
+                push_run = subprocess.run(push_cmd, capture_output=True, text=True, timeout=30)
+                if push_run.returncode != 0:
+                    logging.warning("[ledger-autocommit] git push falhou: %s", (push_run.stderr or "").strip())
+            elif "nothing to commit" not in commit_stdout and "nothing to commit" not in commit_stderr:
+                logging.warning("[ledger-autocommit] git commit falhou: %s", (commit_run.stderr or "").strip())
+        else:
+            logging.warning("[ledger-autocommit] git add falhou: %s", (add_run.stderr or "").strip())
+    except Exception as exc:
+        try:
+            import logging as _logging
+
+            _logging.warning("[ledger-autocommit] excecao inesperada: %s", exc)
+        except Exception:
+            pass
+    return {"ok": True, "paths": paths}
+
+
 def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, override_date: date | None = None) -> None:
     import http.server
 
@@ -371,156 +530,12 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                     code=403,
                 )
                 return
-
-            real_dir = ROOT / "data" / "real"
-            market_day_raw = str(payload.get("market_day", "")).strip()
-            if market_day_raw:
-                try:
-                    market_day = date.fromisoformat(market_day_raw)
-                except ValueError:
-                    market_day = save_day
-            else:
-                market_day = save_day
-
-            cycle_dir = ROOT / "data" / "cycles" / market_day.isoformat()
-            real_dir.mkdir(parents=True, exist_ok=True)
-            cycle_dir.mkdir(parents=True, exist_ok=True)
-
-            # SSOT imutavel: primeiro grava eventos no ledger (D-045).
-            ops = payload.get("operations", [])
-            for op in ops:
-                typ = str(op.get("type", "")).upper().strip()
-                tk = str(op.get("ticker", "")).upper().strip()
-                qtd = int(op.get("qtd", 0) or 0)
-                preco = float(op.get("preco", 0.0) or 0.0)
-                if not tk or qtd <= 0 or preco <= 0:
-                    continue
-                amount = qtd * preco
-                if typ == "COMPRA":
-                    ev = create_event(EventType.BUY, exec_date=save_day, amount=amount, ticker=tk, qtd=qtd, price=preco)
-                elif typ == "VENDA":
-                    ev = create_event(EventType.SELL, exec_date=save_day, amount=amount, ticker=tk, qtd=qtd, price=preco)
-                else:
-                    continue
-                if not is_duplicate(ev):
-                    append_event(ev)
-
-            cash_movements = payload.get("cash_movements", [])
-            for mv in cash_movements:
-                typ = str(mv.get("type", "")).upper().strip()
-                val = float(mv.get("value", mv.get("valor", 0.0)) or 0.0)
-                desc = str(mv.get("description", "")).strip() or None
-                if val <= 0:
-                    continue
-                if typ in {"APORTE", "DEPOSITO"}:
-                    ev = create_event(EventType.APORTE, exec_date=save_day, amount=val, reason=desc)
-                    if not is_duplicate(ev):
-                        append_event(ev)
-                elif typ in {"DIVIDENDO", "JCP", "BONIFICACAO", "BONUS", "SUBSCRICAO"}:
-                    ev = create_event(EventType.DIVIDENDO, exec_date=save_day, amount=val, reason=desc)
-                    if not is_duplicate(ev):
-                        append_event(ev)
-                elif typ in {"RETIRADA", "SAQUE"}:
-                    ev = create_event(EventType.RETIRADA, exec_date=save_day, amount=val, reason=desc)
-                    if not is_duplicate(ev):
-                        append_event(ev)
-
-            # Transferências usam ref_id quando possível.
-            pend_by_ref = {p.get("ref"): p for p in pending_settlements(save_day)}
-            cash_transfers = payload.get("cash_transfers", [])
-            for tr in cash_transfers:
-                val = float(tr.get("value", tr.get("valor", 0.0)) or 0.0)
-                note = str(tr.get("note", tr.get("ref", ""))).strip()
-                if val <= 0:
-                    continue
-                ref_id = note if note in pend_by_ref else None
-                ev = create_event(
-                    EventType.SETTLEMENT,
-                    exec_date=save_day,
-                    settle_date=save_day,
-                    amount=val,
-                    ref_id=ref_id,
-                    reason=note or "cash_transfer",
-                )
-                if not is_duplicate(ev):
-                    append_event(ev)
-
-            # Boletim salvo vira artefato derivado do ledger.
-            cash = compute_cash(save_day)
-            derived_payload = {
-                "date": payload.get("date", save_day.isoformat()),
-                "reference_decision": payload.get("reference_decision", market_day.isoformat()),
-                "exec_day": save_day.isoformat(),
-                "market_day": market_day.isoformat(),
-                "trade_day": str(payload.get("trade_day", save_day.isoformat())),
-                "operations": ops,
-                "cash_movements": cash_movements,
-                "cash_transfers": cash_transfers,
-                "cash_free": float(cash.get("cash_free", 0.0)),
-                "cash_accounting": float(cash.get("cash_accounting", 0.0)),
-                "caixa_liquido_real": payload.get("caixa_liquido_real", None),
-                "positions_snapshot": export_snapshot(save_day),
-                "cash_balance": float(cash.get("cash_free", 0.0)),
-                "caixa_liquidando": float(cash.get("cash_accounting", 0.0)),
-            }
-
-            out_real = real_dir / f"{market_day.isoformat()}.json"
-            out_cycle = cycle_dir / "boletim_preenchido.json"
-            content = json.dumps(derived_payload, ensure_ascii=False, indent=2)
-            out_real.write_text(content, encoding="utf-8")
-            out_cycle.write_text(content, encoding="utf-8")
             try:
-                decision_path = ROOT / "data" / "daily" / f"decision_{save_day.isoformat()}.json"
-                if decision_path.exists():
-                    decision_payload = json.loads(decision_path.read_text(encoding="utf-8"))
-                    if bool(decision_payload.get("is_rebalance_day", False)):
-                        rebalance_dt_raw = str(decision_payload.get("scores_reference_date_d_minus_1", "")).strip()
-                        if rebalance_dt_raw:
-                            date.fromisoformat(rebalance_dt_raw)
-                            last_rebalance_path = ROOT / "data" / "daily" / "last_rebalance.json"
-                            last_rebalance_path.parent.mkdir(parents=True, exist_ok=True)
-                            last_rebalance_payload = {
-                                "last_rebalance_dt": rebalance_dt_raw,
-                                "updated_at": datetime.now(tz=timezone.utc).isoformat(),
-                            }
-                            last_rebalance_path.write_text(
-                                json.dumps(last_rebalance_payload, indent=2, ensure_ascii=False),
-                                encoding="utf-8",
-                            )
-            except Exception:
-                pass
-            paths = [str(out_cycle.relative_to(ROOT)), str(out_real.relative_to(ROOT))]
-            # Auto-commit e auto-push do ledger SSOT apos salvar o boletim (D-037, R-030).
-            # Falha no commit/push NAO bloqueia o 200 OK: registra no log e continua.
-            try:
-                import logging
-                import subprocess
-
-                ledger_rel = "data/ssot/ledger.jsonl"
-                add_cmd = ["git", "-C", str(ROOT), "add", "-f", ledger_rel]
-                add_run = subprocess.run(add_cmd, capture_output=True, text=True, timeout=15)
-                if add_run.returncode == 0:
-                    commit_msg = f"feat(ledger): auto-commit boletim {save_day.isoformat()}"
-                    commit_cmd = ["git", "-C", str(ROOT), "commit", "-m", commit_msg]
-                    commit_run = subprocess.run(commit_cmd, capture_output=True, text=True, timeout=15)
-                    commit_stdout = (commit_run.stdout or "").lower()
-                    commit_stderr = (commit_run.stderr or "").lower()
-                    if commit_run.returncode == 0:
-                        push_cmd = ["git", "-C", str(ROOT), "push"]
-                        push_run = subprocess.run(push_cmd, capture_output=True, text=True, timeout=30)
-                        if push_run.returncode != 0:
-                            logging.warning("[ledger-autocommit] git push falhou: %s", (push_run.stderr or "").strip())
-                    elif "nothing to commit" not in commit_stdout and "nothing to commit" not in commit_stderr:
-                        logging.warning("[ledger-autocommit] git commit falhou: %s", (commit_run.stderr or "").strip())
-                else:
-                    logging.warning("[ledger-autocommit] git add falhou: %s", (add_run.stderr or "").strip())
-            except Exception as exc:
-                try:
-                    import logging as _logging
-                    _logging.warning("[ledger-autocommit] excecao inesperada: %s", exc)
-                except Exception:
-                    pass
-            self._respond_json({"ok": True, "paths": paths}, code=200)
+                result = apply_boletim_operations(payload)
+            except ValueError as exc:
+                self._respond_json({"ok": False, "error": str(exc)}, code=400)
+                return
+            self._respond_json(result, code=200)
 
         def _render_home(self, today: date) -> str:
             hist = _list_existing_panels()
