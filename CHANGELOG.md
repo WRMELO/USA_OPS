@@ -2,6 +2,7 @@
 
 ## 2026-07-16
 
+- feat(scripts): T-SDC-LIVE-REAL-TEST-DAILY-LAUNCHERS-US-V1 — cria `scripts/lookup_shadow_price.py`, `scripts/registrar_ordem_real.sh` e `scripts/encerrar_dia_real.sh` com testes sintéticos, reutilizando `scripts/live_real_cutover.py`/`scripts/friction_ruler.py` (F-16/F-17); adiciona atalhos de desktop `USA_REGISTRAR_ORDEM` e `USA_ENCERRAR_DIA`; não executa corte real nem grava `data/live_real_test/` em produção. Decision: D-131 (ref cruzada: SALA D-106).
 - docs(governanca): T-SDC-LIVE-REAL-TEST-PREREGISTRATION-F13-US-V1 — congela pre-registro de vigilancia F-13 em `analise_interfabricas/T-SDC-LIVE-REAL-TEST-PREREGISTRATION-F13-US-V1/preregistro.md` + `manifest.json` (SHA256), sem abrir `data/live_real_test/ledger_real.jsonl`, e registra o sinal explicito do Owner para o corte real do dia-D com os parametros confirmados (C0, ancora sombra e `exec_date` do APORTE). Decision: D-130 (ref cruzada: SALA D-105).
 
 ## 2026-07-15

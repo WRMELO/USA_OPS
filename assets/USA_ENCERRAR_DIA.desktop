@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=USA - 3. Encerrar o Dia (boletim + friccao)
+Comment=Emitir boletim real-only e relatorio de friccao do dia LIVE-REAL-TEST
+Exec=/home/wilson/USA_OPS/scripts/encerrar_dia_real.sh
+Icon=/home/wilson/USA_OPS/assets/usa_ops.png
+Terminal=true
+Categories=Finance;Utility;
+StartupNotify=true

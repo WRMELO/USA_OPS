@@ -170,6 +170,25 @@ Decisões formalizadas na `SALA_DE_CONTROLE` que alterem código, skills, compor
 
 Alterações a esta seção exigem registro prévio no `DECISION_LOG.md`.
 
+### 6.8 Launchers operacionais LIVE-REAL-TEST (F-16/F-17, D-131)
+
+O regime `LIVE-REAL-TEST` (R-049) tem dois atalhos de desktop dedicados, que
+orquestram exclusivamente `scripts/live_real_cutover.py` e
+`scripts/friction_ruler.py` (nenhum arquivo blindado de §6.6 e tocado):
+
+| Atalho | Script | Função |
+|--------|--------|--------|
+| `USA_REGISTRAR_ORDEM` | `scripts/registrar_ordem_real.sh` | Para cada fill real (BTG), registra o par BUY real + BUY sombra na mesma ação, com preço-sombra sugerido por auto-lookup em `data/ssot/operational_window.parquet` (`scripts/lookup_shadow_price.py`) e confirmação explícita antes de gravar. |
+| `USA_ENCERRAR_DIA` | `scripts/encerrar_dia_real.sh` | Emite o boletim real-only (`emit-boletim`) e o relatório de fricção (`emit-friction-report`) do dia, reportando `n_live_real` via a mesma contagem do Trilho B/C. |
+
+O corte inicial do regime (`freeze-dryrun` + `init-cutover --confirm`) e ato
+único e irreversível - abre `data/live_real_test/ledger_real.jsonl` com o
+aporte real (C0). Por isso nao recebe atalho de desktop; e executado uma única
+vez pelo ciclo formal completo (`Architect -> Executor -> Auditor -> Curator`),
+com autorização explícita do Owner (R-049, D-105/D-130).
+
+Ref: SALA D-103, D-105, D-106; USA D-128, D-129, D-130, D-131; R-018; R-049.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.

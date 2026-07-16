@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=USA - 2. Registrar Ordem (real + sombra)
+Comment=Registrar fill real (BTG) e par sombra do dia LIVE-REAL-TEST
+Exec=/home/wilson/USA_OPS/scripts/registrar_ordem_real.sh
+Icon=/home/wilson/USA_OPS/assets/usa_ops.png
+Terminal=true
+Categories=Finance;Utility;
+StartupNotify=true
