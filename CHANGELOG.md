@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-16
+
+- docs(governanca): T-SDC-LIVE-REAL-TEST-PREREGISTRATION-F13-US-V1 — congela pre-registro de vigilancia F-13 em `analise_interfabricas/T-SDC-LIVE-REAL-TEST-PREREGISTRATION-F13-US-V1/preregistro.md` + `manifest.json` (SHA256), sem abrir `data/live_real_test/ledger_real.jsonl`, e registra o sinal explicito do Owner para o corte real do dia-D com os parametros confirmados (C0, ancora sombra e `exec_date` do APORTE). Decision: D-130 (ref cruzada: SALA D-105).
+
 ## 2026-07-15
 
 - feat(scripts): T-SDC-FRICTION-RULER-F17-US-V1 — cria `scripts/friction_ruler.py` (`record-shadow-buy`, `emit-friction-report`) e `tests/test_friction_ruler.py` para autoria/teste da F-17 (régua de fricção Opção 1 dry-run paralelo + Opção 2 gêmeo sombra) com dados sintéticos; não executa corte real nem grava `data/live_real_test/` em produção. Decision: D-129 (ref cruzada: SALA D-104).

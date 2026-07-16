@@ -1,0 +1,7 @@
+{
+  "task_id": "T-SDC-LIVE-REAL-TEST-PREREGISTRATION-F13-US-V1",
+  "file": "preregistro.md",
+  "sha256": "e4600a024d7918edaee3c2131d6f11dd2256505d0ed5531a1f4237d746c2790f",
+  "frozen_at": "2026-07-16T11:36:19Z",
+  "precondition_check": "ledger_real.jsonl ausente em USA_OPS/data/live_real_test/ no momento do congelamento"
+}
