@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import pipeline.ledger as ledger  # noqa: E402
+from pipeline.painel_diario import get_latest_prices  # noqa: E402
 from pipeline.ledger import EventType, append_event, create_event, export_snapshot, is_duplicate  # noqa: E402
 
 DEFAULT_LEDGER_DIR = ROOT / "data" / "live_real_test"
@@ -197,6 +198,109 @@ def cmd_emit_boletim(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_emit_abertura(args: argparse.Namespace) -> int:
+    ledger_dir = _resolve_dir(args.ledger_dir, DEFAULT_LEDGER_DIR)
+    ledger_path = _configure_target_ledger(ledger_dir)
+    if not ledger_path.exists():
+        print(
+            "ERRO: ledger real ainda nao foi aberto. Rode init-cutover --confirm antes de emitir o boletim de abertura.",
+            file=sys.stderr,
+        )
+        return 2
+
+    events = ledger.read_all_events()
+    if not any(ev.type == EventType.APORTE for ev in events):
+        print(
+            "ERRO: ledger real nao contem APORTE. Corte (init-cutover) ainda nao foi executado.",
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.decision_file:
+        decision_file = Path(args.decision_file)
+        if not decision_file.is_absolute():
+            decision_file = (ROOT / decision_file).resolve()
+    else:
+        decision_file = ROOT / "data" / "daily" / f"decision_{args.exec_date.isoformat()}.json"
+
+    if not decision_file.exists():
+        print(f"ERRO: decision file nao encontrado: {decision_file}", file=sys.stderr)
+        return 2
+
+    decision = json.loads(decision_file.read_text(encoding="utf-8"))
+    operational_ranking = decision.get("operational_ranking", [])
+    if not operational_ranking:
+        print(
+            "ERRO: operational_ranking vazio no decision file; nada para exibir como lista operacional.",
+            file=sys.stderr,
+        )
+        return 2
+
+    market_day_raw = decision.get("scores_reference_date_d_minus_1")
+    try:
+        market_day = date.fromisoformat(str(market_day_raw or "").strip())
+    except ValueError:
+        print("ERRO: decision file sem 'scores_reference_date_d_minus_1'.", file=sys.stderr)
+        return 2
+    if not market_day_raw:
+        print("ERRO: decision file sem 'scores_reference_date_d_minus_1'.", file=sys.stderr)
+        return 2
+
+    def _rank_value(row: dict[str, Any]) -> int:
+        try:
+            return int(row.get("rank"))
+        except (TypeError, ValueError):
+            return 10**9
+
+    top_rows = sorted(operational_ranking, key=_rank_value)[: int(args.top_n)]
+    tickers = [
+        str(row.get("ticker", "")).upper().strip()
+        for row in top_rows
+        if str(row.get("ticker", "")).strip()
+    ]
+    prices = get_latest_prices(tickers, as_of_day=market_day)
+
+    top_operational: list[dict[str, Any]] = []
+    for row in top_rows:
+        ticker = str(row.get("ticker", "")).upper().strip()
+        if not ticker:
+            continue
+        top_operational.append(
+            {
+                "rank": _rank_value(row),
+                "ticker": ticker,
+                "score_m3": float(row.get("score_m3", 0.0) or 0.0),
+                "target_weight": float(row.get("target_weight", 0.0) or 0.0),
+                "bucket": str(row.get("bucket", "") or ""),
+                "close_d1": float(prices.get(ticker, 0.0) or 0.0),
+            }
+        )
+
+    snapshot = export_snapshot(args.exec_date)
+    cash = ledger.compute_cash(args.exec_date)
+    payload: dict[str, Any] = {
+        "kind": "abertura",
+        "exec_day": args.exec_date.isoformat(),
+        "date": args.exec_date.isoformat(),
+        "market_day": market_day.isoformat(),
+        "reference_decision": market_day.isoformat(),
+        "is_rebalance_day": bool(decision.get("is_rebalance_day", False)),
+        "action": str(decision.get("action", "")),
+        "top_operational": top_operational,
+        "positions_snapshot": snapshot,
+        "cash_free": float(cash.get("cash_free", 0.0)),
+        "cash_accounting": float(cash.get("cash_accounting", 0.0)),
+        "cash_balance": float(cash.get("cash_free", 0.0)),
+        "caixa_liquidando": float(cash.get("cash_accounting", 0.0)),
+        "source_decision_file": str(decision_file),
+        "generated_at": datetime.now(tz=UTC).isoformat(),
+    }
+    out_file = ledger_dir / f"abertura_{args.exec_date.isoformat()}.json"
+    _json_dump(out_file, payload)
+    print(f"OK: boletim de abertura gravado em {out_file}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Ferramentas de corte LIVE-REAL-TEST (sem execucao automatica)."
@@ -260,6 +364,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Diretorio do ledger real (default: data/live_real_test).",
     )
     p_emit.set_defaults(handler=cmd_emit_boletim)
+
+    p_abertura = sub.add_parser(
+        "emit-abertura",
+        help="Emite boletim real de abertura (Top-N + caixa + carteira) do ledger de teste.",
+    )
+    p_abertura.add_argument("--exec-date", type=_parse_iso_date, required=True, help="Data YYYY-MM-DD.")
+    p_abertura.add_argument(
+        "--decision-file",
+        type=str,
+        default=None,
+        help="Arquivo de decisao a ser usado como fonte da lista operacional.",
+    )
+    p_abertura.add_argument(
+        "--ledger-dir",
+        type=str,
+        default=None,
+        help="Diretorio do ledger real (default: data/live_real_test).",
+    )
+    p_abertura.add_argument("--top-n", type=int, default=20, help="Quantidade maxima de ativos na abertura.")
+    p_abertura.set_defaults(handler=cmd_emit_abertura)
 
     return parser
 

@@ -201,3 +201,100 @@ def test_init_cutover_without_confirm_writes_nothing(tmp_path):
     )
     assert rc == 0
     assert not (ledger_dir / "ledger_real.jsonl").exists()
+
+
+def test_emit_abertura_fails_without_init_cutover(tmp_path):
+    ledger_dir = tmp_path / "live_real"
+    rc = cutover.main(
+        [
+            "emit-abertura",
+            "--exec-date",
+            "2026-07-16",
+            "--ledger-dir",
+            str(ledger_dir),
+        ]
+    )
+    assert rc != 0
+
+
+def test_emit_abertura_fails_without_decision_file(tmp_path):
+    ledger_dir = tmp_path / "live_real"
+    rc_init = cutover.main(
+        [
+            "init-cutover",
+            "--exec-date",
+            "2026-07-16",
+            "--aporte",
+            "20008.72",
+            "--ledger-dir",
+            str(ledger_dir),
+            "--confirm",
+        ]
+    )
+    assert rc_init == 0
+
+    missing_decision = tmp_path / "decision_missing.json"
+    rc_opening = cutover.main(
+        [
+            "emit-abertura",
+            "--exec-date",
+            "2026-07-16",
+            "--ledger-dir",
+            str(ledger_dir),
+            "--decision-file",
+            str(missing_decision),
+        ]
+    )
+    assert rc_opening != 0
+
+
+def test_emit_abertura_happy_path(tmp_path):
+    ledger_dir = tmp_path / "live_real"
+    rc_init = cutover.main(
+        [
+            "init-cutover",
+            "--exec-date",
+            "2026-07-16",
+            "--aporte",
+            "20008.72",
+            "--ledger-dir",
+            str(ledger_dir),
+            "--confirm",
+        ]
+    )
+    assert rc_init == 0
+
+    decision_payload = {
+        "scores_reference_date_d_minus_1": "2026-07-15",
+        "is_rebalance_day": False,
+        "action": "HOLD",
+        "operational_ranking": [
+            {"rank": 2, "ticker": "ZZZTEST2", "score_m3": 3.5, "target_weight": 0.05, "bucket": "LISTA"},
+            {"rank": 1, "ticker": "ZZZTEST1", "score_m3": 4.2, "target_weight": 0.07, "bucket": "LISTA"},
+            {"rank": 3, "ticker": "ZZZTEST3", "score_m3": 2.1, "target_weight": 0.04, "bucket": "LISTA"},
+        ],
+    }
+    decision_file = tmp_path / "decision_2026-07-16.json"
+    decision_file.write_text(json.dumps(decision_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    rc_opening = cutover.main(
+        [
+            "emit-abertura",
+            "--exec-date",
+            "2026-07-16",
+            "--ledger-dir",
+            str(ledger_dir),
+            "--decision-file",
+            str(decision_file),
+        ]
+    )
+    assert rc_opening == 0
+
+    opening_payload_path = ledger_dir / "abertura_2026-07-16.json"
+    opening_payload = json.loads(opening_payload_path.read_text(encoding="utf-8"))
+
+    assert opening_payload["positions_snapshot"] == []
+    assert abs(float(opening_payload["cash_free"]) - 20008.72) < 1e-9
+    assert abs(float(opening_payload["cash_accounting"]) - 0.0) < 1e-9
+    assert len(opening_payload["top_operational"]) == 3
+    assert all(float(row["close_d1"]) == 0.0 for row in opening_payload["top_operational"])

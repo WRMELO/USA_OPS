@@ -189,6 +189,39 @@ com autorização explícita do Owner (R-049, D-105/D-130).
 
 Ref: SALA D-103, D-105, D-106; USA D-128, D-129, D-130, D-131; R-018; R-049.
 
+### 6.9 Boletim real de abertura e roteamento do painel (F-16 execucao, D-107/D-132)
+
+O corte inicial (`init-cutover --confirm`) foi executado em producao em
+16/07/2026 (SALA D-107, USA D-132), abrindo
+`data/live_real_test/ledger_real.jsonl` com APORTE C0 = US$ 20.008,72.
+
+Novo subcomando `emit-abertura` em `scripts/live_real_cutover.py` (nao
+blindado) compoe o boletim real de abertura: caixa/posicoes do ledger real +
+Top-N operacional (`operational_ranking`/`target_weight`) do
+`decision_<exec_day>.json` do dia, com preco de fechamento D-1 via
+`pipeline.painel_diario.get_latest_prices` (leitura, sem alterar o arquivo
+blindado).
+
+`pipeline/servidor.py` (nao blindado) passa a rotear `/painel` (rota do dia)
+para esse boletim real quando o regime LIVE-REAL-TEST estiver ativo (ledger
+real com APORTE), preservando integralmente `/painel/<data>` como historico do
+dry-run.
+
+**Enderecos oficiais de gravacao**:
+
+| Artefato | Caminho | Gerado por |
+|----------|---------|------------|
+| Boletim dry-run (diario) | `data/real/<market_day>.json` | `/salvar` (painel dry-run, inalterado) |
+| Ledger real (SSOT do teste) | `data/live_real_test/ledger_real.jsonl` | `init-cutover --confirm` (ato unico) |
+| Boletim real de abertura | `data/live_real_test/abertura_<exec_day>.json` | `emit-abertura` (novo, manual por ora -- ver F-18) |
+| Boletim real de fechamento | `data/live_real_test/<exec_day>.json` | `emit-boletim` (atalho USA_ENCERRAR_DIA) |
+
+Autosave do dry-run e automacao diaria do `emit-abertura` permanecem fora de
+escopo desta decisao -- ver `TEMAS_PARA_ACAO.MD` F-18 (SALA) para a decisao de
+politica pendente.
+
+Ref: SALA D-107; USA D-132; R-018; R-020; R-049; R-050.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.

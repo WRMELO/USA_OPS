@@ -29,6 +29,134 @@ from pipeline.ledger import (
 )
 
 
+def _real_ledger_path() -> Path:
+    return ROOT / "data" / "live_real_test" / "ledger_real.jsonl"
+
+
+def _real_test_active() -> bool:
+    ledger_path = _real_ledger_path()
+    if not ledger_path.exists():
+        return False
+    try:
+        with ledger_path.open("r", encoding="utf-8") as fp:
+            for raw_line in fp:
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except Exception:
+                    continue
+                if payload.get("type") == "APORTE":
+                    return True
+    except Exception:
+        return False
+    return False
+
+
+def _real_boletim_payload_path(today: date) -> tuple[Path, str] | None:
+    real_dir = ROOT / "data" / "live_real_test"
+    abertura_path = real_dir / f"abertura_{today.isoformat()}.json"
+    if abertura_path.exists():
+        return abertura_path, "abertura"
+    fechamento_path = real_dir / f"{today.isoformat()}.json"
+    if fechamento_path.exists():
+        return fechamento_path, "fechamento"
+    return None
+
+
+def _render_real_boletim_html(payload: dict[str, Any], today: date, kind: str) -> str:
+    def _fmt_usd(value: Any) -> str:
+        try:
+            return f"$ {float(value):,.2f}"
+        except Exception:
+            return "$ 0.00"
+
+    def _fmt_pct(value: Any) -> str:
+        try:
+            return f"{float(value) * 100:.2f}%"
+        except Exception:
+            return "0.00%"
+
+    banner = "Boletim de abertura (analise do dia)" if kind == "abertura" else "Boletim de fechamento"
+    title = f"Boletim Real — LIVE-REAL-TEST — {today.isoformat()}"
+    cash_free = _fmt_usd(payload.get("cash_free", 0.0))
+    cash_accounting = _fmt_usd(payload.get("cash_accounting", 0.0))
+
+    top_operational = payload.get("top_operational", [])
+    top_rows: list[str] = []
+    if top_operational:
+        for row in top_operational:
+            top_rows.append(
+                "<tr>"
+                f"<td>{row.get('rank', '')}</td>"
+                f"<td>{str(row.get('ticker', '')).upper()}</td>"
+                f"<td style='text-align:right'>{float(row.get('score_m3', 0.0) or 0.0):.4f}</td>"
+                f"<td style='text-align:right'>{_fmt_pct(row.get('target_weight', 0.0))}</td>"
+                f"<td style='text-align:right'>{_fmt_usd(row.get('close_d1', 0.0))}</td>"
+                "</tr>"
+            )
+    else:
+        top_rows.append("<tr><td colspan='5'>Top-20 nao disponivel neste boletim.</td></tr>")
+
+    positions = payload.get("positions_snapshot", [])
+    pos_rows: list[str] = []
+    if positions:
+        for row in positions:
+            pos_rows.append(
+                "<tr>"
+                f"<td>{str(row.get('ticker', '')).upper()}</td>"
+                f"<td>{row.get('data_compra', '')}</td>"
+                f"<td style='text-align:right'>{int(row.get('qtd', 0) or 0)}</td>"
+                f"<td style='text-align:right'>{_fmt_usd(row.get('preco_compra', 0.0))}</td>"
+                "</tr>"
+            )
+    else:
+        pos_rows.append(
+            "<tr><td colspan='4'>Nenhuma posicao registrada ainda — carteira comprada zerada.</td></tr>"
+        )
+
+    return f"""<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>{title}</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 18px; color: #111827; background: #f9fafb; }}
+    .card {{ background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; margin: 10px 0; }}
+    .banner {{ font-weight: 700; color: #1d4ed8; margin-bottom: 8px; }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
+    th {{ text-align: left; background: #0f172a; color: #fff; padding: 7px; }}
+    td {{ border-bottom: 1px solid #e5e7eb; padding: 6px 7px; }}
+    .muted {{ color: #4b5563; font-size: 12px; }}
+  </style>
+</head>
+<body>
+  <h1>{title}</h1>
+  <div class="card">
+    <div class="banner">{banner}</div>
+    <p><strong>Caixa Livre:</strong> {cash_free}</p>
+    <p><strong>Caixa Contabil:</strong> {cash_accounting}</p>
+  </div>
+  <div class="card">
+    <h3>Top-20 operacional</h3>
+    <table>
+      <tr><th>Rank</th><th>Ticker</th><th>Score M3</th><th>Peso-Alvo(%)</th><th>Fechamento D-1</th></tr>
+      {''.join(top_rows)}
+    </table>
+  </div>
+  <div class="card">
+    <h3>Carteira comprada</h3>
+    <table>
+      <tr><th>Ticker</th><th>Data Compra</th><th>Qtd</th><th>Preco Compra</th></tr>
+      {''.join(pos_rows)}
+    </table>
+  </div>
+  <p class="muted">Registro de ordens via atalho USA_REGISTRAR_ORDEM. Encerramento do dia via atalho USA_ENCERRAR_DIA. Historico dry-run continua disponivel em /painel/&lt;data&gt;.</p>
+</body>
+</html>"""
+
+
 @dataclass
 class JobState:
     status: str = "IDLE"  # IDLE | RUNNING | OK | FAIL
@@ -181,6 +309,20 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 self._respond_html(self._render_status(today))
                 return
             if path == "/painel":
+                if _real_test_active():
+                    target = _real_boletim_payload_path(today)
+                    if target is None:
+                        self._respond_html(
+                            "<h3>"
+                            f"Regime LIVE-REAL-TEST ativo, mas o boletim de hoje ainda nao foi emitido. Rode: ./.venv/bin/python scripts/live_real_cutover.py emit-abertura --exec-date {today.isoformat()}"
+                            "</h3>",
+                            code=200,
+                        )
+                        return
+                    payload_path, kind = target
+                    payload = json.loads(payload_path.read_text(encoding="utf-8"))
+                    self._respond_html(_render_real_boletim_html(payload, today, kind), code=200)
+                    return
                 panel = _panel_path(_painel_diario_mod.get_d_minus_1(today))
                 if not panel.exists():
                     self._respond_html("<h3>Painel do dia nao encontrado.</h3>", code=404)
