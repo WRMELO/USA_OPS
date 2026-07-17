@@ -11,16 +11,20 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import pdfplumber
 
 import pipeline.ledger as ledger_mod
 from pipeline.ledger import EventType
 
-ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LEDGER_DIR = ROOT / "data" / "live_real_test"
 LOG_FILE = "reconciliation_log.jsonl"
 
@@ -33,6 +37,7 @@ _EXEC_RE = re.compile(
     r"(?P<trade_date>\d{1,2}/\d{1,2}/\d{4})\s+"
     r"(?P<settle_date>\d{1,2}/\d{1,2}/\d{4})\s+\S+"
 )
+NOTE_FILENAME_RE = re.compile(r"^Confirm_.*\.pdf$", flags=re.IGNORECASE)
 
 
 def _now_iso() -> str:
@@ -313,6 +318,47 @@ def propose(note_path: Path, ledger_dir: Path) -> dict[str, Any]:
     }
 
 
+def discover_notes(notes_dir: Path) -> list[Path]:
+    if not notes_dir.exists():
+        return []
+    return sorted(
+        path for path in notes_dir.iterdir() if path.is_file() and NOTE_FILENAME_RE.match(path.name)
+    )
+
+
+def propose_dir(notes_dir: Path, ledger_dir: Path) -> dict[str, Any]:
+    resolved_notes_dir = _resolve_ledger_dir(notes_dir)
+    notes = discover_notes(resolved_notes_dir)
+
+    results: list[dict[str, Any]] = []
+    divergent_items: list[dict[str, Any]] = []
+    parse_errors: list[dict[str, Any]] = []
+    proposals_created_total = 0
+
+    for note_path in notes:
+        try:
+            result = propose(note_path, ledger_dir)
+        except Exception as exc:
+            parse_errors.append({"note_file": note_path.name, "error": str(exc)})
+            continue
+
+        results.append(result)
+        proposals_created_total += int(result["proposals_created"])
+        for item in result["items"]:
+            if item["status"] in {"divergencia", "divergencia_pendente"}:
+                divergent_items.append({**item, "note_file": result["note_file"]})
+
+    return {
+        "notes_dir": str(resolved_notes_dir),
+        "notes_found": [str(note) for note in notes],
+        "results": results,
+        "proposals_created_total": proposals_created_total,
+        "divergent_items": divergent_items,
+        "parse_errors": parse_errors,
+        "has_blocking_divergence": bool(divergent_items) or bool(parse_errors),
+    }
+
+
 def resolve(
     note_path: Path,
     ticker: str,
@@ -347,6 +393,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_propose.add_argument("--note", required=True, type=Path)
     p_propose.add_argument("--ledger-dir", type=Path, default=Path("data/live_real_test"))
 
+    p_propose_dir = sub.add_parser("propose-dir", help="Varrer pasta de notas oficiais e propor divergencias")
+    p_propose_dir.add_argument("--notes-dir", required=True, type=Path)
+    p_propose_dir.add_argument("--ledger-dir", type=Path, default=Path("data/live_real_test"))
+
     p_resolve = sub.add_parser("resolve", help="Registrar decisao sobre proposta")
     p_resolve.add_argument("--note", required=True, type=Path)
     p_resolve.add_argument("--ticker", required=True)
@@ -364,6 +414,11 @@ def main() -> None:
 
     if args.command == "propose":
         output = propose(args.note, args.ledger_dir)
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+        return
+
+    if args.command == "propose-dir":
+        output = propose_dir(args.notes_dir, args.ledger_dir)
         print(json.dumps(output, ensure_ascii=False, indent=2))
         return
 

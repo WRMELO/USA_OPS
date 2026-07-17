@@ -121,3 +121,112 @@ def test_propose_and_resolve_are_idempotent_for_accepted_keys(tmp_path, monkeypa
     ]
     proposals = [entry for entry in log_entries if entry.get("type") == "PROPOSTA"]
     assert len(proposals) == 1
+
+
+def test_discover_notes_filters_confirm_pdfs_and_ignores_noise(tmp_path):
+    note_a = tmp_path / "Confirm_BTGP_001_BPXB000001_07162026.pdf"
+    note_b = tmp_path / "Confirm_BTGP_001_BPXB000002_07172026.PDF"
+    noise_image = tmp_path / "WhatsApp Image 2026-07-15 at 14.06.52.jpeg"
+    noise_pdf = tmp_path / "nota_qualquer.pdf"
+
+    note_a.write_text("pdf a", encoding="utf-8")
+    note_b.write_text("pdf b", encoding="utf-8")
+    noise_image.write_text("image", encoding="utf-8")
+    noise_pdf.write_text("pdf noise", encoding="utf-8")
+
+    found = reconcile_mod.discover_notes(tmp_path)
+    assert [path.name for path in found] == [note_a.name, note_b.name]
+
+
+def test_discover_notes_returns_empty_list_for_missing_dir(tmp_path):
+    missing = tmp_path / "nao_existe"
+    assert reconcile_mod.discover_notes(missing) == []
+
+
+def test_propose_dir_aggregates_multiple_notes_and_flags_blocking_divergence(tmp_path, monkeypatch):
+    notes_dir = tmp_path / "notes"
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    note_mrvi = notes_dir / "Confirm_BTGP_001_BPXB000001_07162026.pdf"
+    note_hpp = notes_dir / "Confirm_BTGP_001_BPXB000002_07172026.pdf"
+    noise = notes_dir / "WhatsApp Image 2026-07-15 at 14.06.52.jpeg"
+    note_mrvi.write_text("mrvi", encoding="utf-8")
+    note_hpp.write_text("hpp", encoding="utf-8")
+    noise.write_text("noise", encoding="utf-8")
+
+    rows_by_note = {
+        note_mrvi.name: [
+            {
+                "ticker": "MRVI",
+                "action": "BUY",
+                "qty": 142.88572,
+                "price": 6.9986,
+                "trade_date": "2026-07-16",
+                "settle_date": "2026-07-17",
+                "principal": 1000.0,
+                "commission": 2.5,
+                "transaction_fee": 0.0,
+                "other_fees": 0.0,
+                "net": 1002.5,
+            }
+        ],
+        note_hpp.name: [
+            {
+                "ticker": "HPP",
+                "action": "BUY",
+                "qty": 62.55004003,
+                "price": 15.9872,
+                "trade_date": "2026-07-17",
+                "settle_date": "2026-07-18",
+                "principal": 1000.0,
+                "commission": 2.5,
+                "transaction_fee": 0.0,
+                "other_fees": 0.0,
+                "net": 1002.5,
+            }
+        ],
+    }
+
+    def _fake_parse(note_path: Path) -> list[dict]:
+        return rows_by_note[note_path.name]
+
+    monkeypatch.setattr(reconcile_mod, "parse_note", _fake_parse)
+
+    ledger_dir = tmp_path / "live_real"
+    _write_jsonl(ledger_dir / "ledger_real.jsonl", [])
+
+    result = reconcile_mod.propose_dir(notes_dir, ledger_dir)
+    assert result["has_blocking_divergence"] is True
+    assert result["parse_errors"] == []
+    assert {Path(path).name for path in result["notes_found"]} == {note_mrvi.name, note_hpp.name}
+    assert {item["ticker"] for item in result["divergent_items"]} == {"MRVI", "HPP"}
+
+
+def test_propose_dir_returns_no_blocking_divergence_when_notes_dir_is_empty(tmp_path):
+    notes_dir = tmp_path / "notes"
+    notes_dir.mkdir(parents=True, exist_ok=True)
+
+    result = reconcile_mod.propose_dir(notes_dir, tmp_path / "live_real")
+    assert result["notes_found"] == []
+    assert result["divergent_items"] == []
+    assert result["parse_errors"] == []
+    assert result["has_blocking_divergence"] is False
+
+
+def test_propose_dir_collects_parse_errors_without_raising(tmp_path, monkeypatch):
+    notes_dir = tmp_path / "notes"
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    note = notes_dir / "Confirm_BTGP_001_BPXB000057_07162026.pdf"
+    note.write_text("invalid", encoding="utf-8")
+
+    def _broken_parse(_note_path: Path) -> list[dict]:
+        raise ValueError("pdf corrompido")
+
+    monkeypatch.setattr(reconcile_mod, "parse_note", _broken_parse)
+    _write_jsonl((tmp_path / "live_real" / "ledger_real.jsonl"), [])
+
+    result = reconcile_mod.propose_dir(notes_dir, tmp_path / "live_real")
+    assert result["divergent_items"] == []
+    assert len(result["parse_errors"]) == 1
+    assert result["parse_errors"][0]["note_file"] == note.name
+    assert "pdf corrompido" in result["parse_errors"][0]["error"]
+    assert result["has_blocking_divergence"] is True

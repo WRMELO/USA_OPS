@@ -361,6 +361,40 @@ A partir de D-139, o regime LIVE-REAL-TEST US adota suporte fracionario no
 
 Ref: SALA D-115, USA D-139, R-018, R-020, R-023, R-049.
 
+### 6.14 Gate de conferencia de nota oficial no Analista-USA (D-140)
+
+A partir de D-140, o Analista-USA (skill consultiva/read-only) passa a
+executar, como parte do proprio fluxo diario, a conferencia de notas oficiais
+de corretagem contra o ledger real, reaproveitando o motor propositivo criado
+em D-139:
+
+1. **Descoberta de notas por pasta**:
+   `scripts/reconcile_broker_note.py` ganha `discover_notes(notes_dir)` e
+   `propose_dir(notes_dir, ledger_dir)` (e o subcomando CLI `propose-dir`), que
+   varrem uma pasta e processam apenas arquivos `Confirm_*.pdf`
+   (case-insensitive), ignorando qualquer outro arquivo (ex.: imagens).
+2. **Gate obrigatorio no Analista-USA**:
+   `.cursor/skills/analista-usa/SKILL.md` ganha o Passo 0c, executado apos o
+   Passo 0b e somente quando `ctx["real_test"]["active"] == true`. O passo roda
+   `propose-dir` contra `dados_oficiais_btg/` e, se o resultado indicar
+   `has_blocking_divergence == true` (divergencia nao decidida ou erro de
+   leitura de nota), o Analista **para o diagnostico** e comunica a divergencia
+   ao Owner, sem prosseguir para os Passos 1-9.
+3. **Retificacao permanece ato separado**:
+   o Analista nunca executa `resolve` ou qualquer migracao por conta propria. A
+   retificacao continua sendo comando explicito do Owner, via
+   `scripts/reconcile_broker_note.py resolve` e/ou migracao supervisionada
+   (D-139, §6.13), preservando o charter consultivo do Analista-USA e R-056.
+
+**Contrato de escopo**:
+
+- Nenhum arquivo blindado de §6.6 foi tocado.
+- O Analista-USA continua sem autoridade de escrita no ledger real.
+- A ausencia de notas na pasta ou a ausencia de divergencia nao bloqueia o
+  diagnostico.
+
+Ref: SALA D-116, USA D-140, USA D-139, SALA D-115, R-020, R-056.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.
