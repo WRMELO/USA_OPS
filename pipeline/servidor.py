@@ -367,6 +367,7 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 return
             if path == "/painel":
                 if _real_test_active():
+                    real_boletim_web.close_stale_drafts(today, ROOT / "data" / "live_real_test")
                     view = real_boletim_web.load_live_view(today, ROOT / "data" / "live_real_test")
                     html = real_boletim_web.render_live_html(view)
                     self._respond_html(html, code=200)

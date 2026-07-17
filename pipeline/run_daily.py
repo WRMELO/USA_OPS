@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import logging
 import os
 import sys
@@ -10,6 +11,7 @@ import traceback
 from collections.abc import Callable
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -98,6 +100,31 @@ def _assert_ssot_fresh_us(run_date: date) -> None:
         )
 
 
+def refresh_contexto_analista_us(run_date: date, logger: logging.Logger | None = None) -> dict[str, Any] | None:
+    from pipeline import analise_us
+
+    log = logger or logging.getLogger("usa_ops")
+    trading_days = analise_us._load_trading_days_us()
+    eligible_days = [day for day in trading_days if day <= run_date]
+    if not eligible_days:
+        log.warning("Refresh contexto Analista US ignorado: sem pregões <= %s.", run_date.isoformat())
+        return None
+
+    market_day = max(eligible_days)
+    ctx = analise_us.build_context(market_day)
+    out_path = ROOT / "data" / "ssot" / "contexto_analista_us.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(ctx, indent=2, default=str, ensure_ascii=False), encoding="utf-8")
+    holdings = ctx.get("holdings", [])
+    holdings_count = len(holdings) if isinstance(holdings, list) else 0
+    log.info(
+        "Contexto Analista US atualizado: market_day=%s holdings=%s",
+        market_day.isoformat(),
+        holdings_count,
+    )
+    return ctx
+
+
 def run(
     target_date: date | None = None,
     full: bool = False,
@@ -139,9 +166,9 @@ def run(
     if ingest_only:
         total_steps = 5
     elif decision_only or full:
-        total_steps = 14
+        total_steps = 15
     else:
-        total_steps = 10
+        total_steps = 11
 
     def _step(n: int, label: str) -> None:
         logger.info(label)
@@ -246,6 +273,15 @@ def run(
                 logger.info("Autosave dry-run concluido: %s dia(s) processado(s).", len(autosave_results))
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Autosave dry-run falhou (nao bloqueante): %s", exc)
+
+        _step(base_n + 9, "Step 14: Refresh contexto Analista US...")
+        if dry_run:
+            logger.info("[DRY-RUN] Step 14: Refresh contexto Analista US...")
+        else:
+            try:
+                refresh_contexto_analista_us(run_date, logger)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Refresh contexto analista US falhou (nao bloqueante): %s", exc)
 
         logger.info("=== Pipeline completed successfully ===")
         return decision

@@ -324,6 +324,39 @@ def close_day(exec_day: date, ledger_dir: Path) -> dict[str, Any]:
     }
 
 
+def close_stale_drafts(today: date, ledger_dir: Path) -> list[dict[str, Any]]:
+    if not DRAFT_DIR.exists():
+        return []
+
+    closed_days: list[dict[str, Any]] = []
+    for candidate in sorted(DRAFT_DIR.glob("draft_*.json")):
+        if "_encerrado_" in candidate.name:
+            continue
+        stem = candidate.stem
+        if not stem.startswith("draft_"):
+            continue
+        raw_day = stem.replace("draft_", "", 1)
+        try:
+            stale_day = date.fromisoformat(raw_day)
+        except ValueError:
+            continue
+        if stale_day >= today:
+            continue
+        try:
+            result = close_day(stale_day, ledger_dir)
+            result["auto_closed"] = True
+            closed_days.append(result)
+        except Exception as exc:  # noqa: BLE001
+            closed_days.append(
+                {
+                    "exec_day": stale_day.isoformat(),
+                    "auto_closed": False,
+                    "error": str(exc),
+                }
+            )
+    return closed_days
+
+
 def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
     resolved_ledger_dir = _resolve_ledger_dir(ledger_dir)
     real_ledger_path = resolved_ledger_dir / REAL_LEDGER_NAME
@@ -333,6 +366,7 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         ledger_mod.LEDGER_PATH = real_ledger_path
         cash = compute_cash(today)
         positions = export_snapshot(today)
+        operations_book_raw = ledger_mod.build_operations_book(today)
     finally:
         ledger_mod.LEDGER_PATH = previous_ledger_path
 
@@ -349,6 +383,21 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
     holdings = context.get("holdings", []) if isinstance(context.get("holdings"), list) else []
     holdings_map = {str(row.get("ticker", "")).upper().strip(): row for row in holdings}
     target_weights = master.get("target_weights", {}) if isinstance(master.get("target_weights"), dict) else {}
+    operations_book: dict[str, Any] = {}
+    for ticker, row in operations_book_raw.items():
+        if not isinstance(row, dict):
+            continue
+        hold = holdings_map.get(ticker, {})
+        close_d1 = _safe_float(hold.get("close_d1"), 0.0)
+        qtd_liquida = int(_safe_int(row.get("qtd_liquida"), 0))
+        custo_medio = _safe_float(row.get("custo_medio"), 0.0)
+        nao_realizado: float | None = None
+        if qtd_liquida > 0 and close_d1 > 0:
+            nao_realizado = round(qtd_liquida * (close_d1 - custo_medio), 2)
+        row_out = dict(row)
+        row_out["close_d1"] = close_d1
+        row_out["nao_realizado"] = nao_realizado
+        operations_book[ticker] = row_out
 
     positions_enriched: list[dict[str, Any]] = []
     held_set: set[str] = set()
@@ -382,6 +431,7 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         "held_set": sorted(held_set),
         "top_operational": top_operational,
         "target_weights": target_weights,
+        "operations_book": operations_book,
         "forno": forno,
         "draft": draft,
         "closed_boletim_exists": closed_boletim_path.exists(),
@@ -416,6 +466,44 @@ def render_live_html(view: dict[str, Any]) -> str:
             )
     else:
         pos_rows.append("<tr><td colspan='6'>Nenhuma posicao registrada no ledger real.</td></tr>")
+
+    operations_book = view.get("operations_book", {}) if isinstance(view.get("operations_book"), dict) else {}
+    book_rows: list[str] = []
+
+    def _format_ops_column(rows: Any) -> str:
+        if not isinstance(rows, list) or not rows:
+            return "-"
+        parts: list[str] = []
+        for item in rows:
+            if not isinstance(item, dict):
+                continue
+            op_date = html.escape(str(item.get("date", "")))
+            op_qtd = int(_safe_int(item.get("qtd"), 0))
+            op_preco = _fmt_usd(item.get("preco", 0.0))
+            parts.append(f"{op_date} {op_qtd}@{op_preco}")
+        return "; ".join(parts) if parts else "-"
+
+    if operations_book:
+        for ticker in sorted(operations_book.keys()):
+            row = operations_book.get(ticker, {})
+            if not isinstance(row, dict):
+                continue
+            nao_realizado_raw = row.get("nao_realizado")
+            nao_realizado_fmt = _fmt_usd(nao_realizado_raw) if nao_realizado_raw is not None else "-"
+            book_rows.append(
+                "<tr>"
+                f"<td>{html.escape(ticker)}</td>"
+                f"<td>{_format_ops_column(row.get('compras', []))}</td>"
+                f"<td>{_format_ops_column(row.get('vendas', []))}</td>"
+                f"<td style='text-align:right'>{int(_safe_int(row.get('qtd_liquida', 0)))}</td>"
+                f"<td style='text-align:right'>{_fmt_usd(row.get('custo_medio', 0.0))}</td>"
+                f"<td style='text-align:right'>{_fmt_usd(row.get('close_d1', 0.0))}</td>"
+                f"<td style='text-align:right'>{_fmt_usd(row.get('realizado', 0.0))}</td>"
+                f"<td style='text-align:right'>{nao_realizado_fmt}</td>"
+                "</tr>"
+            )
+    if not book_rows:
+        book_rows.append("<tr><td colspan='8'>Sem operacoes registradas por ativo.</td></tr>")
 
     held_set = set(view.get("held_set", []))
     ranking = view.get("top_operational", []) if isinstance(view.get("top_operational"), list) else []
@@ -542,6 +630,14 @@ def render_live_html(view: dict[str, Any]) -> str:
     <table>
       <tr><th>Ticker</th><th>Data Compra</th><th>Qtd</th><th>Preco Compra</th><th>Fech. D-1</th><th>Heat %</th></tr>
       {''.join(pos_rows)}
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Livro de operacoes por ativo</h2>
+    <table>
+      <tr><th>Ticker</th><th>Compras</th><th>Vendas</th><th>Qtd Liquida</th><th>Custo Medio</th><th>Fech. D-1</th><th>Resultado Realizado</th><th>Resultado Nao Realizado</th></tr>
+      {''.join(book_rows)}
     </table>
   </div>
 

@@ -411,3 +411,84 @@ def export_snapshot(as_of_date: date) -> list[dict[str, Any]]:
             )
     return out
 
+
+def build_operations_book(as_of_date: date) -> dict[str, Any]:
+    events = _effective_events(as_of_date)
+    buys: dict[str, list[dict[str, Any]]] = {}
+    sells: dict[str, list[dict[str, Any]]] = {}
+    fifo_queue: dict[str, list[dict[str, Any]]] = {}
+    realized: dict[str, float] = {}
+
+    for ev in events:
+        ticker = (ev.ticker or "").upper().strip()
+        if not ticker:
+            continue
+        qtd = int(ev.qtd or 0)
+        price = float(ev.price or 0.0)
+        if qtd <= 0 or price <= 0:
+            continue
+
+        if ev.type == EventType.BUY:
+            buy_row = {
+                "date": ev.exec_date.isoformat(),
+                "qtd": qtd,
+                "preco": price,
+                "valor": round(qtd * price, 2),
+            }
+            buys.setdefault(ticker, []).append(buy_row)
+            fifo_queue.setdefault(ticker, []).append(
+                {
+                    "date": ev.exec_date.isoformat(),
+                    "qtd": qtd,
+                    "preco": price,
+                }
+            )
+            realized.setdefault(ticker, 0.0)
+            continue
+
+        if ev.type == EventType.SELL:
+            sell_row = {
+                "date": ev.exec_date.isoformat(),
+                "qtd": qtd,
+                "preco": price,
+                "valor": round(qtd * price, 2),
+            }
+            sells.setdefault(ticker, []).append(sell_row)
+            queue = fifo_queue.setdefault(ticker, [])
+            remaining = qtd
+            matched_cost = 0.0
+            while remaining > 0 and queue:
+                lot = queue[0]
+                lot_qtd = int(lot.get("qtd", 0))
+                lot_price = float(lot.get("preco", 0.0))
+                if lot_qtd <= 0 or lot_price <= 0:
+                    queue.pop(0)
+                    continue
+                take = min(remaining, lot_qtd)
+                matched_cost += take * lot_price
+                lot["qtd"] = lot_qtd - take
+                remaining -= take
+                if int(lot.get("qtd", 0)) <= 0:
+                    queue.pop(0)
+            proceeds = float(qtd * price)
+            realized[ticker] = realized.get(ticker, 0.0) + (proceeds - matched_cost)
+
+    out: dict[str, Any] = {}
+    tickers = sorted(set(buys.keys()) | set(sells.keys()))
+    for ticker in tickers:
+        queue = fifo_queue.get(ticker, [])
+        open_lots = [lot for lot in queue if int(lot.get("qtd", 0)) > 0]
+        qtd_liquida = sum(int(lot.get("qtd", 0)) for lot in open_lots)
+        investido = sum(int(lot.get("qtd", 0)) * float(lot.get("preco", 0.0)) for lot in open_lots)
+        custo_medio = (investido / qtd_liquida) if qtd_liquida > 0 else 0.0
+        out[ticker] = {
+            "ticker": ticker,
+            "compras": buys.get(ticker, []),
+            "vendas": sells.get(ticker, []),
+            "qtd_liquida": int(qtd_liquida),
+            "custo_medio": round(custo_medio, 4),
+            "investido": round(investido, 2),
+            "realizado": round(realized.get(ticker, 0.0), 2),
+        }
+    return out
+

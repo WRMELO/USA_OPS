@@ -142,6 +142,47 @@ def test_close_day_generates_artifacts_and_archives_draft(tmp_path, monkeypatch)
     assert not draft_file.exists()
 
 
+def test_close_stale_drafts_closes_only_open_stale_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    today = date(2026, 7, 17)
+    stale_day = date(2026, 7, 16)
+    current_day = date(2026, 7, 17)
+    old_archived_day = date(2026, 7, 15)
+    ledger_dir = tmp_path / "live_real"
+
+    real_boletim_web.add_operation(
+        stale_day,
+        tipo="COMPRA",
+        ticker="MRVI",
+        qtd=3,
+        preco=7.0,
+        corretagem=2.5,
+        preco_sombra=6.9,
+    )
+    real_boletim_web.add_operation(
+        current_day,
+        tipo="COMPRA",
+        ticker="HPP",
+        qtd=2,
+        preco=15.0,
+        corretagem=1.0,
+        preco_sombra=14.8,
+    )
+
+    archived_path = real_boletim_web.DRAFT_DIR / f"draft_{old_archived_day.isoformat()}_encerrado_101010.json"
+    archived_path.parent.mkdir(parents=True, exist_ok=True)
+    archived_path.write_text("{}", encoding="utf-8")
+
+    result = real_boletim_web.close_stale_drafts(today, ledger_dir)
+    assert any(row.get("exec_day") == stale_day.isoformat() and row.get("auto_closed") is True for row in result)
+    assert not real_boletim_web.draft_path(stale_day).exists()
+    assert real_boletim_web.draft_path(current_day).exists()
+    assert archived_path.exists()
+    assert any(real_boletim_web.DRAFT_DIR.glob(f"draft_{stale_day.isoformat()}_encerrado_*.json"))
+    assert (ledger_dir / f"{stale_day.isoformat()}.json").exists()
+    assert (ledger_dir / f"friction_report_{stale_day.isoformat()}.json").exists()
+
+
 def test_render_live_html_orders_by_m3_rank():
     view = {
         "today": "2026-07-16",
@@ -155,11 +196,26 @@ def test_render_live_html_orders_by_m3_rank():
             {"ticker": "AAAA", "m3_rank": 1, "score_m3": 2.0, "close_d1": 20.0},
         ],
         "target_weights": {"ZZZZ": 0.03, "AAAA": 0.05},
+        "operations_book": {
+            "MRVI": {
+                "ticker": "MRVI",
+                "compras": [{"date": "2026-07-16", "qtd": 10, "preco": 7.0}],
+                "vendas": [],
+                "qtd_liquida": 10,
+                "custo_medio": 7.0,
+                "investido": 70.0,
+                "realizado": 0.0,
+                "close_d1": 7.2,
+                "nao_realizado": 2.0,
+            }
+        },
         "forno": {},
         "draft": {"operations": []},
         "closed_boletim_exists": False,
     }
     html = real_boletim_web.render_live_html(view)
+    assert "Carteira real" in html
+    assert "Livro de operacoes por ativo" in html
     assert "Top-20 operacional (m3_rank)" in html
     assert "M3 Rank" in html
     assert html.index("AAAA") < html.index("ZZZZ")

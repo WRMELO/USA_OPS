@@ -193,3 +193,123 @@ def test_sells_in_settlement_and_reconciliation(tmp_path):
     recon = sum(p["pendente"] for p in pending) + sum(s["pendente"] for s in in_settlement)
     assert abs(recon - cash_d1["cash_accounting"]) < 0.02
 
+
+def test_build_operations_book_single_buy(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+
+    _append(
+        LedgerEvent(
+            id="B1",
+            type=EventType.BUY,
+            exec_date=date(2026, 1, 2),
+            created_at=datetime.now(tz=UTC),
+            ticker="ABC",
+            qtd=10,
+            price=10.0,
+            amount=100.0,
+            settle_date=date(2026, 1, 3),
+        )
+    )
+
+    book = ledger.build_operations_book(date(2026, 1, 2))
+    row = book["ABC"]
+    assert row["qtd_liquida"] == 10
+    assert abs(row["investido"] - 100.0) < 1e-9
+    assert abs(row["custo_medio"] - 10.0) < 1e-9
+    assert abs(row["realizado"]) < 1e-9
+    assert len(row["compras"]) == 1
+    assert row["vendas"] == []
+
+
+def test_build_operations_book_partial_sell(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+
+    _append(
+        LedgerEvent(
+            id="B2",
+            type=EventType.BUY,
+            exec_date=date(2026, 1, 2),
+            created_at=datetime.now(tz=UTC),
+            ticker="ABC",
+            qtd=10,
+            price=10.0,
+            amount=100.0,
+            settle_date=date(2026, 1, 3),
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="S2",
+            type=EventType.SELL,
+            exec_date=date(2026, 1, 3),
+            created_at=datetime.now(tz=UTC),
+            ticker="ABC",
+            qtd=4,
+            price=12.0,
+            amount=48.0,
+            settle_date=date(2026, 1, 4),
+        )
+    )
+
+    book = ledger.build_operations_book(date(2026, 1, 3))
+    row = book["ABC"]
+    assert row["qtd_liquida"] == 6
+    assert abs(row["investido"] - 60.0) < 1e-9
+    assert abs(row["custo_medio"] - 10.0) < 1e-9
+    assert abs(row["realizado"] - 8.0) < 1e-9
+    assert len(row["compras"]) == 1
+    assert len(row["vendas"]) == 1
+
+
+def test_build_operations_book_fifo_multiple_buys(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+
+    _append(
+        LedgerEvent(
+            id="B3A",
+            type=EventType.BUY,
+            exec_date=date(2026, 1, 2),
+            created_at=datetime.now(tz=UTC),
+            ticker="ABC",
+            qtd=5,
+            price=10.0,
+            amount=50.0,
+            settle_date=date(2026, 1, 3),
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="B3B",
+            type=EventType.BUY,
+            exec_date=date(2026, 1, 3),
+            created_at=datetime.now(tz=UTC),
+            ticker="ABC",
+            qtd=5,
+            price=12.0,
+            amount=60.0,
+            settle_date=date(2026, 1, 4),
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="S3",
+            type=EventType.SELL,
+            exec_date=date(2026, 1, 4),
+            created_at=datetime.now(tz=UTC),
+            ticker="ABC",
+            qtd=8,
+            price=15.0,
+            amount=120.0,
+            settle_date=date(2026, 1, 5),
+        )
+    )
+
+    book = ledger.build_operations_book(date(2026, 1, 4))
+    row = book["ABC"]
+    assert row["qtd_liquida"] == 2
+    assert abs(row["investido"] - 24.0) < 1e-9
+    assert abs(row["custo_medio"] - 12.0) < 1e-9
+    assert abs(row["realizado"] - 34.0) < 1e-9
+    assert len(row["compras"]) == 2
+    assert len(row["vendas"]) == 1
+

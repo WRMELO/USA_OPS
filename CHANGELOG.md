@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-17
+
+- feat(boletim): T-SDC-BOLETIM-REAL-CONTEXTO-LIVRO-US-V1 — adiciona `refresh_contexto_analista_us` no Step 14 de `pipeline/run_daily.py` (refresh automatico do `data/ssot/contexto_analista_us.json` por `market_day` elegivel, nao bloqueante), inclui `build_operations_book` (FIFO) em `pipeline/ledger.py`, estende `pipeline/real_boletim_web.py` com `close_stale_drafts` (autoencerramento de `draft_<exec_day>.json` anterior ao dia atual) e nova secao "Livro de operacoes por ativo" no `/painel`, e integra o rollover automatico em `pipeline/servidor.py` antes da renderizacao live; adiciona cobertura em `tests/test_run_daily_contexto_refresh.py`, `tests/test_ledger.py` e `tests/test_real_boletim_web.py`. Decision: D-138 (ref cruzada: SALA D-114).
+
 ## 2026-07-16
 
 - feat(autosave): T-SDC-DRYRUN-AUTOSAVE-F18-US-V1 — mecaniza o autosave do dry-run US: `pipeline/painel_diario.py` ganha `_build_rebalance_buy_suggestions` e `compute_dryrun_autosave_operations` (sell+buy de rebalance por `target_weight`, ordem de `operational_ranking` e caixa disponivel); `pipeline/servidor.py` extrai `apply_boletim_operations(payload)` para reuso interno mantendo a regra "somente hoje" no endpoint `/salvar`; novo `pipeline/dryrun_autosave.py` executa catch-up idempotente por `market_day` com trilha append-only em `data/daily/autosave_log.jsonl`; `pipeline/run_daily.py` integra Step 13 de autosave (nao bloqueante); adiciona testes `tests/test_painel_diario_autosave.py` e `tests/test_dryrun_autosave.py` e expande `tests/test_servidor_real_boletim.py`. Decision: D-137 (ref cruzada: SALA D-112).

@@ -217,10 +217,16 @@ dry-run.
 | Boletim real de fechamento | `data/live_real_test/<exec_day>.json` | `emit-boletim` (atalho USA_ENCERRAR_DIA) |
 
 Autosave do dry-run foi desmembrado para a F-18 e concluido na frente de
-autosave autonomo (`SALA D-112` / `USA D-137`). A automacao diaria do
-`emit-abertura` (frente 1 da F-18) permanece pendente no backlog.
+autosave autonomo (`SALA D-112` / `USA D-137`).
 
-Ref: SALA D-107, SALA D-112; USA D-132, USA D-137; R-018; R-020; R-049; R-050.
+**Nota 2026-07-17 (D-138/SALA D-114)**: a frente 1 da F-18 foi concluida com
+reescopo. A automacao diaria deixou de depender do `emit-abertura` e passou a
+ser implementada pelo refresh automatico do contexto canonico
+`data/ssot/contexto_analista_us.json` no ciclo diario + rollover automatico de
+`draft_<exec_day>.json` pendente ao abrir `/painel` (ver §6.12).
+
+Ref: SALA D-107, SALA D-112, SALA D-114; USA D-132, USA D-137, USA D-138;
+R-018; R-020; R-049; R-050.
 
 **Nota 2026-07-16 (D-133/SALA D-108)**: `pipeline/analise_us.py` passa a
 detectar o regime LIVE-REAL-TEST pelo `ledger_real.jsonl` (evento `APORTE`) e,
@@ -286,10 +292,44 @@ preenchimento de rebalance:
   grava `data/real/<market_day>.json` apenas quando ausente e registra trilha
   append-only em `data/daily/autosave_log.jsonl`.
 
-Escopo: frente 2 da F-18 (autosave do dry-run). A frente 1 (automacao diaria do
-`emit-abertura`) segue pendente.
+Escopo desta secao: frente 2 da F-18 (autosave do dry-run). A frente 1 foi
+concluida em D-138 e esta detalhada em §6.12.
 
-Ref: SALA D-112, USA D-137, R-049, R-050.
+Ref: SALA D-112, SALA D-114, USA D-137, USA D-138, R-049, R-050.
+
+### 6.12 Refresh diario do contexto Analista-USA e rollover automatico do rascunho (F-18 frente 1 re-escopada, D-138)
+
+A partir de D-138, o ciclo diario US passa a fechar a lacuna operacional entre
+SSOT e boletim web real sem depender de acao manual do Owner:
+
+1. **Refresh canonico no pipeline diario**:
+   `pipeline/run_daily.py` ganha o Step 14
+   (`refresh_contexto_analista_us`), executado apos a etapa de autosave.
+   O step regrava `data/ssot/contexto_analista_us.json` usando o ultimo pregao
+   elegivel (`market_day` D-1), com comportamento nao bloqueante em caso de
+   falha (warning em log).
+2. **Rollover automatico ao abrir `/painel`**:
+   `pipeline/servidor.py` chama `real_boletim_web.close_stale_drafts(...)`
+   antes de renderizar o dia corrente em regime LIVE-REAL-TEST.
+   Qualquer `draft_<exec_day>.json` anterior ao dia atual e fechado
+   automaticamente (aplicacao no ledger, emissao de boletim/friccao e arquivo
+   `draft_<exec_day>_encerrado_<HHMMSS>.json`).
+3. **Livro de operacoes por ativo no boletim web**:
+   `pipeline/ledger.py` expoe `build_operations_book(as_of_date)` (FIFO) e
+   `pipeline/real_boletim_web.py` passa a exibir o bloco "Livro de operacoes por
+   ativo" no `/painel`, com compras, vendas, quantidade liquida, custo medio,
+   resultado realizado e nao realizado por ticker (cruzando Fech. D-1 do
+   contexto canonico).
+
+**Contrato operacional**:
+
+- `market_day` permanece D-1 canonicamente (R-022) e `exec_day` permanece o dia
+  civil de operacao.
+- `emit-abertura` permanece disponivel como fallback manual, sem ser o mecanismo
+  primario da frente 1.
+- Nenhum arquivo blindado de §6.6 foi tocado neste pacote.
+
+Ref: SALA D-114, USA D-138, R-018, R-022, R-049, R-050.
 
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
