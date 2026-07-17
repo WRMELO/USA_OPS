@@ -331,6 +331,36 @@ SSOT e boletim web real sem depender de acao manual do Owner:
 
 Ref: SALA D-114, USA D-138, R-018, R-022, R-049, R-050.
 
+### 6.13 Ledger fracionario no caminho real + conferencia propositiva de nota oficial (D-139)
+
+A partir de D-139, o regime LIVE-REAL-TEST US adota suporte fracionario no
+**caminho real** sem alterar os arquivos blindados do motor:
+
+1. **Semantica de quantidade no ledger real**:
+   `pipeline/ledger.py` passa a tratar `qtd` como `float` (comparacao
+   epsilon-safe), preservando FIFO e exportacoes com arredondamento controlado.
+2. **Entrada operacional por principal investido**:
+   no `/painel`, o registro de operacao aceita `valor_investido` (US$), com
+   derivacao de quantidade por `qtd = valor_investido / preco` e fallback para
+   `qtd` manual quando o valor nao for informado.
+3. **Conferencia de nota como fonte da verdade (modo propositivo)**:
+   `scripts/reconcile_broker_note.py` compara nota oficial vs ledger e grava
+   apenas propostas/decisoes em `reconciliation_log.jsonl`; o script **nao**
+   altera ledger automaticamente.
+4. **Excecao controlada para 16/07/2026**:
+   `scripts/migrate_ledger_20260716_fractional_fix.py` implementa migracao
+   supervisionada (dry-run por default, backup obrigatorio e `--confirm`
+   explicito) para corrigir os dois BUYs historicos (MRVI/HPP) do dia 16/07,
+   refletindo principal de US$1.000 por ativo da nota oficial.
+
+**Contrato de escopo**:
+
+- `pipeline/painel_diario.py` permanece intocado.
+- Nao ha auto-aplicacao de proposta de reconciliacao.
+- A confirmacao de migracao real permanece ato explicito do Owner.
+
+Ref: SALA D-115, USA D-139, R-018, R-020, R-023, R-049.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.

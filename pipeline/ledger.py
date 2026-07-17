@@ -13,6 +13,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER_PATH = ROOT / "data" / "ssot" / "ledger.jsonl"
+_QTD_EPS = 1e-6  # tolerancia para comparacoes de quantidade fracionaria (D-139)
 
 
 class EventType(str, Enum):
@@ -33,7 +34,7 @@ class LedgerEvent:
     exec_date: date
     created_at: datetime
     ticker: str | None = None
-    qtd: int | None = None
+    qtd: float | None = None
     price: float | None = None
     amount: float = 0.0
     settle_date: date | None = None
@@ -99,6 +100,12 @@ def _safe_str_or_none(v: Any) -> str | None:
     return s
 
 
+def qtd_from_invested(invested: float, price: float) -> float:
+    if price <= 0:
+        return 0.0
+    return round(float(invested) / float(price), 8)
+
+
 def _next_trading_day(from_day: date) -> date:
     opw = ROOT / "data" / "ssot" / "operational_window.parquet"
     if opw.exists():
@@ -128,7 +135,7 @@ def create_event(
     amount: float,
     *,
     ticker: str | None = None,
-    qtd: int | None = None,
+    qtd: float | None = None,
     price: float | None = None,
     settle_date: date | None = None,
     ref_id: str | None = None,
@@ -166,7 +173,7 @@ def _from_dict(d: dict[str, Any]) -> LedgerEvent | None:
         exec_date=exec_date,
         created_at=_to_datetime(d.get("created_at")),
         ticker=(_safe_str_or_none(d.get("ticker")) or "").upper().strip() or None,
-        qtd=_safe_int(d.get("qtd"), 0) if d.get("qtd") is not None else None,
+        qtd=_safe_float(d.get("qtd"), 0.0) if d.get("qtd") is not None else None,
         price=_safe_float(d.get("price"), 0.0) if d.get("price") is not None else None,
         amount=_safe_float(d.get("amount"), 0.0),
         settle_date=_to_date(d.get("settle_date")),
@@ -230,7 +237,7 @@ def is_duplicate(event: LedgerEvent) -> bool:
         # BUY/SELL.
         if (
             (ev.ticker or "") == (event.ticker or "")
-            and (ev.qtd or 0) == (event.qtd or 0)
+            and abs((ev.qtd or 0.0) - (event.qtd or 0.0)) <= _QTD_EPS
             and abs((ev.price or 0.0) - (event.price or 0.0)) <= 1e-6
             and abs(ev.amount - event.amount) <= 0.01
         ):
@@ -248,27 +255,27 @@ def compute_positions(as_of_date: date) -> dict[str, list[dict[str, Any]]]:
     lots: dict[str, list[dict[str, Any]]] = {}
     events = _effective_events(as_of_date)
     for ev in events:
-        if ev.type == EventType.BUY and ev.ticker and (ev.qtd or 0) > 0 and (ev.price or 0.0) > 0:
+        if ev.type == EventType.BUY and ev.ticker and float(ev.qtd or 0.0) > _QTD_EPS and (ev.price or 0.0) > 0:
             lots.setdefault(ev.ticker, []).append(
                 {
                     "ticker": ev.ticker,
                     "buy_date": ev.exec_date.isoformat(),
-                    "qtd": int(ev.qtd or 0),
+                    "qtd": float(ev.qtd or 0.0),
                     "buy_price": float(ev.price or 0.0),
                 }
             )
             continue
-        if ev.type == EventType.SELL and ev.ticker and (ev.qtd or 0) > 0:
-            remain = int(ev.qtd or 0)
+        if ev.type == EventType.SELL and ev.ticker and float(ev.qtd or 0.0) > _QTD_EPS:
+            remain = float(ev.qtd or 0.0)
             queue = lots.get(ev.ticker, [])
             i = 0
-            while i < len(queue) and remain > 0:
-                take = min(remain, int(queue[i]["qtd"]))
-                queue[i]["qtd"] = int(queue[i]["qtd"]) - take
+            while i < len(queue) and remain > _QTD_EPS:
+                take = min(remain, float(queue[i]["qtd"]))
+                queue[i]["qtd"] = float(queue[i]["qtd"]) - take
                 remain -= take
-                if int(queue[i]["qtd"]) == 0:
+                if float(queue[i]["qtd"]) <= _QTD_EPS:
                     i += 1
-            lots[ev.ticker] = [x for x in queue if int(x["qtd"]) > 0]
+            lots[ev.ticker] = [x for x in queue if float(x["qtd"]) > _QTD_EPS]
     out = {}
     for tk in sorted(lots.keys()):
         if lots[tk]:
@@ -314,7 +321,7 @@ def pending_settlements(as_of_date: date) -> list[dict[str, Any]]:
                     "sell_id": ev.id,
                     "sale_date": ev.exec_date.isoformat(),
                     "ticker": ev.ticker or "",
-                    "qtd": int(ev.qtd or 0),
+                    "qtd": round(float(ev.qtd or 0.0), 8),
                     "preco": float(ev.price or 0.0),
                     "valor_venda": float(ev.amount),
                     "ja_transferido": already,
@@ -358,7 +365,7 @@ def sells_in_settlement(as_of_date: date) -> list[dict[str, Any]]:
                     "sell_id": ev.id,
                     "sale_date": ev.exec_date.isoformat(),
                     "ticker": ev.ticker or "",
-                    "qtd": int(ev.qtd or 0),
+                    "qtd": round(float(ev.qtd or 0.0), 8),
                     "preco": float(ev.price or 0.0),
                     "valor_venda": float(ev.amount),
                     "ja_transferido": already,
@@ -398,14 +405,14 @@ def export_snapshot(as_of_date: date) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for tk in sorted(pos.keys()):
         for lot in pos[tk]:
-            qtd = int(lot.get("qtd", 0))
-            if qtd <= 0:
+            qtd = float(lot.get("qtd", 0.0))
+            if qtd <= _QTD_EPS:
                 continue
             out.append(
                 {
                     "ticker": tk,
                     "data_compra": str(lot.get("buy_date", as_of_date.isoformat())),
-                    "qtd": qtd,
+                    "qtd": round(qtd, 8),
                     "preco_compra": float(lot.get("buy_price", 0.0)),
                 }
             )
@@ -423,15 +430,15 @@ def build_operations_book(as_of_date: date) -> dict[str, Any]:
         ticker = (ev.ticker or "").upper().strip()
         if not ticker:
             continue
-        qtd = int(ev.qtd or 0)
+        qtd = float(ev.qtd or 0.0)
         price = float(ev.price or 0.0)
-        if qtd <= 0 or price <= 0:
+        if qtd <= _QTD_EPS or price <= 0:
             continue
 
         if ev.type == EventType.BUY:
             buy_row = {
                 "date": ev.exec_date.isoformat(),
-                "qtd": qtd,
+                "qtd": round(qtd, 8),
                 "preco": price,
                 "valor": round(qtd * price, 2),
             }
@@ -449,7 +456,7 @@ def build_operations_book(as_of_date: date) -> dict[str, Any]:
         if ev.type == EventType.SELL:
             sell_row = {
                 "date": ev.exec_date.isoformat(),
-                "qtd": qtd,
+                "qtd": round(qtd, 8),
                 "preco": price,
                 "valor": round(qtd * price, 2),
             }
@@ -457,18 +464,18 @@ def build_operations_book(as_of_date: date) -> dict[str, Any]:
             queue = fifo_queue.setdefault(ticker, [])
             remaining = qtd
             matched_cost = 0.0
-            while remaining > 0 and queue:
+            while remaining > _QTD_EPS and queue:
                 lot = queue[0]
-                lot_qtd = int(lot.get("qtd", 0))
+                lot_qtd = float(lot.get("qtd", 0.0))
                 lot_price = float(lot.get("preco", 0.0))
-                if lot_qtd <= 0 or lot_price <= 0:
+                if lot_qtd <= _QTD_EPS or lot_price <= 0:
                     queue.pop(0)
                     continue
                 take = min(remaining, lot_qtd)
                 matched_cost += take * lot_price
                 lot["qtd"] = lot_qtd - take
                 remaining -= take
-                if int(lot.get("qtd", 0)) <= 0:
+                if float(lot.get("qtd", 0.0)) <= _QTD_EPS:
                     queue.pop(0)
             proceeds = float(qtd * price)
             realized[ticker] = realized.get(ticker, 0.0) + (proceeds - matched_cost)
@@ -477,15 +484,15 @@ def build_operations_book(as_of_date: date) -> dict[str, Any]:
     tickers = sorted(set(buys.keys()) | set(sells.keys()))
     for ticker in tickers:
         queue = fifo_queue.get(ticker, [])
-        open_lots = [lot for lot in queue if int(lot.get("qtd", 0)) > 0]
-        qtd_liquida = sum(int(lot.get("qtd", 0)) for lot in open_lots)
-        investido = sum(int(lot.get("qtd", 0)) * float(lot.get("preco", 0.0)) for lot in open_lots)
-        custo_medio = (investido / qtd_liquida) if qtd_liquida > 0 else 0.0
+        open_lots = [lot for lot in queue if float(lot.get("qtd", 0.0)) > _QTD_EPS]
+        qtd_liquida = sum(float(lot.get("qtd", 0.0)) for lot in open_lots)
+        investido = sum(float(lot.get("qtd", 0.0)) * float(lot.get("preco", 0.0)) for lot in open_lots)
+        custo_medio = (investido / qtd_liquida) if qtd_liquida > _QTD_EPS else 0.0
         out[ticker] = {
             "ticker": ticker,
             "compras": buys.get(ticker, []),
             "vendas": sells.get(ticker, []),
-            "qtd_liquida": int(qtd_liquida),
+            "qtd_liquida": round(qtd_liquida, 8),
             "custo_medio": round(custo_medio, 4),
             "investido": round(investido, 2),
             "realizado": round(realized.get(ticker, 0.0), 2),

@@ -220,3 +220,76 @@ def test_render_live_html_orders_by_m3_rank():
     assert "M3 Rank" in html
     assert html.index("AAAA") < html.index("ZZZZ")
 
+
+def test_add_operation_with_valor_investido_calculates_fractional_qty(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    exec_day = date(2026, 7, 16)
+
+    real_boletim_web.add_operation(
+        exec_day,
+        tipo="COMPRA",
+        ticker="MRVI",
+        preco=6.9986,
+        corretagem=2.5,
+        valor_investido=1000.0,
+        preco_sombra=6.9,
+    )
+
+    payload = real_boletim_web.load_draft(exec_day)
+    row = payload["operations"][0]
+    assert abs(float(row["qtd"]) - 142.88572) < 1e-4
+    assert abs(float(row["valor_investido_informado"]) - 1000.0) < 1e-9
+
+
+def test_render_live_html_shows_fractional_quantities():
+    view = {
+        "today": "2026-07-16",
+        "market_day": "2026-07-15",
+        "cash_free": 18018.34,
+        "cash_accounting": 0.0,
+        "positions": [
+            {
+                "ticker": "MRVI",
+                "data_compra": "2026-07-16",
+                "qtd": 142.88572,
+                "preco_compra": 6.9986,
+                "close_d1": 7.09,
+                "heat_pct": 1.29,
+            }
+        ],
+        "held_set": ["MRVI"],
+        "top_operational": [],
+        "target_weights": {},
+        "operations_book": {
+            "MRVI": {
+                "ticker": "MRVI",
+                "compras": [{"date": "2026-07-16", "qtd": 142.88572, "preco": 6.9986}],
+                "vendas": [],
+                "qtd_liquida": 142.88572,
+                "custo_medio": 6.9986,
+                "investido": 1000.0,
+                "realizado": 0.0,
+                "close_d1": 7.09,
+                "nao_realizado": 12.86,
+            }
+        },
+        "forno": {},
+        "draft": {
+            "operations": [
+                {
+                    "id": "op-frac",
+                    "type": "COMPRA",
+                    "ticker": "MRVI",
+                    "qtd": 0.88572,
+                    "preco": 6.9986,
+                    "corretagem": 2.5,
+                    "preco_sombra": 6.9,
+                }
+            ]
+        },
+        "closed_boletim_exists": False,
+    }
+    html = real_boletim_web.render_live_html(view)
+    assert "142.88572" in html
+    assert "0.88572" in html
+

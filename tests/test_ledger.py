@@ -313,3 +313,94 @@ def test_build_operations_book_fifo_multiple_buys(tmp_path):
     assert len(row["compras"]) == 2
     assert len(row["vendas"]) == 1
 
+
+def test_qtd_from_invested_matches_broker_fractional_examples():
+    mrvi_qtd = ledger.qtd_from_invested(1000.0, 6.9986)
+    hpp_qtd = ledger.qtd_from_invested(1000.0, 15.9872)
+    assert abs(mrvi_qtd - 142.88572) < 1e-4
+    assert abs(hpp_qtd - 62.55004003) < 1e-4
+
+
+def test_fractional_compute_positions_and_operations_book(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+
+    _append(
+        LedgerEvent(
+            id="FB1",
+            type=EventType.BUY,
+            exec_date=date(2026, 7, 16),
+            created_at=datetime.now(tz=UTC),
+            ticker="MRVI",
+            qtd=142.88572,
+            price=6.9986,
+            amount=1000.0,
+            settle_date=date(2026, 7, 17),
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="FS1",
+            type=EventType.SELL,
+            exec_date=date(2026, 7, 17),
+            created_at=datetime.now(tz=UTC),
+            ticker="MRVI",
+            qtd=20.12345,
+            price=7.2,
+            amount=144.88884,
+            settle_date=date(2026, 7, 18),
+        )
+    )
+
+    pos = ledger.compute_positions(date(2026, 7, 17))
+    assert "MRVI" in pos
+    qtd_restante = sum(float(l["qtd"]) for l in pos["MRVI"])
+    assert abs(qtd_restante - (142.88572 - 20.12345)) < 1e-6
+
+    book = ledger.build_operations_book(date(2026, 7, 17))
+    row = book["MRVI"]
+    assert abs(float(row["qtd_liquida"]) - (142.88572 - 20.12345)) < 1e-6
+    assert abs(float(row["custo_medio"]) - 6.9986) < 1e-4
+
+
+def test_is_duplicate_with_fractional_qty_epsilon(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+
+    base = LedgerEvent(
+        id="DQ1",
+        type=EventType.BUY,
+        exec_date=date(2026, 7, 16),
+        created_at=datetime.now(tz=UTC),
+        ticker="HPP",
+        qtd=62.55004003,
+        price=15.9872,
+        amount=1000.0,
+        settle_date=date(2026, 7, 17),
+    )
+    _append(base)
+
+    within_eps = LedgerEvent(
+        id="DQ2",
+        type=EventType.BUY,
+        exec_date=date(2026, 7, 16),
+        created_at=datetime.now(tz=UTC),
+        ticker="HPP",
+        qtd=62.55004003 + 5e-7,
+        price=15.9872,
+        amount=1000.0,
+        settle_date=date(2026, 7, 17),
+    )
+    assert ledger.is_duplicate(within_eps) is True
+
+    outside_eps = LedgerEvent(
+        id="DQ3",
+        type=EventType.BUY,
+        exec_date=date(2026, 7, 16),
+        created_at=datetime.now(tz=UTC),
+        ticker="HPP",
+        qtd=62.55004003 + 2e-5,
+        price=15.9872,
+        amount=1000.0,
+        settle_date=date(2026, 7, 17),
+    )
+    assert ledger.is_duplicate(outside_eps) is False
+

@@ -434,7 +434,10 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 tipo = str(form.get("tipo", "")).upper().strip()
                 ticker = str(form.get("ticker", "")).upper().strip()
                 try:
-                    qtd = int(float(str(form.get("qtd", "0") or "0")))
+                    raw_qtd = str(form.get("qtd", "")).strip()
+                    qtd = float(raw_qtd) if raw_qtd else None
+                    raw_valor_investido = str(form.get("valor_investido", "")).strip()
+                    valor_investido = float(raw_valor_investido) if raw_valor_investido else None
                     preco = float(str(form.get("preco", "0") or "0"))
                     raw_corretagem = str(form.get("corretagem", "")).strip()
                     corretagem = float(raw_corretagem) if raw_corretagem else 2.50
@@ -444,8 +447,11 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                     self._respond_html("<h3>Campos numericos invalidos.</h3>", code=400)
                     return
 
-                if tipo not in {"COMPRA", "VENDA"} or not ticker or qtd <= 0 or preco <= 0:
+                if tipo not in {"COMPRA", "VENDA"} or not ticker or preco <= 0:
                     self._respond_html("<h3>Dados da operacao invalidos.</h3>", code=400)
+                    return
+                if not valor_investido and (qtd is None or qtd <= 0):
+                    self._respond_html("<h3>Informe Valor investido ou Quantidade.</h3>", code=400)
                     return
                 if corretagem < 0:
                     self._respond_html("<h3>Corretagem invalida.</h3>", code=400)
@@ -460,6 +466,7 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                         preco=preco,
                         corretagem=corretagem,
                         preco_sombra=preco_sombra,
+                        valor_investido=valor_investido,
                     )
                 except ValueError as exc:
                     self._respond_html(f"<h3>{str(exc)}</h3>", code=400)

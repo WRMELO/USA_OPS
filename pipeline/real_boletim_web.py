@@ -46,6 +46,12 @@ def _fmt_pct(value: Any) -> str:
     return f"{_safe_float(value):.2f}%"
 
 
+def _fmt_qtd(value: Any) -> str:
+    v = _safe_float(value)
+    s = f"{v:.6f}".rstrip("0").rstrip(".")
+    return s if s else "0"
+
+
 def _draft_skeleton(exec_day: date) -> dict[str, Any]:
     return {
         "exec_day": exec_day.isoformat(),
@@ -100,26 +106,33 @@ def add_operation(
     exec_day: date,
     tipo: str,
     ticker: str,
-    qtd: int,
+    *,
+    qtd: float | None = None,
     preco: float,
     corretagem: float,
     preco_sombra: float | None = None,
+    valor_investido: float | None = None,
 ) -> dict[str, Any]:
     op_type = str(tipo or "").upper().strip()
     op_ticker = str(ticker or "").upper().strip()
-    op_qtd = _safe_int(qtd)
     op_preco = _safe_float(preco)
     op_corretagem = _safe_float(corretagem)
     if op_type not in {"COMPRA", "VENDA"}:
         raise ValueError("Tipo invalido")
     if not op_ticker:
         raise ValueError("Ticker obrigatorio")
-    if op_qtd <= 0:
-        raise ValueError("Quantidade invalida")
     if op_preco <= 0:
         raise ValueError("Preco invalido")
     if op_corretagem < 0:
         raise ValueError("Corretagem invalida")
+
+    op_valor_investido = _safe_float(valor_investido, 0.0) if valor_investido is not None else 0.0
+    if op_valor_investido > 0:
+        op_qtd = ledger_mod.qtd_from_invested(op_valor_investido, op_preco)
+    else:
+        op_qtd = _safe_float(qtd, 0.0)
+    if op_qtd <= 0:
+        raise ValueError("Quantidade invalida: informe valor_investido ou qtd")
 
     shadow_auto = False
     shadow_price: float | None = None
@@ -134,11 +147,12 @@ def add_operation(
         "id": str(uuid.uuid4()),
         "type": op_type,
         "ticker": op_ticker,
-        "qtd": op_qtd,
+        "qtd": round(op_qtd, 8),
         "preco": op_preco,
         "corretagem": op_corretagem,
         "preco_sombra": shadow_price,
         "preco_sombra_auto": shadow_auto,
+        "valor_investido_informado": op_valor_investido if op_valor_investido > 0 else None,
         "created_at": _now_iso(),
     }
     payload = load_draft(exec_day)
@@ -189,7 +203,7 @@ def apply_draft_to_ledger(exec_day: date, ledger_dir: Path, operations: list[dic
         for idx, raw in enumerate(operations, start=1):
             op_type = str(raw.get("type", "")).upper().strip()
             ticker = str(raw.get("ticker", "")).upper().strip()
-            qtd = _safe_int(raw.get("qtd"))
+            qtd = _safe_float(raw.get("qtd"))
             preco = _safe_float(raw.get("preco"))
             corretagem = _safe_float(raw.get("corretagem"))
             preco_sombra = _safe_float(raw.get("preco_sombra"), 0.0)
@@ -389,7 +403,7 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
             continue
         hold = holdings_map.get(ticker, {})
         close_d1 = _safe_float(hold.get("close_d1"), 0.0)
-        qtd_liquida = int(_safe_int(row.get("qtd_liquida"), 0))
+        qtd_liquida = _safe_float(row.get("qtd_liquida"), 0.0)
         custo_medio = _safe_float(row.get("custo_medio"), 0.0)
         nao_realizado: float | None = None
         if qtd_liquida > 0 and close_d1 > 0:
@@ -409,7 +423,7 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
             {
                 "ticker": ticker,
                 "data_compra": row.get("data_compra", ""),
-                "qtd": int(_safe_int(row.get("qtd"))),
+                "qtd": round(_safe_float(row.get("qtd")), 8),
                 "preco_compra": _safe_float(row.get("preco_compra")),
                 "close_d1": _safe_float(hold.get("close_d1"), 0.0),
                 "heat_pct": _safe_float(hold.get("heat_pct"), 0.0),
@@ -458,7 +472,7 @@ def render_live_html(view: dict[str, Any]) -> str:
                 "<tr>"
                 f"<td>{html.escape(str(row.get('ticker', '')))}</td>"
                 f"<td>{html.escape(str(row.get('data_compra', '')))}</td>"
-                f"<td style='text-align:right'>{int(_safe_int(row.get('qtd')))}</td>"
+                f"<td style='text-align:right'>{_fmt_qtd(row.get('qtd'))}</td>"
                 f"<td style='text-align:right'>{_fmt_usd(row.get('preco_compra', 0.0))}</td>"
                 f"<td style='text-align:right'>{_fmt_usd(row.get('close_d1', 0.0))}</td>"
                 f"<td style='text-align:right'>{_fmt_pct(row.get('heat_pct', 0.0))}</td>"
@@ -478,7 +492,7 @@ def render_live_html(view: dict[str, Any]) -> str:
             if not isinstance(item, dict):
                 continue
             op_date = html.escape(str(item.get("date", "")))
-            op_qtd = int(_safe_int(item.get("qtd"), 0))
+            op_qtd = _fmt_qtd(item.get("qtd"))
             op_preco = _fmt_usd(item.get("preco", 0.0))
             parts.append(f"{op_date} {op_qtd}@{op_preco}")
         return "; ".join(parts) if parts else "-"
@@ -495,7 +509,7 @@ def render_live_html(view: dict[str, Any]) -> str:
                 f"<td>{html.escape(ticker)}</td>"
                 f"<td>{_format_ops_column(row.get('compras', []))}</td>"
                 f"<td>{_format_ops_column(row.get('vendas', []))}</td>"
-                f"<td style='text-align:right'>{int(_safe_int(row.get('qtd_liquida', 0)))}</td>"
+                f"<td style='text-align:right'>{_fmt_qtd(row.get('qtd_liquida', 0))}</td>"
                 f"<td style='text-align:right'>{_fmt_usd(row.get('custo_medio', 0.0))}</td>"
                 f"<td style='text-align:right'>{_fmt_usd(row.get('close_d1', 0.0))}</td>"
                 f"<td style='text-align:right'>{_fmt_usd(row.get('realizado', 0.0))}</td>"
@@ -545,7 +559,7 @@ def render_live_html(view: dict[str, Any]) -> str:
             "<tr>"
             f"<td>{html.escape(str(op.get('type', '')))}</td>"
             f"<td>{html.escape(str(op.get('ticker', '')))}</td>"
-            f"<td style='text-align:right'>{int(_safe_int(op.get('qtd')))}</td>"
+            f"<td style='text-align:right'>{_fmt_qtd(op.get('qtd'))}</td>"
             f"<td style='text-align:right'>{_fmt_usd(op.get('preco', 0.0))}</td>"
             f"<td style='text-align:right'>{_fmt_usd(op.get('corretagem', 0.0))}</td>"
             f"<td style='text-align:right'>{_fmt_usd(op.get('preco_sombra', 0.0)) if _safe_float(op.get('preco_sombra', 0.0)) > 0 else '-'}</td>"
@@ -670,7 +684,8 @@ def render_live_html(view: dict[str, Any]) -> str:
           </select>
         </label>
         <label>Ticker<input type="text" name="ticker" required /></label>
-        <label>Quantidade<input type="number" name="qtd" min="1" step="1" required /></label>
+        <label>Valor investido US$ (opcional, tem prioridade sobre Quantidade)<input type="number" name="valor_investido" min="0.00" step="0.01" placeholder="ex: 1000.00" /></label>
+        <label>Quantidade (preencha se NAO usar Valor investido)<input type="number" name="qtd" min="0" step="0.00000001" /></label>
         <label>Preco real<input type="number" name="preco" min="0.01" step="0.01" required /></label>
         <label>Corretagem<input type="number" name="corretagem" min="0.00" step="0.01" value="2.50" /></label>
         <label>Preco-sombra (opcional)<input type="number" name="preco_sombra" min="0.00" step="0.01" placeholder="auto-lookup se vazio" /></label>
