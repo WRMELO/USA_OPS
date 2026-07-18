@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import html
 import json
+import math
 import uuid
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -50,6 +51,141 @@ def _fmt_qtd(value: Any) -> str:
     v = _safe_float(value)
     s = f"{v:.6f}".rstrip("0").rstrip(".")
     return s if s else "0"
+
+
+def _sign_class(value: Any) -> str:
+    v = _safe_float(value, 0.0)
+    if abs(v) <= 1e-9:
+        return "flat"
+    return "gpos" if v > 0 else "gneg"
+
+
+def _fmt_signed_usd(value: float) -> tuple[str, str]:
+    v = _safe_float(value, 0.0)
+    if abs(v) <= 1e-9:
+        return "$ 0.00", "flat"
+    sign = "+" if v > 0 else "-"
+    return f"{sign}$ {abs(v):,.2f}", ("gpos" if v > 0 else "gneg")
+
+
+def _fmt_signed_pct(value: float) -> tuple[str, str]:
+    v = _safe_float(value, 0.0)
+    if abs(v) <= 1e-12:
+        return "0.00%", "flat"
+    sign = "+" if v > 0 else ""
+    return f"{sign}{v:.2f}%", ("gpos" if v > 0 else "gneg")
+
+
+def _sparkline_svg(values: list[float], *, width: int = 150, height: int = 30) -> str:
+    vals: list[float] = []
+    for value in values:
+        try:
+            n = float(value)
+        except Exception:
+            continue
+        if math.isfinite(n):
+            vals.append(n)
+    if len(vals) < 2:
+        return "<span class='flat'>-</span>"
+    lo, hi = min(vals), max(vals)
+    span = (hi - lo) or 1.0
+    n_vals = len(vals)
+    pts: list[str] = []
+    for idx, value in enumerate(vals):
+        x = 1 + (width - 2) * idx / (n_vals - 1)
+        y = (height - 2) - (height - 4) * ((value - lo) / span)
+        pts.append(f"{x:.1f},{y:.1f}")
+    color = "var(--green)" if vals[-1] >= vals[0] else "var(--red)"
+    return (
+        f"<svg class='spark' viewBox='0 0 {width} {height}' width='{width}' height='{height}'"
+        " aria-hidden='true'>"
+        f"<polyline fill='none' stroke='{color}' stroke-width='1.6' points='{' '.join(pts)}' /></svg>"
+    )
+
+
+def _base1_chart_svg(series: list[dict[str, Any]], *, width: int = 880, height: int = 240) -> str:
+    clean: list[tuple[str, float, float]] = []
+    for row in series:
+        if not isinstance(row, dict):
+            continue
+        base = _safe_float(row.get("base1"), float("nan"))
+        expect = _safe_float(row.get("cagr_expect"), float("nan"))
+        if not (math.isfinite(base) and math.isfinite(expect)):
+            continue
+        clean.append((str(row.get("date", "")), base, expect))
+
+    if len(clean) < 2:
+        return "<div class='chart-empty'>Base 1 indisponivel.</div>"
+
+    values = [v for _, b, e in clean for v in (b, e)]
+    lo = min(values)
+    hi = max(values)
+    span = (hi - lo) or 1.0
+
+    left = 36.0
+    top = 10.0
+    right = 14.0
+    bottom = 24.0
+    plot_w = width - left - right
+    plot_h = height - top - bottom
+
+    def _pt(idx: int, value: float) -> str:
+        x = left + (plot_w * idx / (len(clean) - 1))
+        y = top + (plot_h * (1.0 - ((value - lo) / span)))
+        return f"{x:.1f},{y:.1f}"
+
+    base_pts = " ".join(_pt(idx, base) for idx, (_, base, _) in enumerate(clean))
+    exp_pts = " ".join(_pt(idx, exp) for idx, (_, _, exp) in enumerate(clean))
+
+    y_guides: list[str] = []
+    for frac in (0.0, 0.25, 0.5, 0.75, 1.0):
+        y = top + plot_h * frac
+        y_guides.append(
+            f"<line x1='{left:.1f}' y1='{y:.1f}' x2='{left + plot_w:.1f}' y2='{y:.1f}' "
+            "stroke='rgba(134,143,155,0.22)' stroke-width='1' />"
+        )
+
+    first_day = html.escape(clean[0][0])
+    last_day = html.escape(clean[-1][0])
+    return (
+        f"<svg class='base1-chart' viewBox='0 0 {width} {height}' width='100%' height='{height}' "
+        "role='img' aria-label='Base 1 real versus CAGR esperado'>"
+        + "".join(y_guides)
+        + f"<polyline fill='none' stroke='var(--amber)' stroke-width='1.9' stroke-dasharray='5 4' points='{exp_pts}' />"
+        + f"<polyline fill='none' stroke='var(--teal)' stroke-width='2.3' points='{base_pts}' />"
+        + f"<text x='{left:.1f}' y='{height - 6:.1f}' fill='var(--muted)' font-size='10'>{first_day}</text>"
+        + f"<text x='{left + plot_w - 4:.1f}' y='{height - 6:.1f}' text-anchor='end' fill='var(--muted)' font-size='10'>{last_day}</text>"
+        + "</svg>"
+    )
+
+
+def _load_sparklines(tickers: list[str], as_of: date, *, lookback: int = 62) -> dict[str, str]:
+    if not tickers:
+        return {}
+    path = ROOT / "data" / "ssot" / "operational_window.parquet"
+    if not path.exists():
+        return {}
+    try:
+        import pandas as pd
+
+        opw = pd.read_parquet(path, columns=["date", "ticker", "close_operational"])
+    except Exception:
+        return {}
+
+    opw["date"] = pd.to_datetime(opw["date"], errors="coerce").dt.normalize()
+    opw["ticker"] = opw["ticker"].astype(str).str.upper().str.strip()
+    opw["close_operational"] = pd.to_numeric(opw["close_operational"], errors="coerce")
+    opw = opw.dropna(subset=["date", "ticker", "close_operational"])
+    opw = opw[opw["date"] <= pd.Timestamp(as_of)]
+
+    out: dict[str, str] = {}
+    for ticker in tickers:
+        sub = opw[opw["ticker"] == ticker].sort_values("date").tail(lookback)
+        if sub.empty:
+            out[ticker] = "<span class='flat'>-</span>"
+            continue
+        out[ticker] = _sparkline_svg(sub["close_operational"].tolist())
+    return out
 
 
 def _draft_skeleton(exec_day: date) -> dict[str, Any]:
@@ -396,12 +532,23 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
 
     previous_ledger_path = ledger_mod.LEDGER_PATH
     informed: dict[str, Any] | None = None
+    base1_series: list[dict[str, Any]] = []
+    corretagem_total = 0.0
+    capital_uso = 0.0
     try:
         ledger_mod.LEDGER_PATH = real_ledger_path
         cash = compute_cash(today)
         positions = export_snapshot(today)
         operations_book_raw = ledger_mod.build_operations_book(today)
         informed = ledger_mod.latest_informed_cash(today)
+        base1_series = ledger_mod.build_real_base1_series(
+            today,
+            live_snapshot=positions,
+            live_cash_free=float(cash.get("cash_free", 0.0)),
+            live_cash_accounting=float(cash.get("cash_accounting", 0.0)),
+        )
+        corretagem_total = ledger_mod.total_fees(today)
+        capital_uso = ledger_mod.capital_em_uso(today)
     finally:
         ledger_mod.LEDGER_PATH = previous_ledger_path
 
@@ -450,10 +597,28 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
                 "heat_pct": _safe_float(hold.get("heat_pct"), 0.0),
             }
         )
+    carteira_d1_valor = round(
+        sum(_safe_float(row.get("qtd"), 0.0) * _safe_float(row.get("close_d1"), 0.0) for row in positions_enriched),
+        4,
+    )
 
     top_operational = master.get("operational_ranking", [])
     if not isinstance(top_operational, list):
         top_operational = []
+    top_sorted = sorted(
+        top_operational,
+        key=lambda row: _safe_int(row.get("m3_rank", row.get("rank", 10**9)), 10**9)
+        if isinstance(row, dict)
+        else 10**9,
+    )[:20]
+    sparkline_tickers = sorted(
+        {
+            str(row.get("ticker", "")).upper().strip()
+            for row in top_sorted
+            if isinstance(row, dict) and str(row.get("ticker", "")).strip()
+        }
+        | held_set
+    )
 
     draft = load_draft(today)
     closed_boletim_path = resolved_ledger_dir / f"{today.isoformat()}.json"
@@ -474,9 +639,14 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         "friccao_balanco_real": friccao_balanco_real,
         "positions": positions_enriched,
         "held_set": sorted(held_set),
+        "sparklines_tickers": sparkline_tickers,
         "top_operational": top_operational,
         "target_weights": target_weights,
         "operations_book": operations_book,
+        "base1_series": base1_series,
+        "corretagem_total": round(float(corretagem_total), 4),
+        "capital_em_uso": round(float(capital_uso), 4),
+        "carteira_d1_valor": carteira_d1_valor,
         "forno": forno,
         "draft": draft,
         "closed_boletim_exists": closed_boletim_path.exists(),
@@ -487,8 +657,11 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
 def render_live_html(view: dict[str, Any]) -> str:
     today = str(view.get("today", ""))
     market_day = str(view.get("market_day", today))
-    cash_free = _fmt_usd(view.get("cash_free", 0.0))
-    cash_accounting = _fmt_usd(view.get("cash_accounting", 0.0))
+    cash_free_raw = _safe_float(view.get("cash_free", 0.0), 0.0)
+    cash_accounting_raw = _safe_float(view.get("cash_accounting", 0.0), 0.0)
+    cash_free = _fmt_usd(cash_free_raw)
+    cash_accounting = _fmt_usd(cash_accounting_raw)
+
     caixa_real_informado_raw = view.get("caixa_real_informado")
     caixa_real_informado_fmt = (
         _fmt_usd(caixa_real_informado_raw) if caixa_real_informado_raw is not None else "pendente"
@@ -497,6 +670,31 @@ def render_live_html(view: dict[str, Any]) -> str:
     friccao_balanco_real_fmt = (
         _fmt_usd(friccao_balanco_real_raw) if friccao_balanco_real_raw is not None else "pendente"
     )
+
+    corretagem_total_raw = _safe_float(view.get("corretagem_total", 0.0), 0.0)
+    capital_em_uso_raw = _safe_float(view.get("capital_em_uso", 0.0), 0.0)
+    carteira_d1_valor_raw = _safe_float(view.get("carteira_d1_valor", 0.0), 0.0)
+    total_bruto_raw = carteira_d1_valor_raw + cash_free_raw + cash_accounting_raw
+    has_caixa_real = caixa_real_informado_raw is not None
+    caixa_real_atual = _safe_float(caixa_real_informado_raw, 0.0) if has_caixa_real else 0.0
+    friccao_operacional_raw = cash_free_raw - caixa_real_atual if has_caixa_real else 0.0
+    friccao_total_raw = corretagem_total_raw + friccao_operacional_raw
+    nav_raw = total_bruto_raw - friccao_operacional_raw
+    resultado_raw = nav_raw - capital_em_uso_raw
+    rent_raw = (resultado_raw / capital_em_uso_raw * 100.0) if capital_em_uso_raw > 0 else 0.0
+
+    delta_fmt = "pendente"
+    delta_cls = "flat"
+    fric_op_fmt = "pendente"
+    fric_op_cls = "flat"
+    if has_caixa_real:
+        delta_fmt, delta_cls = _fmt_signed_usd(friccao_operacional_raw)
+        fric_op_fmt, fric_op_cls = _fmt_signed_usd(friccao_operacional_raw)
+
+    fric_total_fmt, fric_total_cls = _fmt_signed_usd(friccao_total_raw)
+    resultado_fmt, resultado_cls = _fmt_signed_usd(resultado_raw)
+    rent_fmt, rent_cls = _fmt_signed_pct(rent_raw)
+
     forno = view.get("forno", {}) if isinstance(view.get("forno"), dict) else {}
     is_rebalance = forno.get("is_rebalance_day")
     cycles = forno.get("cycles_to_next_rebalance")
@@ -507,6 +705,7 @@ def render_live_html(view: dict[str, Any]) -> str:
     pos_rows: list[str] = []
     if positions:
         for row in positions:
+            heat_class = _sign_class(row.get("heat_pct", 0.0))
             pos_rows.append(
                 "<tr>"
                 f"<td>{html.escape(str(row.get('ticker', '')))}</td>"
@@ -514,7 +713,7 @@ def render_live_html(view: dict[str, Any]) -> str:
                 f"<td style='text-align:right'>{_fmt_qtd(row.get('qtd'))}</td>"
                 f"<td style='text-align:right'>{_fmt_usd(row.get('preco_compra', 0.0))}</td>"
                 f"<td style='text-align:right'>{_fmt_usd(row.get('close_d1', 0.0))}</td>"
-                f"<td style='text-align:right'>{_fmt_pct(row.get('heat_pct', 0.0))}</td>"
+                f"<td class='{heat_class}' style='text-align:right'>{_fmt_pct(row.get('heat_pct', 0.0))}</td>"
                 "</tr>"
             )
     else:
@@ -543,6 +742,7 @@ def render_live_html(view: dict[str, Any]) -> str:
                 continue
             nao_realizado_raw = row.get("nao_realizado")
             nao_realizado_fmt = _fmt_usd(nao_realizado_raw) if nao_realizado_raw is not None else "-"
+            nao_realizado_cls = _sign_class(nao_realizado_raw if nao_realizado_raw is not None else 0.0)
             book_rows.append(
                 "<tr>"
                 f"<td>{html.escape(ticker)}</td>"
@@ -552,7 +752,7 @@ def render_live_html(view: dict[str, Any]) -> str:
                 f"<td style='text-align:right'>{_fmt_usd(row.get('custo_medio', 0.0))}</td>"
                 f"<td style='text-align:right'>{_fmt_usd(row.get('close_d1', 0.0))}</td>"
                 f"<td style='text-align:right'>{_fmt_usd(row.get('realizado', 0.0))}</td>"
-                f"<td style='text-align:right'>{nao_realizado_fmt}</td>"
+                f"<td class='{nao_realizado_cls}' style='text-align:right'>{nao_realizado_fmt}</td>"
                 "</tr>"
             )
     if not book_rows:
@@ -571,9 +771,23 @@ def render_live_html(view: dict[str, Any]) -> str:
             except Exception:
                 return 10**9
 
+    top_sorted = sorted((row for row in ranking if isinstance(row, dict)), key=_rank_key)[:20]
+    sparklines_tickers = view.get("sparklines_tickers")
+    if not isinstance(sparklines_tickers, list):
+        sparklines_tickers = [str(row.get("ticker", "")).upper().strip() for row in top_sorted]
+    today_date = date.today()
+    try:
+        today_date = date.fromisoformat(today)
+    except Exception:
+        pass
+    spark_map = _load_sparklines(
+        sorted({str(tk).upper().strip() for tk in sparklines_tickers if str(tk).strip()}),
+        today_date,
+    )
+
     top_rows: list[str] = []
-    if ranking:
-        for row in sorted(ranking, key=_rank_key)[:20]:
+    if top_sorted:
+        for row in top_sorted:
             ticker = str(row.get("ticker", "")).upper().strip()
             indicator = "held" if ticker in held_set else "cand"
             tw = target_weights.get(ticker, row.get("target_weight", 0.0))
@@ -584,10 +798,11 @@ def render_live_html(view: dict[str, Any]) -> str:
                 f"<td style='text-align:right'>{_safe_float(row.get('score_m3', 0.0)):.4f}</td>"
                 f"<td style='text-align:right'>{_fmt_pct(_safe_float(tw, 0.0) * 100.0)}</td>"
                 f"<td style='text-align:right'>{_fmt_usd(row.get('close_d1', 0.0))}</td>"
+                f"<td class='spark-cell'>{spark_map.get(ticker, '<span class=\"flat\">-</span>')}</td>"
                 "</tr>"
             )
     else:
-        top_rows.append("<tr><td colspan='5'>Top-20 nao disponivel — rode pipeline/analise_us.py.</td></tr>")
+        top_rows.append("<tr><td colspan='6'>Top-20 nao disponivel — rode pipeline/analise_us.py.</td></tr>")
 
     draft = view.get("draft", {}) if isinstance(view.get("draft"), dict) else {}
     operations = draft.get("operations", []) if isinstance(draft.get("operations"), list) else []
@@ -614,11 +829,23 @@ def render_live_html(view: dict[str, Any]) -> str:
     if not draft_rows:
         draft_rows.append("<tr><td colspan='7'>Nenhuma operacao em rascunho.</td></tr>")
 
+    base1_series = view.get("base1_series", []) if isinstance(view.get("base1_series"), list) else []
+    base_chart = _base1_chart_svg(base1_series)
+    base_now = _safe_float(base1_series[-1].get("base1"), 0.0) if base1_series else 0.0
+    expect_now = _safe_float(base1_series[-1].get("cagr_expect"), 0.0) if base1_series else 0.0
+    base_delta_txt, base_delta_cls = _fmt_signed_pct((base_now - 1.0) * 100.0)
+    vs_cagr_txt, vs_cagr_cls = _fmt_signed_pct((base_now - expect_now) * 100.0)
+
     closed_note = (
         "<p class='pill'>Dia encerrado: boletim de fechamento ja existe para hoje.</p>"
         if bool(view.get("closed_boletim_exists"))
         else ""
     )
+
+    caixa_real_value_attr = (
+        f"value='{_safe_float(caixa_real_informado_raw):.2f}'" if caixa_real_informado_raw is not None else ""
+    )
+    caixa_real_bridge = _fmt_usd(caixa_real_informado_raw) if has_caixa_real else "pendente"
 
     return f"""<!doctype html>
 <html lang="pt-BR">
@@ -630,14 +857,14 @@ def render_live_html(view: dict[str, Any]) -> str:
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
-    :root {{ --ink:#0E1318; --surface:#161D25; --surface2:#1A222B; --hair:#29333D; --bone:#E9E5D8; --muted:#868F9B; --teal:#52B9A3; --amber:#E2A959; }}
+    :root {{ --ink:#0E1318; --surface:#161D25; --surface2:#1A222B; --hair:#29333D; --bone:#E9E5D8; --muted:#868F9B; --teal:#52B9A3; --amber:#E2A959; --green:#4FBE7B; --red:#E0664F; }}
     * {{ box-sizing: border-box; }}
     body {{ margin: 0; padding: 20px; background: var(--ink); color: var(--bone); font-family: "Space Grotesk", sans-serif; }}
     .mono {{ font-family: "IBM Plex Mono", monospace; }}
     .top {{ display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; border-bottom:1px solid var(--hair); margin-bottom:16px; padding-bottom:12px; }}
     .badge {{ border:1px solid var(--amber); color:var(--amber); border-radius:99px; padding:4px 10px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }}
     .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin-bottom:12px; }}
-    .card {{ background:var(--surface); border:1px solid var(--hair); border-radius:10px; padding:12px; }}
+    .card {{ background:var(--surface); border:1px solid var(--hair); border-radius:10px; padding:12px; margin-bottom:12px; }}
     h1,h2,h3 {{ margin:0 0 8px 0; }}
     table {{ width:100%; border-collapse:collapse; font-family:"IBM Plex Mono", monospace; font-size:12px; }}
     th,td {{ border-bottom:1px solid var(--hair); padding:6px; text-align:left; }}
@@ -651,6 +878,20 @@ def render_live_html(view: dict[str, Any]) -> str:
     input,select,button {{ width:100%; padding:8px; border-radius:6px; border:1px solid var(--hair); background:var(--surface2); color:var(--bone); }}
     button {{ cursor:pointer; font-weight:600; }}
     .muted {{ color: var(--muted); font-size:12px; }}
+    .gpos {{ color: var(--green); }}
+    .gneg {{ color: var(--red); }}
+    .flat {{ color: var(--muted); }}
+    .spark {{ display:block; }}
+    .spark-cell {{ text-align:center; min-width:160px; }}
+    .chart-empty {{ color: var(--muted); font-size:12px; }}
+    .base-head {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-bottom:8px; }}
+    .base-k {{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }}
+    .base-v {{ font-family:"IBM Plex Mono", monospace; font-size:20px; margin-top:4px; }}
+    .base-sub {{ font-size:12px; color:var(--muted); margin-top:2px; }}
+    .bridge .row {{ display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid var(--hair); padding:6px 0; }}
+    .bridge .row:last-child {{ border-bottom:none; }}
+    .bridge .lab {{ color:var(--muted); }}
+    .bridge .val {{ font-family:"IBM Plex Mono", monospace; }}
   </style>
 </head>
 <body>
@@ -681,6 +922,35 @@ def render_live_html(view: dict[str, Any]) -> str:
   </div>
 
   <div class="card">
+    <h2>Base 1 real vs CAGR esperado</h2>
+    <div class="base-head">
+      <div><div class="base-k">Base 1 atual</div><div class="base-v">{base_now:.4f}</div><div class="base-sub {base_delta_cls}">{base_delta_txt} vs ancora</div></div>
+      <div><div class="base-k">CAGR esperado (holdout)</div><div class="base-v">{expect_now:.4f}</div><div class="base-sub">composicao diaria em 252 pregoes</div></div>
+      <div><div class="base-k">Delta Base1 - CAGR</div><div class="base-v {vs_cagr_cls}">{vs_cagr_txt}</div><div class="base-sub">pontos de base</div></div>
+    </div>
+    {base_chart}
+  </div>
+
+  <div class="card">
+    <h2>Ponte de friccao (Balanco -> Real -> NAV)</h2>
+    <div class="bridge">
+      <div class="row"><div class="lab">Carteira (Fech. D-1)</div><div class="val" id="bridgeCarteira">{_fmt_usd(carteira_d1_valor_raw)}</div></div>
+      <div class="row"><div class="lab">Caixa Livre de Balanco</div><div class="val" id="bridgeCaixaBalanco">{_fmt_usd(cash_free_raw)}</div></div>
+      <div class="row"><div class="lab">Caixa Contabil</div><div class="val" id="bridgeCaixaContabil">{_fmt_usd(cash_accounting_raw)}</div></div>
+      <div class="row"><div class="lab">Total do Ativo (bruto)</div><div class="val" id="bridgeTotalBruto">{_fmt_usd(total_bruto_raw)}</div></div>
+      <div class="row"><div class="lab">Caixa Livre Real</div><div class="val" id="bridgeCaixaReal">{caixa_real_bridge}</div></div>
+      <div class="row"><div class="lab">Delta (Balanco - Real)</div><div class="val {delta_cls}" id="bridgeDelta">{delta_fmt}</div></div>
+      <div class="row"><div class="lab">Friccao operacional</div><div class="val {fric_op_cls}" id="bridgeFriccaoOperacional">{fric_op_fmt}</div></div>
+      <div class="row"><div class="lab">Corretagem acumulada</div><div class="val" id="bridgeCorretagem">{_fmt_usd(corretagem_total_raw)}</div></div>
+      <div class="row"><div class="lab">Friccao total (operacional + corretagem)</div><div class="val {fric_total_cls}" id="bridgeFriccaoTotal">{fric_total_fmt}</div></div>
+      <div class="row"><div class="lab">NAV (patrimonio liquido real)</div><div class="val" id="bridgeNav">{_fmt_usd(nav_raw)}</div></div>
+      <div class="row"><div class="lab">Capital em uso (aportes - retiradas)</div><div class="val" id="bridgeCapital">{_fmt_usd(capital_em_uso_raw)}</div></div>
+      <div class="row"><div class="lab">Resultado acumulado</div><div class="val {resultado_cls}" id="bridgeResultado">{resultado_fmt}</div></div>
+      <div class="row"><div class="lab">Rentabilidade acumulada</div><div class="val {rent_cls}" id="bridgeRent">{rent_fmt}</div></div>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>Carteira real</h2>
     <table>
       <tr><th>Ticker</th><th>Data Compra</th><th>Qtd</th><th>Preco Compra</th><th>Fech. D-1</th><th>Heat %</th></tr>
@@ -699,7 +969,7 @@ def render_live_html(view: dict[str, Any]) -> str:
   <div class="card">
     <h2>Top-20 operacional (m3_rank)</h2>
     <table>
-      <tr><th>Ticker</th><th>M3 Rank</th><th>Score M3</th><th>Peso-Alvo</th><th>Fech. D-1</th></tr>
+      <tr><th>Ticker</th><th>M3 Rank</th><th>Score M3</th><th>Peso-Alvo</th><th>Fech. D-1</th><th>62d</th></tr>
       {''.join(top_rows)}
     </table>
   </div>
@@ -740,7 +1010,7 @@ def render_live_html(view: dict[str, Any]) -> str:
     <h2>Encerramento definitivo do dia</h2>
     <form method="POST" action="/painel/encerrar">
       <input type="hidden" name="exec_day" value="{html.escape(today)}" />
-      <label>Caixa Livre Real (saldo do app BTG, opcional)<input type="number" name="caixa_real" min="0.00" step="0.01" placeholder="ex: 950.00" /></label>
+      <label>Caixa Livre Real (saldo do app BTG, opcional)<input id="caixaRealInput" type="number" name="caixa_real" min="0.00" step="0.01" placeholder="ex: 950.00" {caixa_real_value_attr} /></label>
       <label><input type="checkbox" name="confirmar" value="sim" required /> Confirmo encerramento definitivo.</label>
       <button type="submit">Encerrar o Dia</button>
     </form>
@@ -757,7 +1027,80 @@ def render_live_html(view: dict[str, Any]) -> str:
     </table>
   </div>
 
-  <p class="muted">Fallback continua disponivel via scripts/atalhos: USA_REGISTRAR_ORDEM e USA_ENCERRAR_DIA. Grafico Base-1 e reconciliacao de Caixa Ajustado ficam fora desta iteracao.</p>
+  <p class="muted">Fallback continua disponivel via scripts/atalhos: USA_REGISTRAR_ORDEM e USA_ENCERRAR_DIA. Grafico Base1/CAGR, sparklines 62d e ponte de friccao rodam localmente sem dependencias externas.</p>
+
+  <script>
+  (function() {{
+    const caixaBalanco = {cash_free_raw:.8f};
+    const caixaContabil = {cash_accounting_raw:.8f};
+    const carteira = {carteira_d1_valor_raw:.8f};
+    const corretagem = {corretagem_total_raw:.8f};
+    const capitalUso = {capital_em_uso_raw:.8f};
+    const totalBruto = carteira + caixaBalanco + caixaContabil;
+
+    const input = document.getElementById("caixaRealInput");
+
+    function fmtUsd(value) {{
+      const v = Number(value) || 0;
+      return "$ " + Math.abs(v).toLocaleString("en-US", {{ minimumFractionDigits: 2, maximumFractionDigits: 2 }});
+    }}
+
+    function fmtSignedUsd(value) {{
+      const v = Number(value) || 0;
+      if (Math.abs(v) < 1e-9) return {{ txt: "$ 0.00", cls: "flat" }};
+      const abs = Math.abs(v).toLocaleString("en-US", {{ minimumFractionDigits: 2, maximumFractionDigits: 2 }});
+      return v > 0 ? {{ txt: "+$ " + abs, cls: "gpos" }} : {{ txt: "-$ " + abs, cls: "gneg" }};
+    }}
+
+    function fmtSignedPct(value) {{
+      const v = Number(value) || 0;
+      if (Math.abs(v) < 1e-12) return {{ txt: "0.00%", cls: "flat" }};
+      const txt = (v > 0 ? "+" : "") + v.toFixed(2) + "%";
+      return {{ txt, cls: v > 0 ? "gpos" : "gneg" }};
+    }}
+
+    function setText(id, txt, cls) {{
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = txt;
+      el.classList.remove("gpos", "gneg", "flat");
+      if (cls) el.classList.add(cls);
+    }}
+
+    function refresh() {{
+      const raw = input ? input.value : "";
+      const has = raw !== "" && !Number.isNaN(Number(raw));
+      const caixaReal = has ? Number(raw) : null;
+      const delta = has ? (caixaBalanco - caixaReal) : 0.0;
+      const friccaoTotal = corretagem + delta;
+      const nav = totalBruto - delta;
+      const resultado = nav - capitalUso;
+      const rent = capitalUso > 0 ? (resultado / capitalUso) * 100.0 : 0.0;
+
+      if (has) {{
+        setText("bridgeCaixaReal", fmtUsd(caixaReal), "");
+        const d = fmtSignedUsd(delta);
+        setText("bridgeDelta", d.txt, d.cls);
+        setText("bridgeFriccaoOperacional", d.txt, d.cls);
+      }} else {{
+        setText("bridgeCaixaReal", "pendente", "flat");
+        setText("bridgeDelta", "pendente", "flat");
+        setText("bridgeFriccaoOperacional", "pendente", "flat");
+      }}
+
+      const ft = fmtSignedUsd(friccaoTotal);
+      const rs = fmtSignedUsd(resultado);
+      const rp = fmtSignedPct(rent);
+      setText("bridgeFriccaoTotal", ft.txt, ft.cls);
+      setText("bridgeNav", fmtUsd(nav), "");
+      setText("bridgeResultado", rs.txt, rs.cls);
+      setText("bridgeRent", rp.txt, rp.cls);
+    }}
+
+    if (input) input.addEventListener("input", refresh);
+    refresh();
+  }})();
+  </script>
 </body>
 </html>"""
 

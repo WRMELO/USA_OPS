@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, date, datetime
+from pathlib import Path
+
+import pandas as pd
 
 import pipeline.ledger as ledger
 from pipeline.ledger import EventType, LedgerEvent
@@ -8,6 +12,35 @@ from pipeline.ledger import EventType, LedgerEvent
 
 def _append(ev: LedgerEvent) -> None:
     ledger.append_event(ev)
+
+
+def _write_real_boletim(
+    base_dir: Path,
+    exec_day: date,
+    *,
+    market_day: date | None = None,
+    snapshot: list[dict[str, float]] | None = None,
+    cash_free: float = 0.0,
+    cash_accounting: float = 0.0,
+) -> None:
+    payload = {
+        "exec_day": exec_day.isoformat(),
+        "market_day": (market_day or exec_day).isoformat(),
+        "positions_snapshot": snapshot or [],
+        "cash_free": float(cash_free),
+        "cash_accounting": float(cash_accounting),
+    }
+    (base_dir / f"{exec_day.isoformat()}.json").write_text(
+        json.dumps(payload, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_price_window(path: Path, rows: list[tuple[date, str, float]]) -> None:
+    df = pd.DataFrame(
+        [{"date": d.isoformat(), "ticker": t, "close_operational": px} for d, t, px in rows]
+    )
+    df.to_parquet(path, index=False)
 
 
 def test_compute_positions_cash_and_pending(tmp_path):
@@ -403,4 +436,233 @@ def test_is_duplicate_with_fractional_qty_epsilon(tmp_path):
         settle_date=date(2026, 7, 17),
     )
     assert ledger.is_duplicate(outside_eps) is False
+
+
+def test_total_fees_and_capital_em_uso(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+
+    _append(
+        LedgerEvent(
+            id="CF1",
+            type=EventType.APORTE,
+            exec_date=date(2026, 7, 16),
+            created_at=datetime.now(tz=UTC),
+            amount=1000.0,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="CF2",
+            type=EventType.RETIRADA,
+            exec_date=date(2026, 7, 17),
+            created_at=datetime.now(tz=UTC),
+            amount=200.0,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="CF3",
+            type=EventType.FEE,
+            exec_date=date(2026, 7, 16),
+            created_at=datetime.now(tz=UTC),
+            amount=2.5,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="CF4",
+            type=EventType.FEE,
+            exec_date=date(2026, 7, 18),
+            created_at=datetime.now(tz=UTC),
+            amount=1.0,
+        )
+    )
+
+    assert abs(ledger.total_fees(date(2026, 7, 17)) - 2.5) < 1e-9
+    assert abs(ledger.total_fees(date(2026, 7, 18)) - 3.5) < 1e-9
+    assert abs(ledger.capital_em_uso(date(2026, 7, 17)) - 800.0) < 1e-9
+
+
+def test_build_real_base1_series_stable_prices(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+    window = tmp_path / "opw.parquet"
+    day1 = date(2026, 7, 16)
+    day2 = date(2026, 7, 17)
+
+    _append(
+        LedgerEvent(
+            id="B1A",
+            type=EventType.APORTE,
+            exec_date=day1,
+            created_at=datetime.now(tz=UTC),
+            amount=1000.0,
+        )
+    )
+    _write_real_boletim(
+        tmp_path,
+        day1,
+        snapshot=[{"ticker": "AAA", "qtd": 10.0, "preco_compra": 100.0}],
+    )
+    _write_real_boletim(
+        tmp_path,
+        day2,
+        snapshot=[{"ticker": "AAA", "qtd": 10.0, "preco_compra": 100.0}],
+    )
+    _write_price_window(window, [(day1, "AAA", 100.0), (day2, "AAA", 100.0)])
+
+    series = ledger.build_real_base1_series(day2, price_window_path=window)
+    assert len(series) == 2
+    assert abs(series[0]["base1"] - 1.0) < 1e-9
+    assert abs(series[1]["base1"] - 1.0) < 1e-9
+    assert abs(series[1]["daily_var_pct"]) < 1e-9
+
+
+def test_build_real_base1_series_price_gain_without_new_flow(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+    window = tmp_path / "opw.parquet"
+    day1 = date(2026, 7, 16)
+    day2 = date(2026, 7, 17)
+
+    _append(
+        LedgerEvent(
+            id="B2A",
+            type=EventType.APORTE,
+            exec_date=day1,
+            created_at=datetime.now(tz=UTC),
+            amount=1000.0,
+        )
+    )
+    _write_real_boletim(
+        tmp_path,
+        day1,
+        snapshot=[{"ticker": "AAA", "qtd": 10.0, "preco_compra": 100.0}],
+    )
+    _write_real_boletim(
+        tmp_path,
+        day2,
+        snapshot=[{"ticker": "AAA", "qtd": 10.0, "preco_compra": 100.0}],
+    )
+    _write_price_window(window, [(day1, "AAA", 100.0), (day2, "AAA", 110.0)])
+
+    series = ledger.build_real_base1_series(day2, price_window_path=window)
+    assert len(series) == 2
+    assert abs(series[1]["base1"] - 1.1) < 1e-6
+    assert abs(series[1]["daily_var_pct"] - 10.0) < 1e-6
+
+
+def test_build_real_base1_series_second_aporte_preserves_gain(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+    window = tmp_path / "opw.parquet"
+    day1 = date(2026, 7, 16)
+    day2 = date(2026, 7, 17)
+    day3 = date(2026, 7, 18)
+
+    _append(
+        LedgerEvent(
+            id="B3A",
+            type=EventType.APORTE,
+            exec_date=day1,
+            created_at=datetime.now(tz=UTC),
+            amount=1000.0,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="B3B",
+            type=EventType.APORTE,
+            exec_date=day3,
+            created_at=datetime.now(tz=UTC),
+            amount=500.0,
+        )
+    )
+    _write_real_boletim(
+        tmp_path,
+        day1,
+        snapshot=[{"ticker": "AAA", "qtd": 10.0, "preco_compra": 100.0}],
+    )
+    _write_real_boletim(
+        tmp_path,
+        day2,
+        snapshot=[{"ticker": "AAA", "qtd": 10.0, "preco_compra": 100.0}],
+    )
+    _write_real_boletim(
+        tmp_path,
+        day3,
+        snapshot=[{"ticker": "AAA", "qtd": 14.54545455, "preco_compra": 110.0}],
+    )
+    _write_price_window(
+        window,
+        [
+            (day1, "AAA", 100.0),
+            (day2, "AAA", 110.0),
+            (day3, "AAA", 110.0),
+        ],
+    )
+
+    series = ledger.build_real_base1_series(day3, price_window_path=window)
+    assert len(series) == 3
+    assert abs(series[1]["base1"] - 1.1) < 1e-6
+    assert abs(series[2]["base1"] - series[1]["base1"]) < 1e-6
+    assert abs(series[2]["nav"] - 1600.0) < 1e-3
+
+
+def test_build_real_base1_series_keeps_fractional_qty(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+    window = tmp_path / "opw.parquet"
+    day1 = date(2026, 7, 16)
+
+    _append(
+        LedgerEvent(
+            id="B4A",
+            type=EventType.APORTE,
+            exec_date=day1,
+            created_at=datetime.now(tz=UTC),
+            amount=100.0,
+        )
+    )
+    _write_real_boletim(
+        tmp_path,
+        day1,
+        snapshot=[{"ticker": "AAA", "qtd": 0.5, "preco_compra": 200.0}],
+    )
+    _write_price_window(window, [(day1, "AAA", 200.0)])
+
+    series = ledger.build_real_base1_series(day1, price_window_path=window)
+    assert len(series) == 1
+    assert abs(series[0]["nav"] - 100.0) < 1e-9
+    assert abs(series[0]["base1"] - 1.0) < 1e-9
+
+
+def test_build_real_base1_series_appends_live_point(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+    window = tmp_path / "opw.parquet"
+    day1 = date(2026, 7, 16)
+    day2 = date(2026, 7, 17)
+
+    _append(
+        LedgerEvent(
+            id="B5A",
+            type=EventType.APORTE,
+            exec_date=day1,
+            created_at=datetime.now(tz=UTC),
+            amount=1000.0,
+        )
+    )
+    _write_real_boletim(
+        tmp_path,
+        day1,
+        snapshot=[{"ticker": "AAA", "qtd": 10.0, "preco_compra": 100.0}],
+    )
+    _write_price_window(window, [(day1, "AAA", 100.0), (day2, "AAA", 105.0)])
+
+    series = ledger.build_real_base1_series(
+        day2,
+        live_snapshot=[{"ticker": "AAA", "qtd": 10.0, "preco_compra": 100.0}],
+        live_cash_free=0.0,
+        live_cash_accounting=0.0,
+        price_window_path=window,
+    )
+    assert len(series) == 2
+    assert series[-1]["date"] == day2.isoformat()
+    assert abs(series[-1]["base1"] - 1.05) < 1e-6
 

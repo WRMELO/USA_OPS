@@ -526,3 +526,249 @@ def build_operations_book(as_of_date: date) -> dict[str, Any]:
         }
     return out
 
+
+def total_fees(as_of_date: date) -> float:
+    """Soma das corretagens (FEE) ate a data de corte."""
+    events = _effective_events(as_of_date)
+    return sum(float(ev.amount) for ev in events if ev.type == EventType.FEE)
+
+
+def capital_em_uso(as_of_date: date) -> float:
+    """Capital liquido em uso: aportes menos retiradas ate a data de corte."""
+    events = _effective_events(as_of_date)
+    aportes = sum(float(ev.amount) for ev in events if ev.type == EventType.APORTE)
+    retiradas = sum(float(ev.amount) for ev in events if ev.type == EventType.RETIRADA)
+    return aportes - retiradas
+
+
+def _load_winner_cagr() -> float:
+    path = ROOT / "config" / "winner_us.json"
+    try:
+        cfg = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return 0.421353
+    holdout = cfg.get("holdout_metrics", {})
+    if not isinstance(holdout, dict):
+        holdout = {}
+    cagr = holdout.get("cagr_pct")
+    if cagr is None:
+        acid_root = cfg.get("acid_test", {})
+        if not isinstance(acid_root, dict):
+            acid_root = {}
+        acid_global = acid_root.get("global_holdout_metrics", {})
+        if not isinstance(acid_global, dict):
+            acid_global = {}
+        c4 = acid_global.get("c4", {})
+        if not isinstance(c4, dict):
+            c4 = {}
+        cagr = c4.get("cagr_pct", 42.1353)
+    try:
+        return float(cagr) / 100.0
+    except Exception:
+        return 0.421353
+
+
+def build_real_base1_series(
+    as_of_date: date,
+    *,
+    live_snapshot: list[dict[str, Any]] | None = None,
+    live_cash_free: float | None = None,
+    live_cash_accounting: float | None = None,
+    price_window_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Serie Base 1 real por cotizacao plena (R-049).
+
+    Nota: este calculo nao aplica ajuste por split_factor entre data de compra e
+    data de referencia; usa close_operational por ticker na data (ou ultimo
+    pregao anterior), com fallback para preco_compra quando necessario.
+    """
+    target_window = price_window_path or (ROOT / "data" / "ssot" / "operational_window.parquet")
+    if not target_window.exists():
+        return []
+
+    records: list[dict[str, Any]] = []
+    real_dir = LEDGER_PATH.parent
+    for path in sorted(real_dir.glob("*.json")):
+        try:
+            file_day = date.fromisoformat(path.stem)
+        except Exception:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        exec_day = _to_date(payload.get("exec_day")) or _to_date(payload.get("date")) or file_day
+        ref_day = (
+            _to_date(payload.get("market_day"))
+            or _to_date(payload.get("reference_decision"))
+            or exec_day
+        )
+        if ref_day > as_of_date:
+            continue
+        snapshot = payload.get("positions_snapshot")
+        if not isinstance(snapshot, list):
+            snapshot = []
+        cash_free = _safe_float(payload.get("cash_free", payload.get("cash_balance", 0.0)), 0.0)
+        cash_acc = _safe_float(payload.get("cash_accounting", payload.get("caixa_liquidando", 0.0)), 0.0)
+        if not snapshot and abs(cash_free) <= 1e-9 and abs(cash_acc) <= 1e-9:
+            continue
+        records.append(
+            {
+                "exec_day": exec_day,
+                "ref_day": ref_day,
+                "snapshot": snapshot,
+                "cash_free": cash_free,
+                "cash_acc": cash_acc,
+            }
+        )
+
+    by_ref_day: dict[date, dict[str, Any]] = {}
+    for rec in records:
+        current = by_ref_day.get(rec["ref_day"])
+        if current is None or rec["exec_day"] > current["exec_day"]:
+            by_ref_day[rec["ref_day"]] = rec
+    ordered = [by_ref_day[d] for d in sorted(by_ref_day.keys())]
+
+    if (
+        isinstance(live_snapshot, list)
+        and live_cash_free is not None
+        and live_cash_accounting is not None
+        and not any(rec["ref_day"] == as_of_date for rec in ordered)
+    ):
+        ordered.append(
+            {
+                "exec_day": as_of_date,
+                "ref_day": as_of_date,
+                "snapshot": live_snapshot,
+                "cash_free": _safe_float(live_cash_free, 0.0),
+                "cash_acc": _safe_float(live_cash_accounting, 0.0),
+            }
+        )
+
+    if not ordered:
+        return []
+
+    tickers: set[str] = set()
+    for rec in ordered:
+        for pos in rec["snapshot"]:
+            if not isinstance(pos, dict):
+                continue
+            ticker = str(pos.get("ticker", "")).upper().strip()
+            if ticker:
+                tickers.add(ticker)
+
+    prices = pd.DataFrame(columns=["date", "ticker", "close_operational"])
+    if tickers:
+        try:
+            prices = pd.read_parquet(target_window, columns=["date", "ticker", "close_operational"])
+        except Exception:
+            prices = pd.DataFrame(columns=["date", "ticker", "close_operational"])
+    if prices.empty:
+        return []
+    prices["date"] = pd.to_datetime(prices["date"], errors="coerce")
+    prices["ticker"] = prices["ticker"].astype(str).str.upper().str.strip()
+    prices["close_operational"] = pd.to_numeric(prices["close_operational"], errors="coerce")
+    prices = prices.dropna(subset=["date", "ticker", "close_operational"])
+    prices = prices[(prices["date"] <= pd.Timestamp(as_of_date)) & (prices["ticker"].isin(tickers))]
+    if prices.empty:
+        return []
+    prices = prices.sort_values(["ticker", "date"]).reset_index(drop=True)
+
+    by_ticker: dict[str, pd.DataFrame] = {}
+    for ticker in prices["ticker"].unique():
+        by_ticker[str(ticker)] = prices[prices["ticker"] == ticker][["date", "close_operational"]].copy()
+
+    events = read_all_events()
+    if not events:
+        return []
+    external_flow_cum: list[float] = []
+    for rec in ordered:
+        cutoff = rec["exec_day"]
+        cum_aportes = sum(
+            float(ev.amount)
+            for ev in events
+            if ev.type == EventType.APORTE and ev.exec_date <= cutoff
+        )
+        cum_retiradas = sum(
+            float(ev.amount)
+            for ev in events
+            if ev.type == EventType.RETIRADA and ev.exec_date <= cutoff
+        )
+        external_flow_cum.append(cum_aportes - cum_retiradas)
+
+    if not external_flow_cum or max(external_flow_cum) <= 1e-9:
+        return []
+
+    cagr = _load_winner_cagr()
+    daily_cagr = (1.0 + cagr) ** (1.0 / 252.0) - 1.0
+    cagr_expect = 1.0
+
+    rows: list[dict[str, Any]] = []
+    cota_price_prev: float | None = None
+    cota_qty_prev = 0.0
+    total_ativo_prev: float | None = None
+    base1_prev: float | None = None
+
+    for idx, rec in enumerate(ordered):
+        ref_ts = pd.Timestamp(rec["ref_day"])
+        total_mkt = 0.0
+        for pos in rec["snapshot"]:
+            if not isinstance(pos, dict):
+                continue
+            ticker = str(pos.get("ticker", "")).upper().strip()
+            qtd = _safe_float(pos.get("qtd"), 0.0)
+            if not ticker or qtd <= _QTD_EPS:
+                continue
+            price = _safe_float(pos.get("preco_compra", pos.get("buy_price", 0.0)), 0.0)
+            sub = by_ticker.get(ticker)
+            if sub is not None and not sub.empty:
+                sub_until = sub[sub["date"] <= ref_ts]
+                if not sub_until.empty:
+                    price = _safe_float(sub_until.iloc[-1]["close_operational"], price)
+            if price <= 0:
+                continue
+            total_mkt += qtd * price
+
+        total_ativo = total_mkt + _safe_float(rec["cash_free"], 0.0) + _safe_float(rec["cash_acc"], 0.0)
+        ext_flow_cum = external_flow_cum[idx]
+        prev_ext_flow_cum = external_flow_cum[idx - 1] if idx > 0 else 0.0
+        ext_flow_day = ext_flow_cum - prev_ext_flow_cum
+
+        cota_price: float | None = None
+        if cota_price_prev is None:
+            if ext_flow_day > 1e-9:
+                cota_qty_prev = ext_flow_day / 100.0
+                if cota_qty_prev > 1e-9:
+                    cota_price = total_ativo / cota_qty_prev
+        elif total_ativo_prev is not None and total_ativo_prev > 1e-9:
+            nav_pre_flow = total_ativo - ext_flow_day
+            cota_price = cota_price_prev * (nav_pre_flow / total_ativo_prev)
+            if cota_price > 1e-9:
+                cota_qty_prev += ext_flow_day / cota_price
+
+        if cota_price is None:
+            continue
+
+        cota_price_prev = cota_price
+        total_ativo_prev = total_ativo
+        base1 = cota_price / 100.0
+        daily_var_pct = 0.0
+        if base1_prev is not None and base1_prev > 1e-9:
+            daily_var_pct = (base1 / base1_prev - 1.0) * 100.0
+        base1_prev = base1
+
+        if rows:
+            cagr_expect *= 1.0 + daily_cagr
+        rows.append(
+            {
+                "date": rec["ref_day"].isoformat(),
+                "nav": round(total_ativo, 4),
+                "base1": round(base1, 8),
+                "daily_var_pct": round(daily_var_pct, 6),
+                "cagr_expect": round(cagr_expect, 8),
+            }
+        )
+
+    return rows
+

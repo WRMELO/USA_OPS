@@ -322,3 +322,88 @@ def test_close_day_without_caixa_real_leaves_it_pending(tmp_path, monkeypatch):
     assert view["caixa_real_informado"] is None
     assert view["friccao_balanco_real"] is None
 
+
+def test_load_live_view_exposes_base1_bridge_keys(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    exec_day = date(2026, 7, 18)
+    ledger_dir = tmp_path / "live_real"
+
+    real_boletim_web.close_day(exec_day, ledger_dir)
+    view = real_boletim_web.load_live_view(exec_day, ledger_dir)
+
+    assert "base1_series" in view
+    assert "corretagem_total" in view
+    assert "capital_em_uso" in view
+    assert "carteira_d1_valor" in view
+    assert "sparklines_tickers" in view
+    assert isinstance(view["base1_series"], list)
+    assert isinstance(view["sparklines_tickers"], list)
+    assert isinstance(view["corretagem_total"], float)
+    assert isinstance(view["capital_em_uso"], float)
+
+
+def test_render_live_html_has_bridge_spark_and_no_cdn(monkeypatch):
+    monkeypatch.setattr(
+        real_boletim_web,
+        "_load_sparklines",
+        lambda tickers, as_of, lookback=62: {"AAAA": "<svg class='spark'></svg>"},
+    )
+    view = {
+        "today": "2026-07-16",
+        "market_day": "2026-07-15",
+        "cash_free": 961.22,
+        "cash_accounting": 0.0,
+        "caixa_real_informado": 950.0,
+        "friccao_balanco_real": 11.22,
+        "positions": [
+            {
+                "ticker": "MRVI",
+                "data_compra": "2026-07-16",
+                "qtd": 142.88572,
+                "preco_compra": 6.9986,
+                "close_d1": 7.09,
+                "heat_pct": 1.29,
+            }
+        ],
+        "held_set": ["MRVI"],
+        "top_operational": [{"ticker": "AAAA", "m3_rank": 1, "score_m3": 2.0, "close_d1": 20.0}],
+        "target_weights": {"AAAA": 0.05},
+        "operations_book": {
+            "MRVI": {
+                "ticker": "MRVI",
+                "compras": [{"date": "2026-07-16", "qtd": 142.88572, "preco": 6.9986}],
+                "vendas": [],
+                "qtd_liquida": 142.88572,
+                "custo_medio": 6.9986,
+                "investido": 1000.0,
+                "realizado": 0.0,
+                "close_d1": 7.09,
+                "nao_realizado": 12.86,
+            }
+        },
+        "forno": {},
+        "draft": {"operations": []},
+        "closed_boletim_exists": False,
+        "base1_series": [
+            {"date": "2026-07-16", "nav": 1000.0, "base1": 1.0, "daily_var_pct": 0.0, "cagr_expect": 1.0},
+            {
+                "date": "2026-07-17",
+                "nav": 1010.0,
+                "base1": 1.01,
+                "daily_var_pct": 1.0,
+                "cagr_expect": 1.001,
+            },
+        ],
+        "corretagem_total": 47.5,
+        "capital_em_uso": 20008.72,
+        "carteira_d1_valor": 1000.0,
+        "sparklines_tickers": ["AAAA"],
+    }
+    html = real_boletim_web.render_live_html(view)
+    assert "Ponte de friccao" in html
+    assert "class='spark'" in html
+    assert "QTY_FIXES" not in html
+    assert "cdn." not in html
+    assert '<script src="http' not in html
+    assert "<script src='http" not in html
+

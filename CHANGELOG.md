@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-18
+
+- docs(curadoria): T-SDC-PAINEL-BASE1-FRICCAO-SPARKLINE-US-V1 — fecha a integracao do preview no `/painel` LIVE-REAL-TEST com Base 1 por cotizacao plena, sparklines 62d, ponte de friccao Balanço -> Real -> NAV e SVG local sem CDN, removendo overlays `QTY_FIXES` do caminho produtivo. Artefatos: `pipeline/ledger.py`, `pipeline/real_boletim_web.py`, `tests/test_ledger.py`, `tests/test_real_boletim_web.py`, `DECISION_LOG.md`, `GOVERNANCE.md`. Decision: D-143 (ref cruzada: SALA D-119).
+
 ## 2026-07-17
 
 - feat(analista-usa): T-SDC-ANALISTA-CONFERENCIA-NOTA-GATE-US-V1 — adiciona `discover_notes`/`propose_dir` e subcomando `propose-dir` em `scripts/reconcile_broker_note.py` (varredura de `Confirm_*.pdf` por pasta, ignorando ruido, com `divergent_items`/`parse_errors`/`has_blocking_divergence`), amplia `tests/test_reconcile_broker_note.py` e inclui Passo 0c no `.cursor/skills/analista-usa/SKILL.md` para bloquear o diagnostico quando houver divergencia pendente entre nota oficial e ledger real no regime LIVE-REAL-TEST. Decision: D-140 (ref cruzada: SALA D-116).

@@ -457,6 +457,42 @@ explicitamente:
 
 Ref: SALA D-118, USA D-142, R-018, R-020, R-023, R-049, R-056.
 
+### 6.17 Integracao do preview no /painel LIVE-REAL-TEST com Base 1 por cotizacao plena e ponte de friccao dinamica (D-143)
+
+A partir de D-143, o `/painel` web LIVE-REAL-TEST incorpora a camada visual
+operacional validada no preview, sem copiar o prototipo `scratch` nem herdar
+seus atalhos de dados:
+
+1. **Base 1 real por cotizacao plena (R-049)**:
+   `pipeline/ledger.py` passa a expor `build_real_base1_series(...)`, calculada
+   por cota ancorada no aporte real e neutra a novos aportes/retiradas no eixo
+   de retorno.
+2. **Sem overlay hardcoded de quantidade/preco**:
+   o `/painel` deixa de depender de qualquer `QTY_FIXES`; leitura e exibicao
+   usam exclusivamente o ledger real corrigido como SSOT (R-056).
+3. **Grafico e sparklines sem dependencia externa**:
+   o grafico Base 1 x CAGR e os sparklines 62d do Top-20 sao renderizados em
+   SVG inline, sem `Chart.js` via CDN.
+4. **Ponte de friccao Balanço -> Real -> NAV no proprio painel**:
+   o boletim exibe e recalcula ao vivo (input de Caixa Livre Real no
+   encerramento) a reconciliacao:
+   Carteira + Caixa Livre de Balanco + Caixa Contabil -> Total Bruto ->
+   Friccao Operacional/Total -> NAV -> Resultado -> Rentabilidade.
+5. **Contrato de persistencia preservado (D-142)**:
+   o recálculo em tela e apenas observacional; o valor oficial de Caixa Livre
+   Real segue persistindo no encerramento (`/painel/encerrar`) como
+   `CAIXA_REAL_INFORMADO`, sem alterar `compute_cash`.
+
+**Contrato de escopo**:
+
+- Nenhum arquivo blindado de §6.6 foi tocado.
+- `pipeline/servidor.py` manteve o contrato de rota `/painel` sem alteracao de
+  semantica.
+- A reconciliacao final de HNGE contra nota oficial de 17/07 continua fora
+  desta task (R-056 / D-141).
+
+Ref: SALA D-119, USA D-143, USA D-142, USA D-141, R-018, R-023, R-049, R-056.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.
