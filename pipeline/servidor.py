@@ -497,6 +497,7 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 form = _read_form_payload()
                 raw_exec_day = str(form.get("exec_day", "")).strip()
                 confirmar = str(form.get("confirmar", "")).strip().lower()
+                raw_caixa_real = str(form.get("caixa_real", "")).strip()
                 try:
                     exec_day = date.fromisoformat(raw_exec_day)
                 except ValueError:
@@ -508,7 +509,17 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 if confirmar != "sim":
                     self._respond_html("<h3>Confirmacao obrigatoria para encerrar o dia.</h3>", code=400)
                     return
-                real_boletim_web.close_day(exec_day, ROOT / "data" / "live_real_test")
+                caixa_real: float | None = None
+                if raw_caixa_real:
+                    try:
+                        caixa_real = float(raw_caixa_real)
+                    except ValueError:
+                        self._respond_html("<h3>caixa_real invalido.</h3>", code=400)
+                        return
+                    if caixa_real < 0:
+                        self._respond_html("<h3>caixa_real deve ser maior ou igual a zero.</h3>", code=400)
+                        return
+                real_boletim_web.close_day(exec_day, ROOT / "data" / "live_real_test", caixa_real=caixa_real)
                 self._redirect("/painel")
                 return
 

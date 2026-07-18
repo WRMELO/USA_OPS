@@ -206,6 +206,13 @@ def build_boletim_payload(exec_day: date, ledger_dir: Path | None = None) -> dic
         _configure_target_ledger(ledger_dir)
     snapshot = export_snapshot(exec_day)
     cash = ledger.compute_cash(exec_day)
+    informed = ledger.latest_informed_cash(exec_day)
+    caixa_livre_real_informado = float(informed["amount"]) if informed else None
+    friccao_balanco_real = (
+        round(float(cash.get("cash_free", 0.0)) - caixa_livre_real_informado, 2)
+        if caixa_livre_real_informado is not None
+        else None
+    )
     return {
         "exec_day": exec_day.isoformat(),
         "date": exec_day.isoformat(),
@@ -220,6 +227,9 @@ def build_boletim_payload(exec_day: date, ledger_dir: Path | None = None) -> dic
         "positions_snapshot": snapshot,
         "cash_balance": float(cash.get("cash_free", 0.0)),
         "caixa_liquidando": float(cash.get("cash_accounting", 0.0)),
+        "caixa_livre_balanco": float(cash.get("cash_free", 0.0)),
+        "caixa_livre_real_informado": caixa_livre_real_informado,
+        "friccao_balanco_real": friccao_balanco_real,
     }
 
 

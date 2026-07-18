@@ -395,6 +395,68 @@ em D-139:
 
 Ref: SALA D-116, USA D-140, USA D-139, SALA D-115, R-020, R-056.
 
+### 6.15 Extensao da migracao supervisionada: HNGE 17/07 com preco interino (D-141)
+
+A partir de D-141, o contrato de migracao supervisionada de §6.13 e estendido
+para corrigir o BUY de HNGE de 17/07 no mesmo padrao operacional:
+
+1. **Execucao de pendencia ja autorizada**:
+   a migracao de MRVI/HPP de 16/07 (`scripts/migrate_ledger_20260716_fractional_fix.py`),
+   aprovada em D-139, foi efetivamente executada com `--confirm`, backup
+   obrigatorio e trilha de evidencia.
+2. **Nova migracao supervisionada para HNGE**:
+   `scripts/migrate_ledger_20260717_hnge_price_fix.py` corrige o evento
+   `fedd1bfa-44d8-496e-9197-a42f9dd6a03b` para preco interino informado pelo
+   Owner (US$86,76), com dry-run default, validacoes de precondicao e backup
+   obrigatorio antes de sobrescrita.
+3. **Sem auto-aplicacao e com reconciliacao pendente**:
+   o preco interino nao substitui a precedencia da nota oficial. A confirmacao
+   final do HNGE permanece vinculada ao mesmo gate de conferencia de §6.14
+   (`scripts/reconcile_broker_note.py`) quando a nota oficial de 17/07 estiver
+   disponivel em `dados_oficiais_btg/`.
+4. **Regeneracao de artefatos derivados**:
+   apos a correcao do ledger, os arquivos arquivais `2026-07-16.json`,
+   `2026-07-17.json`, `friction_report_2026-07-16.json` e
+   `friction_report_2026-07-17.json` foram regenerados pelos CLIs oficiais
+   (`scripts/live_real_cutover.py emit-boletim` e
+   `scripts/friction_ruler.py emit-friction-report`) para manter consistencia
+   entre fonte e derivados.
+
+**Contrato de escopo**:
+
+- Nenhum arquivo blindado de §6.6 foi tocado.
+- A retificacao continua dependente de comando explicito do Owner.
+- O gate read-only do Analista-USA permanece sem autoridade de escrita.
+
+Ref: SALA D-117, USA D-141, USA D-140, USA D-139, R-018, R-020, R-023, R-049,
+R-056.
+
+### 6.16 Caixa Livre de Balanco vs Caixa Livre Real no /painel (D-142)
+
+A partir de D-142, o boletim web LIVE-REAL-TEST passa a diferenciar
+explicitamente:
+
+1. **Caixa Livre de Balanco**:
+   valor derivado de `compute_cash` (aporte/dividendo/settlement menos
+   retirada/buy/fee), sem mudanca de semantica financeira.
+2. **Caixa Livre Real**:
+   valor informado manualmente pelo Owner no encerramento do `/painel`, gravado
+   no ledger real como evento observacional `CAIXA_REAL_INFORMADO`.
+3. **Delta de Friccao (Balanco - Real)**:
+   diferenca exibida no painel e no boletim diario para monitoramento de
+   divergencias operacionais.
+
+**Contrato tecnico**:
+
+- O novo evento `CAIXA_REAL_INFORMADO` nao entra em `compute_cash`.
+- O registro ocorre apenas no fechamento (`/painel/encerrar`) quando o campo
+  opcional de Caixa Real for informado.
+- A ausencia do campo mantem o comportamento anterior (sem gravar evento e sem
+  friccao calculada).
+- Nenhum arquivo blindado de §6.6 foi tocado.
+
+Ref: SALA D-118, USA D-142, R-018, R-020, R-023, R-049, R-056.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.

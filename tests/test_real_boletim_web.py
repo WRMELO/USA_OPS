@@ -293,3 +293,32 @@ def test_render_live_html_shows_fractional_quantities():
     assert "142.88572" in html
     assert "0.88572" in html
 
+
+def test_close_day_records_caixa_real_informado_and_computes_friccao(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    exec_day = date(2026, 7, 18)
+    ledger_dir = tmp_path / "live_real"
+
+    out = real_boletim_web.close_day(exec_day, ledger_dir, caixa_real=950.0)
+    assert Path(out["boletim_path"]).exists()
+
+    boletim = json.loads(Path(out["boletim_path"]).read_text(encoding="utf-8"))
+    assert abs(float(boletim["caixa_livre_real_informado"]) - 950.0) < 1e-6
+    assert boletim["friccao_balanco_real"] is not None
+
+    view = real_boletim_web.load_live_view(exec_day, ledger_dir)
+    assert abs(float(view["caixa_real_informado"]) - 950.0) < 1e-6
+    assert view["caixa_real_informado_date"] == exec_day.isoformat()
+    assert view["friccao_balanco_real"] == round(float(view["cash_free"]) - 950.0, 2)
+
+
+def test_close_day_without_caixa_real_leaves_it_pending(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    exec_day = date(2026, 7, 18)
+    ledger_dir = tmp_path / "live_real"
+
+    real_boletim_web.close_day(exec_day, ledger_dir)
+    view = real_boletim_web.load_live_view(exec_day, ledger_dir)
+    assert view["caixa_real_informado"] is None
+    assert view["friccao_balanco_real"] is None
+

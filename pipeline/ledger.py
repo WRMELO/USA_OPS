@@ -24,6 +24,7 @@ class EventType(str, Enum):
     SELL = "SELL"
     SETTLEMENT = "SETTLEMENT"
     FEE = "FEE"
+    CAIXA_REAL_INFORMADO = "CAIXA_REAL_INFORMADO"
     CORRECTION = "CORRECTION"
 
 
@@ -213,9 +214,16 @@ def is_duplicate(event: LedgerEvent) -> bool:
     for ev in read_all_events():
         if ev.type != event.type or ev.exec_date != event.exec_date:
             continue
-        # Tipos monetários sem ticker.
+        # Tipos monetarios sem ticker.
         if event.type in {EventType.APORTE, EventType.RETIRADA, EventType.DIVIDENDO}:
             if abs(ev.amount - event.amount) <= 0.01:
+                return True
+            continue
+        # Caixa real informado: dedupe por (amount, reason, date).
+        if event.type == EventType.CAIXA_REAL_INFORMADO:
+            same_amount = abs(ev.amount - event.amount) <= 0.01
+            same_reason = (ev.reason or "") == (event.reason or "")
+            if same_amount and same_reason:
                 return True
             continue
         # Liquidação é única por (ref_id, amount, date). Se não houver ref_id, usa reason.
@@ -398,6 +406,25 @@ def compute_cash(as_of_date: date) -> dict[str, float]:
             accounting += float(ev.amount)
     accounting = max(accounting - float(unmatched_total), 0.0)
     return {"cash_free": free, "cash_accounting": accounting}
+
+
+def latest_informed_cash(as_of_date: date) -> dict[str, Any] | None:
+    """Ultimo saldo de Caixa Livre Real informado pelo Owner.
+
+    Este dado e observacional e nao altera o calculo de caixa contabil/de balanco.
+    """
+    informed = [
+        ev
+        for ev in read_all_events()
+        if ev.type == EventType.CAIXA_REAL_INFORMADO and ev.exec_date <= as_of_date
+    ]
+    if not informed:
+        return None
+    latest = max(informed, key=lambda ev: (ev.exec_date, ev.created_at))
+    return {
+        "amount": float(latest.amount),
+        "exec_date": latest.exec_date.isoformat(),
+    }
 
 
 def export_snapshot(as_of_date: date) -> list[dict[str, Any]]:

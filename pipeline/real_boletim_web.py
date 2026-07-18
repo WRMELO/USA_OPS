@@ -299,7 +299,7 @@ def apply_draft_to_ledger(exec_day: date, ledger_dir: Path, operations: list[dic
     return {"events_created": events_created, "warnings": warnings}
 
 
-def close_day(exec_day: date, ledger_dir: Path) -> dict[str, Any]:
+def close_day(exec_day: date, ledger_dir: Path, caixa_real: float | None = None) -> dict[str, Any]:
     from scripts.friction_ruler import build_friction_report_payload
     from scripts.live_real_cutover import build_boletim_payload
 
@@ -307,6 +307,25 @@ def close_day(exec_day: date, ledger_dir: Path) -> dict[str, Any]:
     draft = load_draft(exec_day)
     operations = draft.get("operations", [])
     result = apply_draft_to_ledger(exec_day, resolved_ledger_dir, operations)
+
+    caixa_real_value = _safe_float(caixa_real, 0.0) if caixa_real is not None else 0.0
+    if caixa_real_value > 0:
+        ledger_mod.LEDGER_PATH = resolved_ledger_dir / REAL_LEDGER_NAME
+        informed_event = create_event(
+            EventType.CAIXA_REAL_INFORMADO,
+            exec_day,
+            caixa_real_value,
+            reason="Caixa Real informado pelo Owner no encerramento do dia via /painel",
+        )
+        if not is_duplicate(informed_event):
+            append_event(informed_event)
+            result.setdefault("events_created", []).append(
+                {
+                    "kind": informed_event.type.value,
+                    "id": informed_event.id,
+                    "amount": caixa_real_value,
+                }
+            )
 
     boletim_payload = build_boletim_payload(exec_day, ledger_dir=resolved_ledger_dir)
     boletim_path = resolved_ledger_dir / f"{exec_day.isoformat()}.json"
@@ -376,11 +395,13 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
     real_ledger_path = resolved_ledger_dir / REAL_LEDGER_NAME
 
     previous_ledger_path = ledger_mod.LEDGER_PATH
+    informed: dict[str, Any] | None = None
     try:
         ledger_mod.LEDGER_PATH = real_ledger_path
         cash = compute_cash(today)
         positions = export_snapshot(today)
         operations_book_raw = ledger_mod.build_operations_book(today)
+        informed = ledger_mod.latest_informed_cash(today)
     finally:
         ledger_mod.LEDGER_PATH = previous_ledger_path
 
@@ -436,11 +457,21 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
 
     draft = load_draft(today)
     closed_boletim_path = resolved_ledger_dir / f"{today.isoformat()}.json"
+    caixa_real_informado = float(informed["amount"]) if informed else None
+    caixa_real_informado_date = str(informed["exec_date"]) if informed else None
+    friccao_balanco_real = (
+        round(float(cash.get("cash_free", 0.0)) - caixa_real_informado, 2)
+        if caixa_real_informado is not None
+        else None
+    )
     return {
         "today": today.isoformat(),
         "market_day": str(context.get("market_day", today.isoformat())),
         "cash_free": float(cash.get("cash_free", 0.0)),
         "cash_accounting": float(cash.get("cash_accounting", 0.0)),
+        "caixa_real_informado": caixa_real_informado,
+        "caixa_real_informado_date": caixa_real_informado_date,
+        "friccao_balanco_real": friccao_balanco_real,
         "positions": positions_enriched,
         "held_set": sorted(held_set),
         "top_operational": top_operational,
@@ -458,6 +489,14 @@ def render_live_html(view: dict[str, Any]) -> str:
     market_day = str(view.get("market_day", today))
     cash_free = _fmt_usd(view.get("cash_free", 0.0))
     cash_accounting = _fmt_usd(view.get("cash_accounting", 0.0))
+    caixa_real_informado_raw = view.get("caixa_real_informado")
+    caixa_real_informado_fmt = (
+        _fmt_usd(caixa_real_informado_raw) if caixa_real_informado_raw is not None else "pendente"
+    )
+    friccao_balanco_real_raw = view.get("friccao_balanco_real")
+    friccao_balanco_real_fmt = (
+        _fmt_usd(friccao_balanco_real_raw) if friccao_balanco_real_raw is not None else "pendente"
+    )
     forno = view.get("forno", {}) if isinstance(view.get("forno"), dict) else {}
     is_rebalance = forno.get("is_rebalance_day")
     cycles = forno.get("cycles_to_next_rebalance")
@@ -628,7 +667,9 @@ def render_live_html(view: dict[str, Any]) -> str:
   </div>
 
   <div class="grid">
-    <div class="card"><h3>Caixa Livre</h3><div class="mono">{cash_free}</div></div>
+    <div class="card"><h3>Caixa Livre de Balanco</h3><div class="mono">{cash_free}</div></div>
+    <div class="card"><h3>Caixa Livre Real</h3><div class="mono">{caixa_real_informado_fmt}</div></div>
+    <div class="card"><h3>Delta Friccao (Balanco - Real)</h3><div class="mono">{friccao_balanco_real_fmt}</div></div>
     <div class="card"><h3>Caixa Contabil</h3><div class="mono">{cash_accounting}</div></div>
     <div class="card">
       <h3>Status Rebalance / D+2</h3>
@@ -699,9 +740,11 @@ def render_live_html(view: dict[str, Any]) -> str:
     <h2>Encerramento definitivo do dia</h2>
     <form method="POST" action="/painel/encerrar">
       <input type="hidden" name="exec_day" value="{html.escape(today)}" />
+      <label>Caixa Livre Real (saldo do app BTG, opcional)<input type="number" name="caixa_real" min="0.00" step="0.01" placeholder="ex: 950.00" /></label>
       <label><input type="checkbox" name="confirmar" value="sim" required /> Confirmo encerramento definitivo.</label>
       <button type="submit">Encerrar o Dia</button>
     </form>
+    <p class="muted">Se informado, o saldo alimenta o Caixa Livre Real e a Delta Friccao (Balanco - Real).</p>
   </div>
 
   <div class="card">
