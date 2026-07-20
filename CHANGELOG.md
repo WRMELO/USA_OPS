@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-20
+
+- feat(web): T-SDC-PAINEL-PREVIEW-PARIDADE-COMPLETA-US-V1 — `pipeline/real_boletim_web.py` passa a renderizar o `/painel` LIVE-REAL-TEST com paridade completa ao preview (8 secoes numeradas 01-08, identidade visual azul, bloco Acao do dia com defensivas calculadas do contexto real e bloco local de Operacoes sugeridas pelo Analista sem POST), preservando os formularios oficiais de rascunho/encerramento e mantendo o contrato sem `QTY_FIXES` e sem CDN. Artefatos: `pipeline/real_boletim_web.py`, `DECISION_LOG.md`, `GOVERNANCE.md`. Decision: D-144 (ref cruzada: SALA D-121).
+
 ## 2026-07-18
 
 - docs(curadoria): T-SDC-PAINEL-BASE1-FRICCAO-SPARKLINE-US-V1 — fecha a integracao do preview no `/painel` LIVE-REAL-TEST com Base 1 por cotizacao plena, sparklines 62d, ponte de friccao Balanço -> Real -> NAV e SVG local sem CDN, removendo overlays `QTY_FIXES` do caminho produtivo. Artefatos: `pipeline/ledger.py`, `pipeline/real_boletim_web.py`, `tests/test_ledger.py`, `tests/test_real_boletim_web.py`, `DECISION_LOG.md`, `GOVERNANCE.md`. Decision: D-143 (ref cruzada: SALA D-119).

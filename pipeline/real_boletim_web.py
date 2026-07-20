@@ -638,6 +638,7 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         "caixa_real_informado_date": caixa_real_informado_date,
         "friccao_balanco_real": friccao_balanco_real,
         "positions": positions_enriched,
+        "holdings": holdings,
         "held_set": sorted(held_set),
         "sparklines_tickers": sparkline_tickers,
         "top_operational": top_operational,
@@ -651,6 +652,65 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         "draft": draft,
         "closed_boletim_exists": closed_boletim_path.exists(),
         "context_available": bool(context),
+    }
+
+
+def _suggested_defensive_sells(view: dict[str, Any]) -> dict[str, Any]:
+    forno = view.get("forno", {}) if isinstance(view.get("forno"), dict) else {}
+    action = str(forno.get("action") or "HOLD").upper()
+    is_rebalance_day = bool(forno.get("is_rebalance_day"))
+
+    holdings = view.get("holdings", []) if isinstance(view.get("holdings"), list) else []
+    held_set = {
+        str(ticker).upper().strip()
+        for ticker in (view.get("held_set", []) if isinstance(view.get("held_set"), list) else [])
+        if str(ticker).strip()
+    }
+    defensive: list[dict[str, Any]] = []
+    for row in holdings:
+        if not isinstance(row, dict):
+            continue
+        ticker = str(row.get("ticker", "")).upper().strip()
+        if not ticker:
+            continue
+        if held_set and ticker not in held_set:
+            continue
+        heat = _safe_float(row.get("heat_pct"), 0.0)
+        spc = str(row.get("spc_status", "")).upper().strip()
+        drawdown = _safe_float(row.get("drawdown_pct"), 0.0)
+        reasons: list[str] = []
+        if heat <= -8.0:
+            reasons.append(f"heat {heat:.1f}%")
+        if spc and spc != "ESTAVEL":
+            reasons.append(f"SPC {spc}")
+        if drawdown <= -15.0:
+            reasons.append(f"drawdown {drawdown:.1f}%")
+        if reasons:
+            defensive.append(
+                {
+                    "ticker": ticker,
+                    "qty": _safe_float(row.get("qty"), 0.0),
+                    "close_d1": _safe_float(row.get("close_d1"), 0.0),
+                    "heat_pct": heat,
+                    "reason": " - ".join(reasons),
+                }
+            )
+
+    motor_lines: list[str] = []
+    if action == "HOLD" and not is_rebalance_day:
+        motor_lines.append("HOLD - nenhuma operacao de rebalanceamento exigida hoje.")
+    elif is_rebalance_day:
+        motor_lines.append("Dia de REBALANCE - executar vendas/compras conforme ranking operacional.")
+    else:
+        motor_lines.append(f"Acao do forno: {action}")
+
+    return {
+        "action": action,
+        "is_rebalance_day": is_rebalance_day,
+        "next_rebalance": forno.get("next_rebalance_date"),
+        "cycles_to_next": forno.get("cycles_to_next_rebalance"),
+        "motor_lines": motor_lines,
+        "defensive": defensive,
     }
 
 
@@ -700,26 +760,57 @@ def render_live_html(view: dict[str, Any]) -> str:
     cycles = forno.get("cycles_to_next_rebalance")
     next_rebalance = forno.get("next_rebalance_date")
     is_d1_pos_rebalance = bool(forno.get("is_d1_pos_rebalance", False))
+    suggestions = _suggested_defensive_sells(view)
 
     positions = view.get("positions", []) if isinstance(view.get("positions"), list) else []
+    operations_book = view.get("operations_book", {}) if isinstance(view.get("operations_book"), dict) else {}
+    holdings = view.get("holdings", []) if isinstance(view.get("holdings"), list) else []
+    holdings_map: dict[str, dict[str, Any]] = {}
+    for row in holdings:
+        if not isinstance(row, dict):
+            continue
+        ticker = str(row.get("ticker", "")).upper().strip()
+        if ticker:
+            holdings_map[ticker] = row
+
+    held_result: dict[str, float] = {}
     pos_rows: list[str] = []
     if positions:
         for row in positions:
-            heat_class = _sign_class(row.get("heat_pct", 0.0))
+            ticker = str(row.get("ticker", "")).upper().strip()
+            qty = _safe_float(row.get("qtd"), 0.0)
+            close_d1 = _safe_float(row.get("close_d1"), 0.0)
+            preco_compra = _safe_float(row.get("preco_compra"), 0.0)
+            heat_pct = _safe_float(row.get("heat_pct"), 0.0)
+            book_row = operations_book.get(ticker, {})
+            if not isinstance(book_row, dict):
+                book_row = {}
+            nao_realizado_raw = book_row.get("nao_realizado")
+            if nao_realizado_raw is None and qty > 0 and close_d1 > 0:
+                nao_realizado_raw = round(qty * (close_d1 - preco_compra), 2)
+
+            if nao_realizado_raw is not None:
+                held_result[ticker] = _safe_float(nao_realizado_raw, 0.0)
+            else:
+                held_result[ticker] = heat_pct
+
+            nao_realizado_txt = _fmt_usd(nao_realizado_raw) if nao_realizado_raw is not None else "-"
+            nao_realizado_cls = _sign_class(nao_realizado_raw if nao_realizado_raw is not None else 0.0)
+            heat_class = _sign_class(heat_pct)
             pos_rows.append(
                 "<tr>"
-                f"<td>{html.escape(str(row.get('ticker', '')))}</td>"
+                f"<td>{html.escape(ticker)}</td>"
                 f"<td>{html.escape(str(row.get('data_compra', '')))}</td>"
-                f"<td style='text-align:right'>{_fmt_qtd(row.get('qtd'))}</td>"
-                f"<td style='text-align:right'>{_fmt_usd(row.get('preco_compra', 0.0))}</td>"
-                f"<td style='text-align:right'>{_fmt_usd(row.get('close_d1', 0.0))}</td>"
-                f"<td class='{heat_class}' style='text-align:right'>{_fmt_pct(row.get('heat_pct', 0.0))}</td>"
+                f"<td style='text-align:right'>{_fmt_qtd(qty)}</td>"
+                f"<td style='text-align:right'>{_fmt_usd(preco_compra)}</td>"
+                f"<td style='text-align:right'>{_fmt_usd(close_d1) if close_d1 > 0 else '-'}</td>"
+                f"<td class='{heat_class}' style='text-align:right'>{_fmt_pct(heat_pct)}</td>"
+                f"<td class='{nao_realizado_cls}' style='text-align:right'>{nao_realizado_txt}</td>"
                 "</tr>"
             )
     else:
-        pos_rows.append("<tr><td colspan='6'>Nenhuma posicao registrada no ledger real.</td></tr>")
+        pos_rows.append("<tr><td colspan='7'>Nenhuma posicao registrada no ledger real.</td></tr>")
 
-    operations_book = view.get("operations_book", {}) if isinstance(view.get("operations_book"), dict) else {}
     book_rows: list[str] = []
 
     def _format_ops_column(rows: Any) -> str:
@@ -758,9 +849,12 @@ def render_live_html(view: dict[str, Any]) -> str:
     if not book_rows:
         book_rows.append("<tr><td colspan='8'>Sem operacoes registradas por ativo.</td></tr>")
 
-    held_set = set(view.get("held_set", []))
+    held_set = {
+        str(ticker).upper().strip()
+        for ticker in (view.get("held_set", []) if isinstance(view.get("held_set"), list) else [])
+        if str(ticker).strip()
+    }
     ranking = view.get("top_operational", []) if isinstance(view.get("top_operational"), list) else []
-    target_weights = view.get("target_weights", {}) if isinstance(view.get("target_weights"), dict) else {}
 
     def _rank_key(item: dict[str, Any]) -> int:
         try:
@@ -789,20 +883,31 @@ def render_live_html(view: dict[str, Any]) -> str:
     if top_sorted:
         for row in top_sorted:
             ticker = str(row.get("ticker", "")).upper().strip()
-            indicator = "held" if ticker in held_set else "cand"
-            tw = target_weights.get(ticker, row.get("target_weight", 0.0))
+            close_d1 = _safe_float(row.get("close_d1"), 0.0)
+            if close_d1 <= 0:
+                hold = holdings_map.get(ticker, {})
+                close_d1 = _safe_float(hold.get("close_d1"), 0.0) if isinstance(hold, dict) else 0.0
+            if ticker in held_set:
+                res = held_result.get(ticker, 0.0)
+                if res > 1e-9:
+                    indicator = "held-pos"
+                elif res < -1e-9:
+                    indicator = "held-neg"
+                else:
+                    indicator = "held-flat"
+            else:
+                indicator = "cand"
             top_rows.append(
                 "<tr>"
                 f"<td><span class='{indicator}'></span>{html.escape(ticker)}</td>"
                 f"<td style='text-align:right'>{_rank_key(row)}</td>"
                 f"<td style='text-align:right'>{_safe_float(row.get('score_m3', 0.0)):.4f}</td>"
-                f"<td style='text-align:right'>{_fmt_pct(_safe_float(tw, 0.0) * 100.0)}</td>"
-                f"<td style='text-align:right'>{_fmt_usd(row.get('close_d1', 0.0))}</td>"
+                f"<td style='text-align:right'>{_fmt_usd(close_d1) if close_d1 > 0 else '-'}</td>"
                 f"<td class='spark-cell'>{spark_map.get(ticker, '<span class=\"flat\">-</span>')}</td>"
                 "</tr>"
             )
     else:
-        top_rows.append("<tr><td colspan='6'>Top-20 nao disponivel — rode pipeline/analise_us.py.</td></tr>")
+        top_rows.append("<tr><td colspan='5'>Top-20 nao disponivel - rode pipeline/analise_us.py.</td></tr>")
 
     draft = view.get("draft", {}) if isinstance(view.get("draft"), dict) else {}
     operations = draft.get("operations", []) if isinstance(draft.get("operations"), list) else []
@@ -841,11 +946,31 @@ def render_live_html(view: dict[str, Any]) -> str:
         if bool(view.get("closed_boletim_exists"))
         else ""
     )
-
     caixa_real_value_attr = (
         f"value='{_safe_float(caixa_real_informado_raw):.2f}'" if caixa_real_informado_raw is not None else ""
     )
     caixa_real_bridge = _fmt_usd(caixa_real_informado_raw) if has_caixa_real else "pendente"
+
+    defensive_rows: list[str] = []
+    for row in suggestions.get("defensive", []):
+        if not isinstance(row, dict):
+            continue
+        heat = _safe_float(row.get("heat_pct", 0.0), 0.0)
+        heat_class = _sign_class(heat)
+        defensive_rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(row.get('ticker', '')))}</td>"
+            f"<td style='text-align:right'>{_fmt_qtd(row.get('qty', 0.0))}</td>"
+            f"<td style='text-align:right'>{_fmt_usd(row.get('close_d1', 0.0)) if _safe_float(row.get('close_d1', 0.0), 0.0) > 0 else '-'}</td>"
+            f"<td class='{heat_class}' style='text-align:right'>{_fmt_pct(heat)}</td>"
+            f"<td>{html.escape(str(row.get('reason', '')))}</td>"
+            "</tr>"
+        )
+    if not defensive_rows:
+        defensive_rows.append(
+            "<tr><td colspan='5'><span class='flat'>Nenhuma venda defensiva sugerida (heat/SPC/drawdown dentro dos limites).</span></td></tr>"
+        )
+    motor_html = "".join(f"<li>{html.escape(str(line))}</li>" for line in suggestions.get("motor_lines", []))
 
     return f"""<!doctype html>
 <html lang="pt-BR">
@@ -857,127 +982,245 @@ def render_live_html(view: dict[str, Any]) -> str:
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
-    :root {{ --ink:#0E1318; --surface:#161D25; --surface2:#1A222B; --hair:#29333D; --bone:#E9E5D8; --muted:#868F9B; --teal:#52B9A3; --amber:#E2A959; --green:#4FBE7B; --red:#E0664F; }}
+    :root {{ --ink:#0A3161; --surface:#0F3D73; --surface-2:#134A86; --hair:#2A5A96; --hair-soft:#1C4A7A; --bone:#E9E5D8; --muted:#A8B8CC; --muted-2:#7A91AB; --teal:#52B9A3; --teal-dim:#2F5F57; --amber:#E2A959; --amber-dim:#6B552F; --green:#4FBE7B; --red:#E0664F; }}
     * {{ box-sizing: border-box; }}
-    body {{ margin: 0; padding: 20px; background: var(--ink); color: var(--bone); font-family: "Space Grotesk", sans-serif; }}
-    .mono {{ font-family: "IBM Plex Mono", monospace; }}
-    .top {{ display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; border-bottom:1px solid var(--hair); margin-bottom:16px; padding-bottom:12px; }}
-    .badge {{ border:1px solid var(--amber); color:var(--amber); border-radius:99px; padding:4px 10px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }}
-    .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin-bottom:12px; }}
-    .card {{ background:var(--surface); border:1px solid var(--hair); border-radius:10px; padding:12px; margin-bottom:12px; }}
+    body {{ margin:0; padding:20px; background:var(--ink); color:var(--bone); font-family:"Space Grotesk",sans-serif; line-height:1.4; }}
+    .mono {{ font-family:"IBM Plex Mono",monospace; }}
+    .topbar {{ display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; border-bottom:1px solid var(--hair); padding-bottom:12px; margin-bottom:16px; }}
+    .eyebrow {{ font-family:"IBM Plex Mono",monospace; color:var(--muted); font-size:11px; letter-spacing:.12em; text-transform:uppercase; }}
     h1,h2,h3 {{ margin:0 0 8px 0; }}
-    table {{ width:100%; border-collapse:collapse; font-family:"IBM Plex Mono", monospace; font-size:12px; }}
-    th,td {{ border-bottom:1px solid var(--hair); padding:6px; text-align:left; }}
+    .pill {{ color:var(--amber); font-size:12px; }}
+    .meta {{ display:flex; gap:14px; flex-wrap:wrap; text-align:right; }}
+    .meta .k {{ color:var(--muted); font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-family:"IBM Plex Mono",monospace; }}
+    .meta .v {{ font-family:"IBM Plex Mono",monospace; margin-top:2px; }}
+    .sec-label {{ display:flex; align-items:center; gap:8px; color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.14em; font-family:"IBM Plex Mono",monospace; margin:14px 0 8px; }}
+    .sec-label .idx {{ color:var(--muted-2); }}
+    .sec-label .tag {{ margin-left:auto; border:1px solid var(--hair); border-radius:99px; padding:2px 8px; font-size:9px; letter-spacing:.08em; color:var(--muted-2); }}
+    .sec-label .tag.governs {{ border-color:var(--teal-dim); color:var(--teal); }}
+    .card {{ background:var(--surface); border:1px solid var(--hair); border-radius:10px; padding:14px; margin-bottom:12px; }}
+    .muted {{ color:var(--muted); font-size:12px; }}
+    table {{ width:100%; border-collapse:collapse; font-family:"IBM Plex Mono",monospace; font-size:12px; }}
+    th,td {{ border-bottom:1px solid var(--hair-soft); padding:6px; text-align:left; vertical-align:middle; }}
     tr:last-child td {{ border-bottom:none; }}
-    .held,.cand {{ display:inline-block; width:7px; height:7px; border-radius:99px; margin-right:6px; }}
-    .held {{ background: var(--teal); }}
-    .cand {{ border:1px solid var(--muted); }}
-    .pill {{ font-size:12px; color:var(--amber); }}
-    form {{ margin:0; }}
-    .form-grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; }}
-    input,select,button {{ width:100%; padding:8px; border-radius:6px; border:1px solid var(--hair); background:var(--surface2); color:var(--bone); }}
-    button {{ cursor:pointer; font-weight:600; }}
-    .muted {{ color: var(--muted); font-size:12px; }}
-    .gpos {{ color: var(--green); }}
-    .gneg {{ color: var(--red); }}
-    .flat {{ color: var(--muted); }}
+    .gpos {{ color:var(--green); font-weight:700; }}
+    .gneg {{ color:var(--red); font-weight:700; }}
+    .flat {{ color:var(--muted); }}
     .spark {{ display:block; }}
     .spark-cell {{ text-align:center; min-width:160px; }}
-    .chart-empty {{ color: var(--muted); font-size:12px; }}
-    .base-head {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-bottom:8px; }}
-    .base-k {{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }}
-    .base-v {{ font-family:"IBM Plex Mono", monospace; font-size:20px; margin-top:4px; }}
-    .base-sub {{ font-size:12px; color:var(--muted); margin-top:2px; }}
-    .bridge .row {{ display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid var(--hair); padding:6px 0; }}
-    .bridge .row:last-child {{ border-bottom:none; }}
-    .bridge .lab {{ color:var(--muted); }}
-    .bridge .val {{ font-family:"IBM Plex Mono", monospace; }}
+    .chart-head {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; margin-bottom:8px; }}
+    .chart-head .k {{ font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-family:"IBM Plex Mono",monospace; }}
+    .chart-head .v {{ font-size:19px; font-family:"IBM Plex Mono",monospace; }}
+    .chart-head .sub {{ font-size:12px; color:var(--muted-2); }}
+    .chart-wrap {{ width:100%; min-height:220px; }}
+    .hero {{ border-left:4px solid var(--teal); padding-left:12px; }}
+    .hero-word {{ font-size:30px; font-weight:700; }}
+    .hero-word .dot {{ display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--teal); margin-right:8px; }}
+    .hero-sub {{ color:var(--muted); font-family:"IBM Plex Mono",monospace; font-size:11px; }}
+    .facts {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-top:10px; }}
+    .fact {{ background:var(--surface-2); border:1px solid var(--hair); border-radius:8px; padding:10px; }}
+    .fact .fk {{ font-family:"IBM Plex Mono",monospace; color:var(--muted); font-size:9px; text-transform:uppercase; letter-spacing:.1em; }}
+    .fact .fv {{ font-family:"IBM Plex Mono",monospace; font-size:18px; margin-top:4px; }}
+    .fact .ok {{ color:var(--teal); }}
+    ul.motor {{ margin:8px 0 0 18px; font-family:"IBM Plex Mono",monospace; font-size:12px; }}
+    .held, .held-pos, .held-neg, .held-flat, .cand {{ display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px; vertical-align:middle; }}
+    .held {{ background:var(--teal); }}
+    .held-pos {{ background:var(--green); }}
+    .held-neg {{ background:var(--red); }}
+    .held-flat {{ background:var(--muted-2); }}
+    .cand {{ background:transparent; border:1.5px solid var(--muted-2); }}
+    .op-gate {{ background:var(--surface-2); border:1px solid var(--teal-dim); border-radius:8px; padding:12px; margin-bottom:12px; }}
+    .op-gate .gate-k {{ color:var(--teal); font-family:"IBM Plex Mono",monospace; font-size:10px; text-transform:uppercase; letter-spacing:.1em; }}
+    .op-gate .gate-v {{ font-size:22px; margin:5px 0; }}
+    .cash-adj {{ max-width:220px; padding:8px; border-radius:6px; border:1px solid var(--teal-dim); background:#061F3F; color:var(--bone); font-family:"IBM Plex Mono",monospace; }}
+    .op-rows {{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }}
+    .op-row {{ display:grid; grid-template-columns:110px 1fr 1fr 1fr 1fr 100px; gap:8px; align-items:end; background:var(--surface-2); border:1px solid var(--hair); border-radius:8px; padding:10px; }}
+    .op-row.blank {{ opacity:.85; border-style:dashed; }}
+    .op-row label {{ display:flex; flex-direction:column; gap:4px; font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }}
+    .op-field {{ width:100%; padding:8px; border-radius:6px; border:1px solid var(--hair); background:#061F3F; color:var(--bone); font-family:"IBM Plex Mono",monospace; }}
+    .wf .row {{ display:flex; justify-content:space-between; gap:10px; border-bottom:1px dashed var(--hair-soft); padding:8px 0; }}
+    .wf .row:last-child {{ border-bottom:none; }}
+    .wf .l {{ color:var(--muted); }}
+    .wf .v {{ font-family:"IBM Plex Mono",monospace; }}
+    .wf .row .op {{ display:inline-block; width:16px; color:var(--muted-2); font-family:"IBM Plex Mono",monospace; }}
+    .wf .row.sub {{ border-top:1px solid var(--hair); margin-top:4px; padding-top:10px; border-bottom:none; }}
+    .wf .row.sub .l, .wf .row.sub .v {{ color:var(--bone); font-weight:700; }}
+    .wf .row.fric .l, .wf .row.fric .v {{ color:var(--amber); }}
+    .wf .row.nav {{ background:rgba(82,185,163,.08); border:1px solid var(--teal-dim); border-radius:8px; padding:10px; margin-top:6px; }}
+    .wf .row.nav .l, .wf .row.nav .v {{ color:var(--teal); font-weight:700; }}
+    .wf .row.res .v {{ font-weight:700; }}
+    .sources {{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }}
+    .src {{ background:var(--surface-2); border:1px solid var(--hair); border-radius:8px; padding:10px; }}
+    .src.manual {{ border-color:var(--teal-dim); }}
+    .src .sk {{ font-family:"IBM Plex Mono",monospace; font-size:9px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; }}
+    .src .sv {{ margin-top:6px; font-family:"IBM Plex Mono",monospace; font-size:12px; }}
+    .recon {{ display:grid; grid-template-columns:1fr auto 1fr; gap:10px; margin-top:10px; align-items:stretch; }}
+    .rcol {{ background:var(--surface-2); border:1px solid var(--hair); border-radius:8px; padding:10px; text-align:center; }}
+    .rcol.real {{ border-color:var(--teal-dim); }}
+    .rcol .rk {{ color:var(--muted); font-family:"IBM Plex Mono",monospace; font-size:9px; text-transform:uppercase; letter-spacing:.1em; }}
+    .rcol .rv {{ font-family:"IBM Plex Mono",monospace; font-size:20px; margin-top:6px; }}
+    .rgap {{ display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:90px; }}
+    .rgap .gk {{ font-family:"IBM Plex Mono",monospace; font-size:9px; text-transform:uppercase; color:var(--muted-2); }}
+    .rgap .gv {{ font-family:"IBM Plex Mono",monospace; font-size:22px; color:var(--amber); }}
+    form {{ margin:0; }}
+    .form-grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; }}
+    input,select,button {{ width:100%; padding:8px; border-radius:6px; border:1px solid var(--hair); background:var(--surface-2); color:var(--bone); }}
+    button {{ cursor:pointer; font-weight:600; }}
+    @media (max-width:900px) {{ .op-row {{ grid-template-columns:1fr 1fr; }} .recon {{ grid-template-columns:1fr; }} .sources {{ grid-template-columns:1fr; }} }}
   </style>
 </head>
 <body>
-  <div class="top">
-    <div>
-      <h1>Boletim LIVE-REAL-TEST</h1>
-      <div class="badge mono">/painel web operacional</div>
+  <div class="topbar">
+    <div class="brand">
+      <div class="eyebrow">Boletim LIVE-REAL-TEST</div>
+      <h1>Fabrica US / C4</h1>
       {closed_note}
     </div>
-    <div class="mono">
-      <div>market_day: {html.escape(market_day)}</div>
-      <div>exec_day: {html.escape(today)}</div>
+    <div class="meta">
+      <div><div class="k">market_day</div><div class="v">{html.escape(market_day)}</div></div>
+      <div><div class="k">exec_day</div><div class="v">{html.escape(today)}</div></div>
+      <div><div class="k">status d+1</div><div class="v">is_d1_pos_rebalance={html.escape(str(is_d1_pos_rebalance))}</div></div>
     </div>
   </div>
 
-  <div class="grid">
-    <div class="card"><h3>Caixa Livre de Balanco</h3><div class="mono">{cash_free}</div></div>
-    <div class="card"><h3>Caixa Livre Real</h3><div class="mono">{caixa_real_informado_fmt}</div></div>
-    <div class="card"><h3>Delta Friccao (Balanco - Real)</h3><div class="mono">{friccao_balanco_real_fmt}</div></div>
-    <div class="card"><h3>Caixa Contabil</h3><div class="mono">{cash_accounting}</div></div>
-    <div class="card">
-      <h3>Status Rebalance / D+2</h3>
-      <div class="mono">is_rebalance_day: {html.escape(str(is_rebalance))}</div>
-      <div class="mono">cycles_to_next: {html.escape(str(cycles))}</div>
-      <div class="mono">next_rebalance: {html.escape(str(next_rebalance))}</div>
-      <div class="mono">is_d1_pos_rebalance: {html.escape(str(is_d1_pos_rebalance))}</div>
-    </div>
-  </div>
-
+  <div class="sec-label"><span class="idx">01</span> Evolucao - Base 1 / cota vs CAGR motor <span class="tag">real - desde aporte</span></div>
   <div class="card">
-    <h2>Base 1 real vs CAGR esperado</h2>
-    <div class="base-head">
-      <div><div class="base-k">Base 1 atual</div><div class="base-v">{base_now:.4f}</div><div class="base-sub {base_delta_cls}">{base_delta_txt} vs ancora</div></div>
-      <div><div class="base-k">CAGR esperado (holdout)</div><div class="base-v">{expect_now:.4f}</div><div class="base-sub">composicao diaria em 252 pregoes</div></div>
-      <div><div class="base-k">Delta Base1 - CAGR</div><div class="base-v {vs_cagr_cls}">{vs_cagr_txt}</div><div class="base-sub">pontos de base</div></div>
+    <div class="chart-head">
+      <div><div class="k">Base 1 atual</div><div class="v mono">{base_now:.4f}</div><div class="sub {base_delta_cls}">{base_delta_txt} vs ancora</div></div>
+      <div><div class="k">CAGR esperado</div><div class="v mono">{expect_now:.4f}</div><div class="sub">composicao diaria em 252 pregoes</div></div>
+      <div><div class="k">Delta Base1 - CAGR</div><div class="v mono {vs_cagr_cls}">{vs_cagr_txt}</div><div class="sub">pontos de base</div></div>
     </div>
-    {base_chart}
+    <div class="chart-wrap">{base_chart}</div>
   </div>
 
-  <div class="card">
-    <h2>Ponte de friccao (Balanco -> Real -> NAV)</h2>
-    <div class="bridge">
-      <div class="row"><div class="lab">Carteira (Fech. D-1)</div><div class="val" id="bridgeCarteira">{_fmt_usd(carteira_d1_valor_raw)}</div></div>
-      <div class="row"><div class="lab">Caixa Livre de Balanco</div><div class="val" id="bridgeCaixaBalanco">{_fmt_usd(cash_free_raw)}</div></div>
-      <div class="row"><div class="lab">Caixa Contabil</div><div class="val" id="bridgeCaixaContabil">{_fmt_usd(cash_accounting_raw)}</div></div>
-      <div class="row"><div class="lab">Total do Ativo (bruto)</div><div class="val" id="bridgeTotalBruto">{_fmt_usd(total_bruto_raw)}</div></div>
-      <div class="row"><div class="lab">Caixa Livre Real</div><div class="val" id="bridgeCaixaReal">{caixa_real_bridge}</div></div>
-      <div class="row"><div class="lab">Delta (Balanco - Real)</div><div class="val {delta_cls}" id="bridgeDelta">{delta_fmt}</div></div>
-      <div class="row"><div class="lab">Friccao operacional</div><div class="val {fric_op_cls}" id="bridgeFriccaoOperacional">{fric_op_fmt}</div></div>
-      <div class="row"><div class="lab">Corretagem acumulada</div><div class="val" id="bridgeCorretagem">{_fmt_usd(corretagem_total_raw)}</div></div>
-      <div class="row"><div class="lab">Friccao total (operacional + corretagem)</div><div class="val {fric_total_cls}" id="bridgeFriccaoTotal">{fric_total_fmt}</div></div>
-      <div class="row"><div class="lab">NAV (patrimonio liquido real)</div><div class="val" id="bridgeNav">{_fmt_usd(nav_raw)}</div></div>
-      <div class="row"><div class="lab">Capital em uso (aportes - retiradas)</div><div class="val" id="bridgeCapital">{_fmt_usd(capital_em_uso_raw)}</div></div>
-      <div class="row"><div class="lab">Resultado acumulado</div><div class="val {resultado_cls}" id="bridgeResultado">{resultado_fmt}</div></div>
-      <div class="row"><div class="lab">Rentabilidade acumulada</div><div class="val {rent_cls}" id="bridgeRent">{rent_fmt}</div></div>
+  <div class="sec-label"><span class="idx">02</span> Acao do dia <span class="tag">motor + defensivas</span></div>
+  <div class="card hero">
+    <div class="hero-word"><span class="dot"></span>{html.escape(str(suggestions.get("action", "HOLD")))}</div>
+    <div class="hero-sub">proximo rebalance: {html.escape(str(suggestions.get("next_rebalance")))} - ciclos: {html.escape(str(suggestions.get("cycles_to_next")))}</div>
+    <div class="facts">
+      <div class="fact">
+        <div class="fk">Rebalanceamento hoje</div>
+        <div class="fv {'ok' if not suggestions.get('is_rebalance_day') else ''}">{'SIM' if suggestions.get('is_rebalance_day') else 'NAO'}</div>
+      </div>
+      <div class="fact">
+        <div class="fk">Vendas defensivas</div>
+        <div class="fv {'ok' if not suggestions.get('defensive') else ''}">{len(suggestions.get('defensive', [])) if suggestions.get('defensive') else 'Nenhuma'}</div>
+      </div>
+      <div class="fact">
+        <div class="fk">Caixa Livre de Balanco</div>
+        <div class="fv mono">{cash_free}</div>
+      </div>
     </div>
-  </div>
-
-  <div class="card">
-    <h2>Carteira real</h2>
+    <p class="muted" style="margin-top:12px">Operacoes sugeridas pelo motor</p>
+    <ul class="motor">{motor_html}</ul>
+    <p class="muted" style="margin-top:12px">Vendas defensivas</p>
     <table>
-      <tr><th>Ticker</th><th>Data Compra</th><th>Qtd</th><th>Preco Compra</th><th>Fech. D-1</th><th>Heat %</th></tr>
+      <tr><th>Ticker</th><th style="text-align:right">Qtd</th><th style="text-align:right">Fech. D-1</th><th style="text-align:right">Heat</th><th>Motivo</th></tr>
+      {''.join(defensive_rows)}
+    </table>
+  </div>
+
+  <div class="sec-label"><span class="idx">03</span> Carteira real <span class="tag">posicoes - heat - nao realizado</span></div>
+  <div class="card">
+    <table>
+      <tr><th>Ticker</th><th>Data Compra</th><th style="text-align:right">Qtd</th><th style="text-align:right">Preco Compra</th><th style="text-align:right">Fech. D-1</th><th style="text-align:right">Heat %</th><th style="text-align:right">Nao Realizado</th></tr>
       {''.join(pos_rows)}
     </table>
   </div>
 
+  <div class="sec-label"><span class="idx">04</span> Livro de operacoes <span class="tag">apenas operacoes acontecidas</span></div>
   <div class="card">
-    <h2>Livro de operacoes por ativo</h2>
     <table>
-      <tr><th>Ticker</th><th>Compras</th><th>Vendas</th><th>Qtd Liquida</th><th>Custo Medio</th><th>Fech. D-1</th><th>Resultado Realizado</th><th>Resultado Nao Realizado</th></tr>
+      <tr><th>Ticker</th><th>Compras</th><th>Vendas</th><th style="text-align:right">Qtd Liquida</th><th style="text-align:right">Custo Medio</th><th style="text-align:right">Fech. D-1</th><th style="text-align:right">Resultado Realizado</th><th style="text-align:right">Resultado Nao Realizado</th></tr>
       {''.join(book_rows)}
     </table>
   </div>
 
+  <div class="sec-label"><span class="idx">05</span> Top-20 operacional <span class="tag">sparkline 62 pregoes</span></div>
   <div class="card">
-    <h2>Top-20 operacional (m3_rank)</h2>
+    <p class="muted" style="margin-bottom:8px">
+      Bolinha:
+      <span class="held-pos"></span> em carteira positivo -
+      <span class="held-neg"></span> em carteira negativo -
+      <span class="held-flat"></span> em carteira neutro -
+      <span class="cand"></span> fora da carteira
+    </p>
     <table>
-      <tr><th>Ticker</th><th>M3 Rank</th><th>Score M3</th><th>Peso-Alvo</th><th>Fech. D-1</th><th>62d</th></tr>
+      <tr><th>Ticker</th><th style="text-align:right">M3 Rank</th><th style="text-align:right">Score M3</th><th style="text-align:right">Fech. D-1</th><th style="text-align:right">62d</th></tr>
       {''.join(top_rows)}
     </table>
   </div>
 
+  <div class="sec-label"><span class="idx">06</span> Operacoes sugeridas pelo Analista <span class="tag">owner preenche - local</span></div>
   <div class="card">
-    <h2>Rascunho do dia</h2>
+    <div class="op-gate">
+      <div class="gate-k">Caixa Livre de Balanco</div>
+      <div class="gate-v mono">{cash_free}</div>
+      <p class="muted">Ajuste local para analise: nao grava no ledger.</p>
+      <div class="gate-k" style="margin-top:10px">Caixa Livre Real (espelho local)</div>
+      <input class="cash-adj" id="analystCaixaReal" type="number" step="0.01" placeholder="saldo no app BTG" />
+      <p class="muted" style="margin-top:8px">Friccao: Delta = Balanco - Real.</p>
+    </div>
+    <p class="muted">Sugestao corrente do motor</p>
+    <ul class="motor">{motor_html}</ul>
+    <table style="margin-top:8px">
+      <tr><th>Ticker</th><th style="text-align:right">Qtd</th><th style="text-align:right">Fech. D-1</th><th style="text-align:right">Heat</th><th>Motivo</th></tr>
+      {''.join(defensive_rows)}
+    </table>
+    <p class="muted" style="margin-top:10px">Linhas locais de sugestao (sem persistencia):</p>
+    <div class="op-rows" id="analystOpsRows"></div>
+  </div>
+
+  <div class="sec-label"><span class="idx">07</span> Balanco - fechamento real <span class="tag governs">Total -> Friccao -> NAV</span></div>
+  <div class="card">
+    <div class="wf">
+      <div class="row"><div class="l"><span class="op">&nbsp;</span>Carteira (Fech. D-1)</div><div class="v" id="bridgeCarteira">{_fmt_usd(carteira_d1_valor_raw)}</div></div>
+      <div class="row"><div class="l"><span class="op">+</span>Caixa Livre de Balanco</div><div class="v" id="bridgeCaixaBalanco">{_fmt_usd(cash_free_raw)}</div></div>
+      <div class="row"><div class="l"><span class="op">+</span>Caixa Contabil</div><div class="v" id="bridgeCaixaContabil">{_fmt_usd(cash_accounting_raw)}</div></div>
+      <div class="row sub"><div class="l">= Total do Ativo (bruto)</div><div class="v" id="bridgeTotalBruto">{_fmt_usd(total_bruto_raw)}</div></div>
+      <div class="row fric"><div class="l"><span class="op">-</span>Caixa Livre Real</div><div class="v" id="bridgeCaixaReal">{caixa_real_bridge}</div></div>
+      <div class="row fric"><div class="l"><span class="op">=</span>Delta (Balanco - Real)</div><div class="v {delta_cls}" id="bridgeDelta">{delta_fmt}</div></div>
+      <div class="row fric"><div class="l"><span class="op">=</span>Friccao operacional</div><div class="v {fric_op_cls}" id="bridgeFriccaoOperacional">{fric_op_fmt}</div></div>
+      <div class="row fric"><div class="l"><span class="op">+</span>Corretagem acumulada</div><div class="v" id="bridgeCorretagem">{_fmt_usd(corretagem_total_raw)}</div></div>
+      <div class="row fric"><div class="l"><span class="op">=</span>Friccao total</div><div class="v {fric_total_cls}" id="bridgeFriccaoTotal">{fric_total_fmt}</div></div>
+      <div class="row nav"><div class="l">NAV (patrimonio liquido real)</div><div class="v" id="bridgeNav">{_fmt_usd(nav_raw)}</div></div>
+      <div class="row"><div class="l">Capital em uso</div><div class="v" id="bridgeCapital">{_fmt_usd(capital_em_uso_raw)}</div></div>
+      <div class="row res"><div class="l">Resultado acumulado</div><div class="v {resultado_cls}" id="bridgeResultado">{resultado_fmt}</div></div>
+      <div class="row res"><div class="l">Rentabilidade acumulada</div><div class="v {rent_cls}" id="bridgeRent">{rent_fmt}</div></div>
+    </div>
+    <h3 style="margin-top:12px">Encerramento definitivo do dia</h3>
+    <form method="POST" action="/painel/encerrar">
+      <input type="hidden" name="exec_day" value="{html.escape(today)}" />
+      <label>Caixa Livre Real (saldo do app BTG, opcional)<input id="caixaRealInput" type="number" name="caixa_real" min="0.00" step="0.01" placeholder="ex: 950.00" {caixa_real_value_attr} /></label>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:8px"><input type="checkbox" name="confirmar" value="sim" required style="width:auto" /> Confirmo encerramento definitivo.</label>
+      <button type="submit" style="margin-top:8px">Encerrar o Dia</button>
+    </form>
+    <p class="muted">Se informado, o saldo alimenta Caixa Livre Real e Delta Friccao (Balanco - Real).</p>
+  </div>
+
+  <div class="sec-label"><span class="idx">08</span> Reconciliacao de caixa - friccao <span class="tag">Balanco vs Real</span></div>
+  <div class="card">
+    <div class="sources">
+      <div class="src">
+        <div class="sk">Caixa Livre de Balanco</div>
+        <div class="sv">Valor derivado das movimentacoes financeiras do ledger real.</div>
+      </div>
+      <div class="src manual">
+        <div class="sk">Caixa Livre Real</div>
+        <div class="sv">Valor informado pelo Owner para reconciliacao operacional.</div>
+      </div>
+    </div>
+    <div class="recon">
+      <div class="rcol"><div class="rk">Caixa Livre de Balanco</div><div class="rv" id="reconCaixaBalanco">{_fmt_usd(cash_free_raw)}</div></div>
+      <div class="rgap"><div class="gk">Delta</div><div class="gv {delta_cls}" id="reconDelta">{delta_fmt}</div></div>
+      <div class="rcol real"><div class="rk">Caixa Livre Real</div><div class="rv" id="reconCaixaRealMirror">{caixa_real_bridge}</div></div>
+    </div>
+    <p class="muted" style="margin-top:10px">Corretagem acumulada: {_fmt_usd(corretagem_total_raw)}. Delta operacional monitora divergencia Balanco vs Real.</p>
+  </div>
+
+  <div class="card">
+    <h2>Rascunho operacional (persistente)</h2>
     <table>
-      <tr><th>Tipo</th><th>Ticker</th><th>Qtd</th><th>Preco real</th><th>Corretagem</th><th>Preco-sombra</th><th>Acoes</th></tr>
+      <tr><th>Tipo</th><th>Ticker</th><th style="text-align:right">Qtd</th><th style="text-align:right">Preco real</th><th style="text-align:right">Corretagem</th><th style="text-align:right">Preco-sombra</th><th>Acoes</th></tr>
       {''.join(draft_rows)}
     </table>
     <p class="muted">Salvar rascunho nao modifica o ledger definitivo.</p>
@@ -995,7 +1238,7 @@ def render_live_html(view: dict[str, Any]) -> str:
           </select>
         </label>
         <label>Ticker<input type="text" name="ticker" required /></label>
-        <label>Valor investido US$ (opcional, tem prioridade sobre Quantidade)<input type="number" name="valor_investido" min="0.00" step="0.01" placeholder="ex: 1000.00" /></label>
+        <label>Valor investido US$ (opcional, prioridade sobre Quantidade)<input type="number" name="valor_investido" min="0.00" step="0.01" placeholder="ex: 1000.00" /></label>
         <label>Quantidade (preencha se NAO usar Valor investido)<input type="number" name="qtd" min="0" step="0.00000001" /></label>
         <label>Preco real<input type="number" name="preco" min="0.01" step="0.01" required /></label>
         <label>Corretagem<input type="number" name="corretagem" min="0.00" step="0.01" value="2.50" /></label>
@@ -1004,17 +1247,6 @@ def render_live_html(view: dict[str, Any]) -> str:
       <p class="muted">Se preco-sombra ficar vazio, o sistema tenta auto-lookup no SSOT operacional.</p>
       <button type="submit">Salvar rascunho</button>
     </form>
-  </div>
-
-  <div class="card">
-    <h2>Encerramento definitivo do dia</h2>
-    <form method="POST" action="/painel/encerrar">
-      <input type="hidden" name="exec_day" value="{html.escape(today)}" />
-      <label>Caixa Livre Real (saldo do app BTG, opcional)<input id="caixaRealInput" type="number" name="caixa_real" min="0.00" step="0.01" placeholder="ex: 950.00" {caixa_real_value_attr} /></label>
-      <label><input type="checkbox" name="confirmar" value="sim" required /> Confirmo encerramento definitivo.</label>
-      <button type="submit">Encerrar o Dia</button>
-    </form>
-    <p class="muted">Se informado, o saldo alimenta o Caixa Livre Real e a Delta Friccao (Balanco - Real).</p>
   </div>
 
   <div class="card">
@@ -1027,7 +1259,7 @@ def render_live_html(view: dict[str, Any]) -> str:
     </table>
   </div>
 
-  <p class="muted">Fallback continua disponivel via scripts/atalhos: USA_REGISTRAR_ORDEM e USA_ENCERRAR_DIA. Grafico Base1/CAGR, sparklines 62d e ponte de friccao rodam localmente sem dependencias externas.</p>
+  <p class="muted">Fallback disponivel via scripts/atalhos: USA_REGISTRAR_ORDEM e USA_ENCERRAR_DIA. Base1/CAGR, sparklines 62d e ponte de friccao rodam localmente sem dependencias externas.</p>
 
   <script>
   (function() {{
@@ -1039,6 +1271,8 @@ def render_live_html(view: dict[str, Any]) -> str:
     const totalBruto = carteira + caixaBalanco + caixaContabil;
 
     const input = document.getElementById("caixaRealInput");
+    const analystInput = document.getElementById("analystCaixaReal");
+    const opsRows = document.getElementById("analystOpsRows");
 
     function fmtUsd(value) {{
       const v = Number(value) || 0;
@@ -1068,7 +1302,13 @@ def render_live_html(view: dict[str, Any]) -> str:
     }}
 
     function refresh() {{
-      const raw = input ? input.value : "";
+      let raw = "";
+      if (analystInput && analystInput.value !== "") {{
+        raw = analystInput.value;
+      }} else if (input) {{
+        raw = input.value;
+      }}
+
       const has = raw !== "" && !Number.isNaN(Number(raw));
       const caixaReal = has ? Number(raw) : null;
       const delta = has ? (caixaBalanco - caixaReal) : 0.0;
@@ -1082,10 +1322,14 @@ def render_live_html(view: dict[str, Any]) -> str:
         const d = fmtSignedUsd(delta);
         setText("bridgeDelta", d.txt, d.cls);
         setText("bridgeFriccaoOperacional", d.txt, d.cls);
+        setText("reconDelta", d.txt, d.cls);
+        setText("reconCaixaRealMirror", fmtUsd(caixaReal), "");
       }} else {{
         setText("bridgeCaixaReal", "pendente", "flat");
         setText("bridgeDelta", "pendente", "flat");
         setText("bridgeFriccaoOperacional", "pendente", "flat");
+        setText("reconDelta", "pendente", "flat");
+        setText("reconCaixaRealMirror", "pendente", "flat");
       }}
 
       const ft = fmtSignedUsd(friccaoTotal);
@@ -1097,7 +1341,58 @@ def render_live_html(view: dict[str, Any]) -> str:
       setText("bridgeRent", rp.txt, rp.cls);
     }}
 
-    if (input) input.addEventListener("input", refresh);
+    function makeAnalystRow(isBlank) {{
+      const row = document.createElement("div");
+      row.className = "op-row" + (isBlank ? " blank" : "");
+      row.innerHTML = `
+        <label>Tipo
+          <select class="op-field op-tipo">
+            <option value="">-</option>
+            <option value="COMPRA">COMPRA</option>
+            <option value="VENDA">VENDA</option>
+          </select>
+        </label>
+        <label>Ticker<input class="op-field" type="text" placeholder="ex: REPL" /></label>
+        <label>Valor US$<input class="op-field" type="number" step="0.01" min="0" placeholder="ex: 1000.00" /></label>
+        <label>Preco<input class="op-field" type="number" step="0.01" min="0" placeholder="preco medio" /></label>
+        <label>Qtd (opcional)<input class="op-field" type="number" step="0.00000001" min="0" placeholder="ou valor/preco" /></label>
+        <label>Corretagem<input class="op-field" type="number" step="0.01" min="0" value="2.50" /></label>
+      `;
+      const sel = row.querySelector(".op-tipo");
+      if (sel) {{
+        sel.addEventListener("change", () => {{
+          if (!sel.value) return;
+          row.classList.remove("blank");
+          const lastSel = opsRows ? opsRows.querySelector(".op-row:last-child .op-tipo") : null;
+          if (lastSel && lastSel.value && opsRows) {{
+            opsRows.appendChild(makeAnalystRow(true));
+          }}
+        }});
+      }}
+      return row;
+    }}
+
+    if (opsRows) {{
+      opsRows.appendChild(makeAnalystRow(true));
+    }}
+
+    if (input) {{
+      input.addEventListener("input", () => {{
+        if (analystInput && document.activeElement === input) {{
+          analystInput.value = input.value;
+        }}
+        refresh();
+      }});
+    }}
+    if (analystInput) {{
+      analystInput.addEventListener("input", () => {{
+        if (input && document.activeElement === analystInput) {{
+          input.value = analystInput.value;
+        }}
+        refresh();
+      }});
+    }}
+
     refresh();
   }})();
   </script>

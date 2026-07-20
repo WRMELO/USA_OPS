@@ -493,6 +493,40 @@ seus atalhos de dados:
 
 Ref: SALA D-119, USA D-143, USA D-142, USA D-141, R-018, R-023, R-049, R-056.
 
+### 6.18 Paridade completa do preview no /painel LIVE-REAL-TEST (D-144)
+
+A partir de D-144, o `/painel` LIVE-REAL-TEST fecha a diferenca residual para o
+padrao validado em `scratch/preview.html`, com contrato de producao (sem copiar
+atalhos de dados do scratch):
+
+1. **Layout operacional completo (01-08)**:
+   o painel passa a exibir 8 secoes numeradas (Evolucao, Acao do dia, Carteira
+   real, Livro de operacoes, Top-20, Operacoes sugeridas pelo Analista,
+   Balanco, Reconciliacao de caixa) com identidade visual azul do USA.
+2. **Acao do dia + defensivas no proprio /painel**:
+   o renderer passa a calcular sugestoes defensivas a partir de `holdings`
+   (`heat_pct`, `spc_status`, `drawdown_pct`) e do estado do forno
+   (`action`, `is_rebalance_day`), sem escrever no ledger.
+3. **Secao local de Operacoes sugeridas pelo Analista**:
+   o bloco e estritamente local (frontend), sem formulario POST e sem nova rota
+   de escrita; serve como area de preenchimento/simulacao.
+4. **Contrato de escrita preservado**:
+   os fluxos operacionais existentes permanecem oficiais e inalterados:
+   `Salvar rascunho`, `Remover` e `Encerrar o Dia`.
+5. **Sem hardcode e sem CDN**:
+   `QTY_FIXES` continua proibido no caminho produtivo e o painel permanece sem
+   dependencia de `Chart.js`/CDN.
+
+**Contrato de escopo**:
+
+- `pipeline/servidor.py` manteve o contrato da rota `/painel` sem adicionar
+  endpoint novo.
+- Nenhum arquivo blindado de §6.6 foi tocado.
+- Abrir `/painel` nao cria nova escrita para o dia corrente por efeito de
+  renderizacao.
+
+Ref: SALA D-121, USA D-144, USA D-143, R-018, R-023, R-049, R-056.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.
