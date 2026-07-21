@@ -201,6 +201,21 @@ def _load_ledger_events(ledger_dir: Path) -> list[ledger_mod.LedgerEvent]:
         ledger_mod.LEDGER_PATH = previous
 
 
+def _active_matching_events(
+    events: list[ledger_mod.LedgerEvent],
+    item: dict[str, Any],
+) -> list[ledger_mod.LedgerEvent]:
+    corrected_ids = {ev.ref_id for ev in events if ev.type == EventType.CORRECTION and ev.ref_id}
+    matching = [
+        ev
+        for ev in events
+        if ev.type.value == item["action"]
+        and (ev.ticker or "").upper().strip() == item["ticker"]
+        and ev.exec_date.isoformat() == item["trade_date"]
+    ]
+    return [ev for ev in matching if ev.id not in corrected_ids]
+
+
 def propose(note_path: Path, ledger_dir: Path) -> dict[str, Any]:
     ledger_dir = _resolve_ledger_dir(ledger_dir)
     note_date = _mmddyyyy_from_filename(note_path)
@@ -230,13 +245,7 @@ def propose(note_path: Path, ledger_dir: Path) -> dict[str, Any]:
 
     for item in aggregates:
         key = _build_key(note_path, item["ticker"], item["action"], item["trade_date"])
-        matching = [
-            ev
-            for ev in events
-            if ev.type.value == item["action"]
-            and (ev.ticker or "").upper().strip() == item["ticker"]
-            and ev.exec_date.isoformat() == item["trade_date"]
-        ]
+        matching = _active_matching_events(events, item)
         matching_ids = {ev.id for ev in matching}
         ledger_qty = round(sum(float(ev.qtd or 0.0) for ev in matching), 8)
         ledger_amount = round(sum(float(ev.amount or 0.0) for ev in matching), 2)

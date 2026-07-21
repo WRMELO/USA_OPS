@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 from enum import Enum
 from pathlib import Path
@@ -26,6 +26,7 @@ class EventType(str, Enum):
     FEE = "FEE"
     CAIXA_REAL_INFORMADO = "CAIXA_REAL_INFORMADO"
     CORRECTION = "CORRECTION"
+    RECON_ADJUST = "RECON_ADJUST"
 
 
 @dataclass(frozen=True)
@@ -143,6 +144,9 @@ def create_event(
     reason: str | None = None,
     event_id: str | None = None,
 ) -> LedgerEvent:
+    if event_type == EventType.RECON_ADJUST:
+        # Ajuste de reconciliacao nunca pode mover caixa/investido.
+        amount = 0.0
     if settle_date is None and event_type in {EventType.BUY, EventType.SELL}:
         settle_date = _next_trading_day(exec_date)
     return LedgerEvent(
@@ -256,7 +260,29 @@ def is_duplicate(event: LedgerEvent) -> bool:
 def _effective_events(as_of_date: date) -> list[LedgerEvent]:
     all_events = [e for e in read_all_events() if e.exec_date <= as_of_date]
     cancelled = {e.ref_id for e in all_events if e.type == EventType.CORRECTION and e.ref_id}
-    return [e for e in all_events if e.id not in cancelled and e.type != EventType.CORRECTION]
+    adjustments: dict[str, LedgerEvent] = {}
+    for ev in all_events:
+        if ev.type == EventType.RECON_ADJUST and ev.ref_id and ev.id not in cancelled:
+            adjustments[ev.ref_id] = ev
+
+    out: list[LedgerEvent] = []
+    for ev in all_events:
+        if ev.id in cancelled:
+            continue
+        if ev.type in {EventType.CORRECTION, EventType.RECON_ADJUST}:
+            continue
+        adj = adjustments.get(ev.id)
+        if adj is not None:
+            out.append(
+                replace(
+                    ev,
+                    qtd=adj.qtd if adj.qtd is not None else ev.qtd,
+                    price=adj.price if adj.price is not None else ev.price,
+                )
+            )
+        else:
+            out.append(ev)
+    return out
 
 
 def compute_positions(as_of_date: date) -> dict[str, list[dict[str, Any]]]:

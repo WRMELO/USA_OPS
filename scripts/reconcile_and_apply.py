@@ -1,11 +1,11 @@
-"""Reconciliacao autonoma BTG x ledger real (D-123/USA D-145, R-058).
+"""Reconciliacao autonoma BTG x ledger real (D-123/USA D-145, R-058/R-059).
 
 Difere de reconcile_broker_note.py (propositivo): esta ferramenta APLICA
-correcoes no ledger real quando o impacto liquido em caixa (cash_free) for
-menor que o limiar de materialidade (default US$ 1,00). Notas oficiais BTG
-sao SSOT (R-056). Toda escrita e append-only via par CORRECTION + evento
-reemitido (EventType.CORRECTION, ja suportado por pipeline/ledger.py e pelo
-padrao R-038) -- nunca sobrescrita destrutiva de linha existente.
+ajustes autonoma apenas para divergencia de quantidade/preco sem impacto de
+caixa. Divergencia que mova `amount` ou `commission` permanece supervisonada
+via PROPOSTA no log oficial (R-056). Notas oficiais BTG sao SSOT.
+Toda escrita e append-only; para ajuste imaterial usa EventType.RECON_ADJUST
+(`amount=0`) ancorado ao evento original, sem sobrescrita destrutiva.
 
 Checkpoint forward-only: nota com todos os itens resolvidos avanca o
 checkpoint; nota com item bloqueado por materialidade NAO avanca e fica
@@ -32,6 +32,7 @@ from pipeline.ledger import EventType
 from scripts.reconcile_broker_note import (
     DEFAULT_LEDGER_DIR,
     LOG_FILE,
+    _active_matching_events,
     _append_log_entry,
     _build_key,
     _load_ledger_events,
@@ -140,13 +141,11 @@ def _git_commit_ledger(ledger_dir: Path, message: str) -> dict[str, Any]:
     return result
 
 
-def _apply_correction(
+def _apply_recon_adjust(
     ledger_dir: Path,
     matching_events: list[Any],
-    all_events: list[Any],
     item: dict[str, Any],
     note_path: Path,
-    cash_delta: float,
 ) -> dict[str, Any]:
     previous_ledger_path = ledger_mod.LEDGER_PATH
     ledger_mod.LEDGER_PATH = ledger_dir / "ledger_real.jsonl"
@@ -157,68 +156,28 @@ def _apply_correction(
                 "applied": False,
                 "reason": f"esperado 1 evento {item['action']} correspondente, encontrado {len(buy_or_sell)}",
             }
-        original = buy_or_sell[0]
+        target = buy_or_sell[0]
         new_qty = round(float(item["qty"]), 8)
         new_price = round(float(item["avg_price"]), 6)
-        new_amount = round(float(item["principal"]), 2)
-
-        correction_event = ledger_mod.create_event(
-            EventType.CORRECTION,
-            original.exec_date,
+        adjust_event = ledger_mod.create_event(
+            EventType.RECON_ADJUST,
+            target.exec_date,
             0.0,
-            ticker=original.ticker,
-            ref_id=original.id,
-            reason=(
-                f"Auto-reconciliacao BTG {note_path.name}: qtd/preco/amount alinhados a nota oficial "
-                f"(Delta caixa=US$ {cash_delta:.2f} < US$ 1,00)"
-            ),
-        )
-        replacement_event = ledger_mod.create_event(
-            EventType(item["action"]),
-            original.exec_date,
-            new_amount,
-            ticker=original.ticker,
+            ticker=target.ticker,
             qtd=new_qty,
             price=new_price,
-            settle_date=original.settle_date,
+            ref_id=target.id,
             reason=(
-                f"{original.reason or ''} | auto-reconciliado via {note_path.name} "
-                f"(Delta caixa=US$ {cash_delta:.2f} < US$ 1,00)"
-            ).strip(" |"),
+                f"Auto-reconciliacao BTG {note_path.name}: qtd/preco alinhados a nota oficial "
+                "(sem alterar investido)"
+            ),
         )
-        ledger_mod.append_event(correction_event)
-        ledger_mod.append_event(replacement_event)
-
-        fee_events = [ev for ev in all_events if ev.type == EventType.FEE and ev.ref_id == original.id]
-        new_commission = float(item.get("commission", 0.0))
-        old_commission = sum(float(fee_ev.amount) for fee_ev in fee_events)
-        if fee_events and abs(new_commission - old_commission) > 0.01:
-            for fee_ev in fee_events:
-                ledger_mod.append_event(
-                    ledger_mod.create_event(
-                        EventType.CORRECTION,
-                        fee_ev.exec_date,
-                        0.0,
-                        ticker=fee_ev.ticker,
-                        ref_id=fee_ev.id,
-                        reason=f"Auto-reconciliacao BTG {note_path.name}: corretagem alinhada a nota oficial",
-                    )
-                )
-            ledger_mod.append_event(
-                ledger_mod.create_event(
-                    EventType.FEE,
-                    original.exec_date,
-                    round(new_commission, 2),
-                    ticker=original.ticker,
-                    ref_id=replacement_event.id,
-                    reason=f"Corretagem auto-reconciliada via {note_path.name}",
-                )
-            )
+        ledger_mod.append_event(adjust_event)
 
         return {
             "applied": True,
-            "original_event_id": original.id,
-            "replacement_event_id": replacement_event.id,
+            "target_event_id": target.id,
+            "adjust_event_id": adjust_event.id,
         }
     finally:
         ledger_mod.LEDGER_PATH = previous_ledger_path
@@ -266,13 +225,7 @@ def apply_dir(
             if key in decisions_by_key:
                 continue
 
-            matching = [
-                ev
-                for ev in events
-                if ev.type.value == item["action"]
-                and (ev.ticker or "").upper().strip() == item["ticker"]
-                and ev.exec_date.isoformat() == item["trade_date"]
-            ]
+            matching = _active_matching_events(events, item)
             if not matching:
                 blocked_items.append(
                     {
@@ -316,21 +269,25 @@ def apply_dir(
                 "cash_delta": cash_delta,
             }
 
-            if abs(cash_delta) < cash_materiality_usd:
+            qty_only_adjustable = abs(qty_diff) > 1e-6 and abs(amount_diff) <= 0.01 and abs(fee_diff) <= 0.01
+
+            if qty_only_adjustable:
                 if dry_run:
                     row["would_apply"] = True
+                    row["mode"] = "recon_adjust"
                     applied_items.append(row)
                     continue
                 backup_path = _backup_ledger(ledger_path, item["ticker"])
-                result = _apply_correction(ledger_dir, matching, events, item, note_path, cash_delta)
+                result = _apply_recon_adjust(ledger_dir, matching, item, note_path)
                 row["applied"] = result.get("applied", False)
                 row["backup_path"] = str(backup_path)
+                row["mode"] = "recon_adjust"
                 if not result.get("applied"):
                     row["error"] = result.get("reason")
                     note_fully_resolved = False
                 applied_items.append(row)
             else:
-                row["status"] = "divergencia_material_bloqueada"
+                row["status"] = "divergencia_caixa_requer_supervisao"
                 if key not in existing_proposal_keys:
                     _append_log_entry(
                         log_path,
@@ -374,7 +331,7 @@ def apply_dir(
     git_result = None
     if not dry_run and any(row.get("applied") for row in applied_items):
         tickers = ",".join(sorted({row["ticker"] for row in applied_items if row.get("applied")}))
-        commit_msg = f"fix(ledger): auto-reconcile BTG {tickers} (max |Delta caixa| < US$ {cash_materiality_usd:.2f})"
+        commit_msg = f"fix(ledger): auto-reconcile BTG qty/price {tickers} (sem alterar investido)"
         git_result = _git_commit_ledger(ledger_dir, commit_msg)
 
     return {

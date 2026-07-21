@@ -593,6 +593,43 @@ material:
 Ref: SALA D-124, USA D-146, SALA D-116, USA D-140, SALA D-123, USA D-145,
 R-056, R-058.
 
+### 6.21 Novacao da reconciliacao 17/07 e novo contrato RECON_ADJUST (D-147)
+
+A partir de D-147, o contrato tecnico da reconciliacao autonoma BTG e
+endurecido para eliminar dupla contagem estrutural e blindar investido/caixa:
+
+1. **Scanner com semantica de evento ativo (R-038)**:
+   `scripts/reconcile_broker_note.py` e `scripts/reconcile_and_apply.py`
+   passam a excluir eventos cancelados por `CORRECTION.ref_id` ao comparar
+   nota x ledger.
+2. **Auto-aplicacao restrita a qtd/preco**:
+   divergencia imaterial sem impacto de caixa e aplicada via
+   `EventType.RECON_ADJUST` (ref_id do evento ativo, `amount=0` por
+   construcao), sem reemitir BUY/SELL/FEE.
+3. **Impacto de caixa sempre supervisionado**:
+   qualquer divergencia com `abs(amount_diff) > US$ 0,01` ou
+   `abs(commission_diff) > US$ 0,01` NUNCA e auto-aplicada, mesmo com
+   `|cash_delta| < US$ 1,00`; permanece em `PROPOSTA` para fluxo de R-056.
+4. **Novacao append-only da nota 17/07**:
+   os pares `CORRECTION + BUY reemitido` da auto-reconciliacao anterior sao
+   superados por migracao append-only que:
+   (a) cancela o BUY reemitido, (b) restaura base pre-reconciliacao e
+   (c) aplica `RECON_ADJUST` para qtd/preco, com relink de FEE para o BUY
+   restaurado, preservando caixa e investido.
+5. **Gate consultivo do Analista-USA**:
+   o Passo 0c passa a bloquear por `abs(cash_delta) > US$ 0,01`, alinhado ao
+   novo contrato de supervisao de caixa.
+
+**Contrato de escopo**:
+
+- Esta secao supersede parcialmente §6.18 e §6.20 apenas na parte de
+  auto-aplicacao de `amount`/`commission` e no limiar do gate consultivo.
+- Permanecem vigentes: append-only, checkpoint forward-only e vedacao de
+  escrita do Analista-USA no ledger real.
+- Nenhum arquivo blindado de §6.6 e tocado por esta mudanca.
+
+Ref: SALA D-125, USA D-147, SALA D-124, USA D-146, R-038, R-056, R-058, R-059.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.

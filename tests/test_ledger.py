@@ -666,3 +666,98 @@ def test_build_real_base1_series_appends_live_point(tmp_path):
     assert series[-1]["date"] == day2.isoformat()
     assert abs(series[-1]["base1"] - 1.05) < 1e-6
 
+
+def test_recon_adjust_updates_positions_without_cash_impact(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+    day = date(2026, 7, 21)
+
+    _append(
+        LedgerEvent(
+            id="AP1",
+            type=EventType.APORTE,
+            exec_date=day,
+            created_at=datetime.now(tz=UTC),
+            amount=1200.0,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="BUY1",
+            type=EventType.BUY,
+            exec_date=day,
+            created_at=datetime.now(tz=UTC),
+            ticker="AAA",
+            qtd=10.0,
+            price=100.0,
+            amount=1000.0,
+            settle_date=day,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="FEE1",
+            type=EventType.FEE,
+            exec_date=day,
+            created_at=datetime.now(tz=UTC),
+            ticker="AAA",
+            amount=2.5,
+            ref_id="BUY1",
+        )
+    )
+
+    cash_before = ledger.compute_cash(day)
+
+    _append(
+        LedgerEvent(
+            id="ADJ1",
+            type=EventType.RECON_ADJUST,
+            exec_date=day,
+            created_at=datetime.now(tz=UTC),
+            ticker="AAA",
+            qtd=12.5,
+            price=80.0,
+            amount=0.0,
+            ref_id="BUY1",
+            reason="ajuste de reconciliacao",
+        )
+    )
+
+    pos = ledger.compute_positions(day)
+    assert "AAA" in pos
+    assert len(pos["AAA"]) == 1
+    assert abs(float(pos["AAA"][0]["qtd"]) - 12.5) < 1e-6
+    assert abs(float(pos["AAA"][0]["buy_price"]) - 80.0) < 1e-6
+
+    book = ledger.build_operations_book(day)
+    row = book["AAA"]
+    assert abs(float(row["qtd_liquida"]) - 12.5) < 1e-6
+    assert abs(float(row["custo_medio"]) - 80.0) < 1e-6
+    assert abs(float(row["investido"]) - 1000.0) < 0.01
+
+    cash_after = ledger.compute_cash(day)
+    assert abs(float(cash_before["cash_free"]) - float(cash_after["cash_free"])) < 1e-9
+    assert abs(float(cash_before["cash_accounting"]) - float(cash_after["cash_accounting"])) < 1e-9
+    assert abs(ledger.total_fees(day) - 2.5) < 1e-9
+
+
+def test_create_event_recon_adjust_forces_zero_amount(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+    day = date(2026, 7, 21)
+
+    ev = ledger.create_event(
+        EventType.RECON_ADJUST,
+        day,
+        999.99,
+        ticker="AAA",
+        qtd=1.0,
+        price=10.0,
+        ref_id="BUY1",
+        reason="teste",
+    )
+    assert abs(float(ev.amount)) < 1e-12
+
+    _append(ev)
+    saved = ledger.read_all_events()[-1]
+    assert saved.type == EventType.RECON_ADJUST
+    assert abs(float(saved.amount)) < 1e-12
+

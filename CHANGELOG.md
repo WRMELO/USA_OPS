@@ -2,6 +2,7 @@
 
 ## 2026-07-21
 
+- feat(ledger-real): T-USA-RECON-QTYPRICE-NOVACAO-V1 — corrige os scanners `scripts/reconcile_broker_note.py` e `scripts/reconcile_and_apply.py` para considerar apenas eventos ativos (R-038), introduz `EventType.RECON_ADJUST` (`amount=0`) no `pipeline/ledger.py`, restringe auto-aplicação a ajuste de quantidade/preço sem impacto de caixa, e aplica novação append-only da nota `Confirm_BTGP_001_BPXB000057_07172026.pdf` (16 tickers) com relink de `FEE` para BUY restaurado via `scripts/migrate_ledger_20260721_novacao_recon_qtyprice.py`. Inclui cobertura em `tests/test_ledger.py`, `tests/test_reconcile_broker_note.py` e `tests/test_migrate_ledger_20260721_novacao_recon_qtyprice.py`, além de ajustes de contrato em `GOVERNANCE.md`, `.cursor/skills/reconciliador-btg/SKILL.md` e `.cursor/skills/analista-usa/SKILL.md`. Decision: D-147 (ref cruzada: SALA D-125).
 - docs(analista-usa): T-SDC-ANALISTA-USA-DELEGAR-RECONCILIACAO-BTG-V1 — o Passo 0c da skill `analista-usa` deixa de executar conferencia via CLI e passa a ler `data/live_real_test/reconciliation_checkpoint.json` + `data/live_real_test/reconciliation_log.jsonl`, bloqueando apenas pendencia material (`|cash_delta| >= US$ 1,00`) sem alterar o motor nem o `reconciliador-btg`. Artefatos: `../.cursor/skills/analista-usa/SKILL.md`, `GOVERNANCE.md`, `DECISION_LOG.md`. Decision: D-146 (ref cruzada: SALA D-124; supersede parcialmente D-140).
 
 ## 2026-07-20

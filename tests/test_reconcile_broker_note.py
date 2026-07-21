@@ -143,6 +143,134 @@ def test_discover_notes_returns_empty_list_for_missing_dir(tmp_path):
     assert reconcile_mod.discover_notes(missing) == []
 
 
+def test_active_matching_events_ignores_cancelled_buy(tmp_path):
+    ledger_dir = tmp_path / "live_real"
+    _write_jsonl(
+        ledger_dir / "ledger_real.jsonl",
+        [
+            {
+                "id": "BUY-OLD",
+                "type": "BUY",
+                "exec_date": "2026-07-17",
+                "created_at": "2026-07-17T12:00:00+00:00",
+                "ticker": "FCEL",
+                "qtd": 53.87931034,
+                "price": 18.56,
+                "amount": 1000.0,
+                "settle_date": "2026-07-20",
+                "ref_id": None,
+                "reason": "original",
+            },
+            {
+                "id": "CORR-1",
+                "type": "CORRECTION",
+                "exec_date": "2026-07-17",
+                "created_at": "2026-07-20T23:58:46+00:00",
+                "ticker": "FCEL",
+                "qtd": None,
+                "price": None,
+                "amount": 0.0,
+                "settle_date": None,
+                "ref_id": "BUY-OLD",
+                "reason": "corrige original",
+            },
+            {
+                "id": "BUY-NEW",
+                "type": "BUY",
+                "exec_date": "2026-07-17",
+                "created_at": "2026-07-20T23:58:47+00:00",
+                "ticker": "FCEL",
+                "qtd": 53.89150562,
+                "price": 18.5558,
+                "amount": 1000.0,
+                "settle_date": "2026-07-20",
+                "ref_id": None,
+                "reason": "replacement",
+            },
+        ],
+    )
+    events = reconcile_mod._load_ledger_events(ledger_dir)
+    item = {"ticker": "FCEL", "action": "BUY", "trade_date": "2026-07-17"}
+
+    matching = reconcile_mod._active_matching_events(events, item)
+
+    assert [ev.id for ev in matching] == ["BUY-NEW"]
+
+
+def test_propose_uses_only_active_event_after_correction(tmp_path, monkeypatch):
+    note_path = tmp_path / "Confirm_BTGP_001_BPXB000057_07172026.pdf"
+    note_path.write_text("placeholder", encoding="utf-8")
+
+    synthetic_rows = [
+        {
+            "ticker": "FCEL",
+            "action": "BUY",
+            "qty": 53.89150562,
+            "price": 18.5558,
+            "trade_date": "2026-07-17",
+            "settle_date": "2026-07-20",
+            "principal": 1000.0,
+            "commission": 0.0,
+            "transaction_fee": 0.0,
+            "other_fees": 0.0,
+            "net": 1000.0,
+        }
+    ]
+    monkeypatch.setattr(reconcile_mod, "parse_note", lambda _path: synthetic_rows)
+
+    ledger_dir = tmp_path / "live_real"
+    _write_jsonl(
+        ledger_dir / "ledger_real.jsonl",
+        [
+            {
+                "id": "BUY-OLD",
+                "type": "BUY",
+                "exec_date": "2026-07-17",
+                "created_at": "2026-07-17T12:00:00+00:00",
+                "ticker": "FCEL",
+                "qtd": 53.87931034,
+                "price": 18.56,
+                "amount": 1000.0,
+                "settle_date": "2026-07-20",
+                "ref_id": None,
+                "reason": "original",
+            },
+            {
+                "id": "CORR-1",
+                "type": "CORRECTION",
+                "exec_date": "2026-07-17",
+                "created_at": "2026-07-20T23:58:46+00:00",
+                "ticker": "FCEL",
+                "qtd": None,
+                "price": None,
+                "amount": 0.0,
+                "settle_date": None,
+                "ref_id": "BUY-OLD",
+                "reason": "corrige original",
+            },
+            {
+                "id": "BUY-NEW",
+                "type": "BUY",
+                "exec_date": "2026-07-17",
+                "created_at": "2026-07-20T23:58:47+00:00",
+                "ticker": "FCEL",
+                "qtd": 53.89150562,
+                "price": 18.5558,
+                "amount": 1000.0,
+                "settle_date": "2026-07-20",
+                "ref_id": None,
+                "reason": "replacement",
+            },
+        ],
+    )
+
+    result = reconcile_mod.propose(note_path, ledger_dir)
+
+    assert result["proposals_created"] == 0
+    assert result["items"][0]["status"] == "sem_divergencia"
+    assert abs(float(result["items"][0]["ledger_amount"]) - 1000.0) < 0.01
+
+
 def test_propose_dir_aggregates_multiple_notes_and_flags_blocking_divergence(tmp_path, monkeypatch):
     notes_dir = tmp_path / "notes"
     notes_dir.mkdir(parents=True, exist_ok=True)
