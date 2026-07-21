@@ -493,7 +493,40 @@ seus atalhos de dados:
 
 Ref: SALA D-119, USA D-143, USA D-142, USA D-141, R-018, R-023, R-049, R-056.
 
-### 6.18 Paridade completa do preview no /painel LIVE-REAL-TEST (D-144)
+### 6.18 Reconciliacao autonoma BTG com invariante de caixa (D-145)
+
+A partir de D-145, o regime LIVE-REAL-TEST US adota reconciliacao autonoma
+blindada, superando parcialmente o contrato propositivo de §6.13/§6.14 para
+divergencias imateriais:
+
+1. **Ledger real versionado**: `data/live_real_test/ledger_real.jsonl`,
+   `reconciliation_log.jsonl` e `reconciliation_checkpoint.json` passam a ser
+   rastreados em git, com protecao append-only equivalente a §6.6.1 (pre-commit
+   hook local bloqueia reducao de linhas).
+2. **Script de aplicacao**: `scripts/reconcile_and_apply.py` (distinto do
+   `reconcile_broker_note.py` propositivo) alinha quantidade/preco/amount/
+   commission a nota oficial via par `CORRECTION` + evento reemitido, SEMPRE
+   append-only, com backup previo obrigatorio.
+3. **Invariante de caixa**: toda auto-aplicacao exige `|amount_diff + fee_diff|
+   < US$ 1,00`. Divergencia igual ou acima do limiar NUNCA e auto-aplicada;
+   permanece como `PROPOSTA` para migracao supervisionada (R-056, inalterado
+   para esses casos).
+4. **Checkpoint forward-only**: nota com todos os itens resolvidos avanca
+   `reconciliation_checkpoint.json`; nota com item bloqueado nao avanca.
+5. **Auditoria obrigatoria**: a skill `reconciliador-btg` invoca o `auditor`
+   (Gemini 3.1 Pro) apos cada aplicacao, com maximo de 2 iteracoes; falha na
+   2a escala ao Owner sem forcar PASS.
+
+**Contrato de escopo**:
+
+- Nenhum arquivo blindado de §6.6 foi tocado.
+- `pipeline/ledger.py` nao foi alterado (reaproveita `EventType.CORRECTION`
+  ja existente).
+- R-056 permanece vigente para divergencias >= US$ 1,00.
+
+Ref: SALA D-123, USA D-145, R-018, R-020, R-023, R-038, R-049, R-056, R-058.
+
+### 6.19 Paridade completa do preview no /painel LIVE-REAL-TEST (D-144)
 
 A partir de D-144, o `/painel` LIVE-REAL-TEST fecha a diferenca residual para o
 padrao validado em `scratch/preview.html`, com contrato de producao (sem copiar

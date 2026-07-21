@@ -289,3 +289,7 @@ fix: T-036-MOTOR (D-004) — redirecionar stdout/stderr de subprocess.run() em p
 
 - docs(curadoria): T-LATE-ROCKET-ENTRY-US-V1 — fecha a rastreabilidade da ablation read-only do gate de entrada por foguete tardio no C4. Auditoria PASS; melhor braço `Arm_A_1.00`; veredito `CONFIRMA_SINAL_US`. Artefatos: `backtest/t_late_rocket_entry_us/decision_criterion_late_rocket_us.json`, `backtest/t_late_rocket_entry_us/run_t_late_rocket_entry_us.py`, `backtest/t_late_rocket_entry_us/results/observations_late_rocket_us.csv`, `backtest/t_late_rocket_entry_us/results/summary_TRAIN_late_rocket_us.csv`, `backtest/t_late_rocket_entry_us/results/summary_HOLDOUT_late_rocket_us.csv`, `backtest/t_late_rocket_entry_us/results/phase_sweep_stats_late_rocket_us.json`, `backtest/t_late_rocket_entry_us/results/verdict_late_rocket_us.json`. Decision: D-110
 - docs(saneamento): T-DOC-SANEAR-V2-FOGUETE-TARDIO — corrige documentacao da V2 do gate foguete tardio: D-112 registrado, R-037 atualizada (V2 PARCIAL), ROADMAP com V2 DONE e V3 BLOCKED, CORPUS com E-US-23 e novo padrao de falha. Decision: D-112
+
+## 2026-07-20
+
+- docs(curadoria): T-SDC-RECONCILIADOR-BTG-AUTONOMO-US-V1 — fecha a rastreabilidade da reconciliacao autonoma BTG no LIVE-REAL-TEST com ledger real versionado em git, checkpoint forward-only e skill dedicada `reconciliador-btg`. Artefatos: `scripts/reconcile_and_apply.py`, `GOVERNANCE.md`, `DECISION_LOG.md`, `data/live_real_test/ledger_real.jsonl`, `data/live_real_test/reconciliation_log.jsonl`, `data/live_real_test/reconciliation_checkpoint.json`. Decision: D-145

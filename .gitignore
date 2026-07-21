@@ -5,6 +5,11 @@ __pycache__/
 data/
 !data/ssot/
 !data/ssot/ledger.jsonl
+!data/live_real_test/
+data/live_real_test/*
+!data/live_real_test/ledger_real.jsonl
+!data/live_real_test/reconciliation_log.jsonl
+!data/live_real_test/reconciliation_checkpoint.json
 logs/
 *.parquet
 *.ubj
