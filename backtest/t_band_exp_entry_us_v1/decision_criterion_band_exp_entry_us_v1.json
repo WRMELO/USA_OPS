@@ -1,0 +1,65 @@
+{
+  "task_id": "T-SDC-BAND-EXPANSION-ENTRY-VETO-US-V1",
+  "hypothesis": "A expansao sistematica e monotonica da banda SPC (Carta-I), quando observada em candidatos elegiveis sem violacao SPC ativa em d_prev, identifica dessensibilizacao e piora risco-retorno futuro de entrada; o gate adiciona valor incremental ao Baseline C4 sem substituir R-001/R-037.",
+  "arms": {
+    "Baseline": "C4 puro sem gate adicional",
+    "Arm_BandExp": "C4 + veto de candidato com Flag_BandExp em d_prev, com substituicao pelo proximo do ranking"
+  },
+  "indicator_definition": {
+    "source_table": "canonical_us.parquet (freeze research_dataset_us_v2)",
+    "formulas": {
+      "width_t": "i_ucl_t - i_lcl_t",
+      "band_exp20_t": "width_t / width_(t-20 pregoes) - 1",
+      "w_diff_pos_t": "1 se width_t > width_(t-1), senao 0",
+      "mono20_t": "media movel de w_diff_pos com janela=20 e min_periods=20, por ticker",
+      "w_pct_dia_t": "rank percentual diario de width_t no cross-section",
+      "w_ter_t": "tercil de w_pct_dia_t com cortes [0,1/3,2/3,1] e labels ESTREITA/MEDIA/LARGA",
+      "exp_pct_dia_t": "rank percentual diario de band_exp20_t no cross-section",
+      "viol_any_t": "violacao SPC ativa (i_value fora [i_lcl,i_ucl] OU xbar fora [xbar_lcl,xbar_ucl] OU mr_value>mr_ucl OU r_value>r_ucl), reaproveitando literalmente _build_spc_blocked_by_day",
+      "Flag_BandExp_t": "(w_ter_t=='LARGA') AND (exp_pct_dia_t>=0.80) AND (mono20_t>=0.65) AND (viol_any_t==False)"
+    }
+  },
+  "dataset": {
+    "path": "USA_OPS/backtest/research_dataset_us_v2/",
+    "freeze_asof": "2026-07-15",
+    "decision_ref_freeze": "D-110",
+    "required_hash_verification": true
+  },
+  "subwindows": {
+    "TRAIN": {
+      "start": "2021-01-01",
+      "end": "2022-12-30"
+    },
+    "HOLDOUT": {
+      "start": "2023-01-02",
+      "end": "2026-07-15"
+    },
+    "SW1": {
+      "start": "2023-01-02",
+      "end": "2024-06-30"
+    },
+    "SW2": {
+      "start": "2024-07-01",
+      "end": "2026-07-15"
+    }
+  },
+  "bootstrap": {
+    "method": "cluster por dia de rebalance",
+    "n_resamples": 2000,
+    "seed": 42,
+    "metrics": [
+      "delta_cvar5",
+      "delta_sharpe_cost_adj"
+    ]
+  },
+  "max_veto_rate": 0.35,
+  "materiality_threshold": "abs(delta_sharpe_cost_adj_holdout)>=0.30 OU abs(delta_cvar5_holdout)>=0.02",
+  "verdict_tiers": {
+    "DOMINA_FORTE": "IC95 do delta inteiramente do lado favoravel (positivo para Arm_BandExp) nas duas metricas (delta_cvar5 e delta_sharpe_cost_adj) no HOLDOUT completo e tambem em SW1 e SW2, com mean_veto_rate<=0.35 nas tres janelas.",
+    "FAVORECIDO_BANDEXP": "Preponderancia de evidencia sem DOMINA_FORTE: massa bootstrap favoravel >=90% para as duas metricas no HOLDOUT, concordancia direcional em HOLDOUT/SW1/SW2, materialidade economica acima do limiar pre-registrado e mean_veto_rate_holdout<=0.35. Suficiente para recomendacao consultiva; nunca para tocar motor.",
+    "INCONCLUSIVO": "Ausencia de direcao clara, materialidade abaixo do limiar, violacao de teto de veto, ou qualquer outro caso fora dos tiers acima."
+  },
+  "post_hoc_prohibition": "O criterio acima e fixo e imutavel. E proibido reinterpretar, redefinir metricas ou escolher subperiodos apos ver os resultados. PARCIAL e INCONCLUSIVO sao resultados legitimos.",
+  "registered_at": "2026-07-21",
+  "registered_before_execution": true
+}
