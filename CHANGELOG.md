@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-21
+
+- docs(analista-usa): T-SDC-ANALISTA-USA-DELEGAR-RECONCILIACAO-BTG-V1 — o Passo 0c da skill `analista-usa` deixa de executar conferencia via CLI e passa a ler `data/live_real_test/reconciliation_checkpoint.json` + `data/live_real_test/reconciliation_log.jsonl`, bloqueando apenas pendencia material (`|cash_delta| >= US$ 1,00`) sem alterar o motor nem o `reconciliador-btg`. Artefatos: `../.cursor/skills/analista-usa/SKILL.md`, `GOVERNANCE.md`, `DECISION_LOG.md`. Decision: D-146 (ref cruzada: SALA D-124; supersede parcialmente D-140).
+
 ## 2026-07-20
 
 - feat(web): T-SDC-PAINEL-PREVIEW-PARIDADE-COMPLETA-US-V1 — `pipeline/real_boletim_web.py` passa a renderizar o `/painel` LIVE-REAL-TEST com paridade completa ao preview (8 secoes numeradas 01-08, identidade visual azul, bloco Acao do dia com defensivas calculadas do contexto real e bloco local de Operacoes sugeridas pelo Analista sem POST), preservando os formularios oficiais de rascunho/encerramento e mantendo o contrato sem `QTY_FIXES` e sem CDN. Artefatos: `pipeline/real_boletim_web.py`, `DECISION_LOG.md`, `GOVERNANCE.md`. Decision: D-144 (ref cruzada: SALA D-121).

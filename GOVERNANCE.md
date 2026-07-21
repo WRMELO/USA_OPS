@@ -560,6 +560,39 @@ atalhos de dados do scratch):
 
 Ref: SALA D-121, USA D-144, USA D-143, R-018, R-023, R-049, R-056.
 
+### 6.20 Delegacao do gate de conferencia ao Reconciliador BTG (D-146)
+
+A partir de D-146, o contrato do gate de conferencia do Analista-USA e
+ajustado para remover execucao duplicada e preservar bloqueio apenas no caso
+material:
+
+1. **Execucao da reconciliacao sai do Analista-USA**:
+   o Passo 0c da skill `analista-usa` deixa de executar
+   `scripts/reconcile_broker_note.py` e `scripts/reconcile_and_apply.py`.
+   A execucao permanece exclusiva da skill `reconciliador-btg` (R-058).
+2. **Passo 0c vira leitura de estado oficial**:
+   o Analista-USA passa a ler
+   `data/live_real_test/reconciliation_checkpoint.json` e
+   `data/live_real_test/reconciliation_log.jsonl`.
+3. **Bloqueio apenas para divergencia material pendente**:
+   o diagnostico so bloqueia quando houver `PROPOSTA` sem `DECISAO` com
+   `|cash_delta| >= US$ 1,00`, no mesmo invariante de R-058.
+4. **Divergencia imaterial nao bloqueia o Analista**:
+   itens com `|cash_delta| < US$ 1,00` seguem no fluxo autonomo da
+   `reconciliador-btg` e nao geram bloqueio consultivo.
+
+**Contrato de escopo**:
+
+- Esta secao supera parcialmente o §6.14 (D-140) apenas na parte de execucao
+  pelo Analista e no criterio de bloqueio por "qualquer divergencia".
+- Permanecem vigentes: R-056 (nota oficial como SSOT para conferencia),
+  R-058 (autonomia sob invariante de caixa), e a vedacao de escrita do
+  Analista-USA no ledger real.
+- Nenhum arquivo blindado de §6.6 e tocado por esta mudanca de skill.
+
+Ref: SALA D-124, USA D-146, SALA D-116, USA D-140, SALA D-123, USA D-145,
+R-056, R-058.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.
