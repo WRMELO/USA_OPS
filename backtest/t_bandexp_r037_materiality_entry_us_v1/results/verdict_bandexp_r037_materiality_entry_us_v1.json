@@ -1,0 +1,149 @@
+{
+  "task_id": "T-SDC-BANDEXP-R037-MATERIALITY-ENTRY-US-V1",
+  "criteria_file": "backtest/t_bandexp_r037_materiality_entry_us_v1/decision_criterion_bandexp_r037_materiality_entry_us_v1.json",
+  "dataset_manifest": "backtest/research_dataset_us_v2/manifest.json",
+  "freeze_asof": "2026-07-15",
+  "final_verdict": "INCONCLUSIVO",
+  "tier_pair": {
+    "baseline": "Baseline_C4puro",
+    "arm": "Arm_Dupla"
+  },
+  "arms": [
+    "Baseline_C4puro",
+    "Arm_Dupla",
+    "Arm_Dupla_Ret62Puro"
+  ],
+  "deltas_primary_pair": {
+    "HOLDOUT": {
+      "delta_cvar5": 0.00011980946307610374,
+      "delta_sharpe_cost_adj": 0.03839515619318301,
+      "mean_veto_rate_arm": 0.0009130094043887149
+    },
+    "SW1": {
+      "delta_cvar5": 0.0,
+      "delta_sharpe_cost_adj": 0.01400290793444725,
+      "mean_veto_rate_arm": 0.0005298719772403983
+    },
+    "SW2": {
+      "delta_cvar5": 0.0,
+      "delta_sharpe_cost_adj": 0.05087376407815274,
+      "mean_veto_rate_arm": 0.001196078431372549
+    }
+  },
+  "bootstrap_primary_pair": {
+    "HOLDOUT": {
+      "subset": "HOLDOUT",
+      "n_dates": 875,
+      "n_pairs": 875,
+      "delta_cvar5": {
+        "delta_mean": 0.00012639922146903522,
+        "ic95": [
+          -0.0014579290159242107,
+          0.0028457353262001774
+        ],
+        "mass_same_sign_pct": 22.5
+      },
+      "delta_sharpe_cost_adj": {
+        "delta_mean": 0.037698354378189136,
+        "ic95": [
+          0.011983981154085992,
+          0.06759092482955786
+        ],
+        "mass_same_sign_pct": 99.95
+      }
+    },
+    "SW1": {
+      "subset": "SW1",
+      "n_dates": 374,
+      "n_pairs": 374,
+      "delta_cvar5": {
+        "delta_mean": 0.0,
+        "ic95": [
+          0.0,
+          0.0
+        ],
+        "mass_same_sign_pct": 50.0
+      },
+      "delta_sharpe_cost_adj": {
+        "delta_mean": 0.015206712558502776,
+        "ic95": [
+          -0.016923496152874504,
+          0.05697666408348804
+        ],
+        "mass_same_sign_pct": 78.60000000000001
+      }
+    },
+    "SW2": {
+      "subset": "SW2",
+      "n_dates": 501,
+      "n_pairs": 501,
+      "delta_cvar5": {
+        "delta_mean": 1.2600089603291634e-05,
+        "ic95": [
+          0.0,
+          0.0
+        ],
+        "mass_same_sign_pct": 0.6
+      },
+      "delta_sharpe_cost_adj": {
+        "delta_mean": 0.049617770518322196,
+        "ic95": [
+          0.015086557614192243,
+          0.0913528370903016
+        ],
+        "mass_same_sign_pct": 99.8
+      }
+    }
+  },
+  "sensitivity_ret62_puro": {
+    "TRAIN": {
+      "delta_cvar5": 0.0008395154425587248,
+      "delta_sharpe_cost_adj": -0.006027099534964719,
+      "mean_veto_rate_sens": 0.010172043010752687,
+      "mean_veto_rate_baseline": 0.0
+    },
+    "HOLDOUT": {
+      "delta_cvar5": 0.015764450802236596,
+      "delta_sharpe_cost_adj": 0.7537499970888619,
+      "mean_veto_rate_sens": 0.07599921630094045,
+      "mean_veto_rate_baseline": 0.0
+    },
+    "SW1": {
+      "delta_cvar5": 0.009436996198913625,
+      "delta_sharpe_cost_adj": 0.6684169629311245,
+      "mean_veto_rate_sens": 0.05014580369843528,
+      "mean_veto_rate_baseline": 0.0
+    },
+    "SW2": {
+      "delta_cvar5": 0.021056125908292894,
+      "delta_sharpe_cost_adj": 0.8248503123488451,
+      "mean_veto_rate_sens": 0.09531960784313726,
+      "mean_veto_rate_baseline": 0.0
+    }
+  },
+  "checks": {
+    "domina_forte_conditions": {
+      "holdout_ic_cvar5_favoravel": false,
+      "holdout_ic_sharpe_favoravel": true,
+      "sw1_ic_cvar5_favoravel": false,
+      "sw1_ic_sharpe_favoravel": false,
+      "sw2_ic_cvar5_favoravel": false,
+      "sw2_ic_sharpe_favoravel": true,
+      "veto_holdout_ok": true,
+      "veto_sw1_ok": true,
+      "veto_sw2_ok": true
+    },
+    "favorecido_conditions": {
+      "holdout_mass_ok": false,
+      "direction_ok_holdout_sw1_sw2": false,
+      "materiality_ok": false,
+      "veto_holdout_ok": true
+    }
+  },
+  "thresholds": {
+    "max_veto_rate": 0.35,
+    "materiality_sharpe_abs_min": 0.3,
+    "materiality_cvar5_abs_min": 0.02,
+    "bootstrap_mass_min_pct": 90.0
+  }
+}

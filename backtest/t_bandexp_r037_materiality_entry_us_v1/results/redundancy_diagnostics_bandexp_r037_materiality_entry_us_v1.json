@@ -1,0 +1,41 @@
+{
+  "task_id": "T-SDC-BANDEXP-R037-MATERIALITY-ENTRY-US-V1",
+  "subset": "Arm_Dupla HOLDOUT veto_events",
+  "n_events": 16,
+  "event_overlap_r001_nonempty_pct": 0.0,
+  "event_full_cover_ret62_puro_pct": 100.0,
+  "ticker_level_ret62_puro_coverage_pct": 100.0,
+  "substitute_rank_stats": [
+    {
+      "split": "HOLDOUT",
+      "n_events": 16,
+      "n_events_with_rank": 16,
+      "mean_m3_rank_max_substituto": 41.3125,
+      "median_m3_rank_max_substituto": 41.0,
+      "p90_m3_rank_max_substituto": 49.5,
+      "max_m3_rank_max_substituto": 51.0
+    },
+    {
+      "split": "SW1",
+      "n_events": 4,
+      "n_events_with_rank": 4,
+      "mean_m3_rank_max_substituto": 38.0,
+      "median_m3_rank_max_substituto": 38.0,
+      "p90_m3_rank_max_substituto": 41.4,
+      "max_m3_rank_max_substituto": 42.0
+    },
+    {
+      "split": "SW2",
+      "n_events": 12,
+      "n_events_with_rank": 12,
+      "mean_m3_rank_max_substituto": 42.416666666666664,
+      "median_m3_rank_max_substituto": 41.5,
+      "p90_m3_rank_max_substituto": 49.9,
+      "max_m3_rank_max_substituto": 51.0
+    }
+  ],
+  "artifacts": {
+    "observations": "backtest/t_bandexp_r037_materiality_entry_us_v1/results/observations_bandexp_r037_materiality_entry_us_v1.csv",
+    "rank_stats_csv": "backtest/t_bandexp_r037_materiality_entry_us_v1/results/substitute_rank_stats_bandexp_r037_materiality_entry_us_v1.csv"
+  }
+}

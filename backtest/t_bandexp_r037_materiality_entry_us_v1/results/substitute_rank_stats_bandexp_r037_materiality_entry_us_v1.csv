@@ -1,0 +1,4 @@
+split,n_events,n_events_with_rank,mean_m3_rank_max_substituto,median_m3_rank_max_substituto,p90_m3_rank_max_substituto,max_m3_rank_max_substituto
+HOLDOUT,16,16,41.3125,41.0,49.5,51.0
+SW1,4,4,38.0,38.0,41.4,42.0
+SW2,12,12,42.416666666666664,41.5,49.9,51.0

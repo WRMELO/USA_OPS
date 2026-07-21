@@ -1,0 +1,75 @@
+{
+  "task_id": "T-SDC-BANDEXP-R037-MATERIALITY-ENTRY-US-V1",
+  "pair_for_tier": {
+    "baseline": "Baseline_C4puro",
+    "arm": "Arm_Dupla"
+  },
+  "method": "cluster por dia de rebalance",
+  "n_resamples": 2000,
+  "seed": 42,
+  "splits": {
+    "HOLDOUT": {
+      "subset": "HOLDOUT",
+      "n_dates": 875,
+      "n_pairs": 875,
+      "delta_cvar5": {
+        "delta_mean": 0.00012639922146903522,
+        "ic95": [
+          -0.0014579290159242107,
+          0.0028457353262001774
+        ],
+        "mass_same_sign_pct": 22.5
+      },
+      "delta_sharpe_cost_adj": {
+        "delta_mean": 0.037698354378189136,
+        "ic95": [
+          0.011983981154085992,
+          0.06759092482955786
+        ],
+        "mass_same_sign_pct": 99.95
+      }
+    },
+    "SW1": {
+      "subset": "SW1",
+      "n_dates": 374,
+      "n_pairs": 374,
+      "delta_cvar5": {
+        "delta_mean": 0.0,
+        "ic95": [
+          0.0,
+          0.0
+        ],
+        "mass_same_sign_pct": 50.0
+      },
+      "delta_sharpe_cost_adj": {
+        "delta_mean": 0.015206712558502776,
+        "ic95": [
+          -0.016923496152874504,
+          0.05697666408348804
+        ],
+        "mass_same_sign_pct": 78.60000000000001
+      }
+    },
+    "SW2": {
+      "subset": "SW2",
+      "n_dates": 501,
+      "n_pairs": 501,
+      "delta_cvar5": {
+        "delta_mean": 1.2600089603291634e-05,
+        "ic95": [
+          0.0,
+          0.0
+        ],
+        "mass_same_sign_pct": 0.6
+      },
+      "delta_sharpe_cost_adj": {
+        "delta_mean": 0.049617770518322196,
+        "ic95": [
+          0.015086557614192243,
+          0.0913528370903016
+        ],
+        "mass_same_sign_pct": 99.8
+      }
+    }
+  }
+}
