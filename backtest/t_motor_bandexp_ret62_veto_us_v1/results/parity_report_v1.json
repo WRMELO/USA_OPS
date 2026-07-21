@@ -1,0 +1,34 @@
+{
+  "task_id": "T-SDC-MOTOR-BANDEXP-RET62-VETO-US-V1",
+  "generated_at_utc": "2026-07-21T21:36:13.359668+00:00",
+  "dataset_manifest": "backtest/research_dataset_us_v2/manifest.json",
+  "hash_checks": {
+    "canonical_us.parquet": {
+      "exists": true,
+      "expected_sha256": "d108c949576f4d7a8b7e718e355719fddf25826e5f606b54693a51e1ac706bd9",
+      "actual_sha256": "d108c949576f4d7a8b7e718e355719fddf25826e5f606b54693a51e1ac706bd9",
+      "ok": true
+    },
+    "macro_us.parquet": {
+      "exists": true,
+      "expected_sha256": "adde074e44bc87bb949edb52bdf765cfcb325ed28c9d2dcaf2711b24b6b4fdde",
+      "actual_sha256": "adde074e44bc87bb949edb52bdf765cfcb325ed28c9d2dcaf2711b24b6b4fdde",
+      "ok": true
+    },
+    "scores_m3_us.parquet": {
+      "exists": true,
+      "expected_sha256": "2f407f8de535bf3aa2fe53e9d4ae0ad43f25895aef0ff4ac3a379de35dc84ebe",
+      "actual_sha256": "2f407f8de535bf3aa2fe53e9d4ae0ad43f25895aef0ff4ac3a379de35dc84ebe",
+      "ok": true
+    }
+  },
+  "hashes_ok": true,
+  "observations_path": "backtest/t_bandexp_ret62_entry_us_v1/results/observations_bandexp_ret62_entry_us_v1.csv",
+  "arm": "Arm_BandExpRet62",
+  "score_source": "recomputed_from_canonical_via_compute_m3_scores",
+  "rows_with_veto": 621,
+  "rows_checked": 621,
+  "rows_match": 621,
+  "rows_mismatch": 0,
+  "mismatches": []
+}

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -10,6 +11,11 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from lib.band_exp_gate import compute_bandexp_ret62_gate  # noqa: E402
+
 OUT_DIR = ROOT / "data" / "daily"
 LAST_REBALANCE_PATH = OUT_DIR / "last_rebalance.json"
 
@@ -82,7 +88,7 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
     if not scores_path.exists() or not canonical_path.exists():
         raise FileNotFoundError("Inputs ausentes para decisão (scores/canonical).")
 
-    scores = pd.read_parquet(scores_path, columns=["date", "ticker", "m3_rank", "score_m3"]).copy()
+    scores = pd.read_parquet(scores_path, columns=["date", "ticker", "m3_rank", "score_m3", "ret_62"]).copy()
     scores["date"] = pd.to_datetime(scores["date"], errors="coerce").dt.normalize()
     scores["ticker"] = scores["ticker"].astype(str).str.upper().str.strip()
     scores["m3_rank"] = pd.to_numeric(scores["m3_rank"], errors="coerce")
@@ -94,6 +100,16 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
             "date",
             "ticker",
             "market_cap",
+            "i_value",
+            "i_ucl",
+            "i_lcl",
+            "mr_value",
+            "mr_ucl",
+            "xbar_value",
+            "xbar_ucl",
+            "xbar_lcl",
+            "r_value",
+            "r_ucl",
         ],
     ).copy()
     canonical["date"] = pd.to_datetime(canonical["date"], errors="coerce").dt.normalize()
@@ -112,7 +128,7 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
             cached_ref = str(cached.get("scores_reference_date_d_minus_1", "")).strip()
             if (
                 cached_ref == str(prev_dt.date())
-                and int(cached.get("ranking_schema_version", 0) or 0) >= 2
+                and int(cached.get("ranking_schema_version", 0) or 0) >= 3
                 and bool(cached.get("operational_ranking"))
             ):
                 return cached
@@ -127,6 +143,47 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
     day_scores = day_scores.sort_values(["m3_rank", "ticker"]).reset_index(drop=True)
     if day_scores.empty:
         raise RuntimeError(f"Sem tickers elegíveis por min_market_cap em {prev_dt.date()}.")
+
+    day_scores_pre_veto = day_scores.copy()
+    gate_df = compute_bandexp_ret62_gate(
+        canonical=canonical[canonical["date"] <= prev_dt].copy(),
+        scores=scores[scores["date"] <= prev_dt].copy(),
+        as_of_date=prev_dt,
+    )
+    gated_tickers = set(
+        gate_df.index[
+            gate_df["gate_bandexp_ret62"].fillna(False).astype(bool)
+        ].astype(str).tolist()
+    )
+    day_scores = day_scores[~day_scores["ticker"].isin(gated_tickers)].copy().reset_index(drop=True)
+    if day_scores.empty:
+        raise RuntimeError(f"Sem tickers elegíveis após veto BandExpRet62 em {prev_dt.date()}.")
+
+    bandexp_ret62_veto_events: list[dict[str, object]] = []
+    if gated_tickers:
+        veto_rows = day_scores_pre_veto[
+            (day_scores_pre_veto["ticker"].isin(gated_tickers))
+            & (pd.to_numeric(day_scores_pre_veto["m3_rank"], errors="coerce") <= float(top_n))
+        ].copy()
+        veto_rows = veto_rows.sort_values(["m3_rank", "ticker"]).reset_index(drop=True)
+        for _, row in veto_rows.iterrows():
+            ticker = str(row["ticker"]).upper().strip()
+            gate_row = gate_df.loc[ticker] if ticker in gate_df.index else None
+            score = pd.to_numeric(row.get("score_m3"), errors="coerce")
+            ret62 = pd.to_numeric(gate_row.get("ret_62"), errors="coerce") if gate_row is not None else np.nan
+            band_exp20 = pd.to_numeric(gate_row.get("band_exp20"), errors="coerce") if gate_row is not None else np.nan
+            mono20 = pd.to_numeric(gate_row.get("mono20"), errors="coerce") if gate_row is not None else np.nan
+            bandexp_ret62_veto_events.append(
+                {
+                    "ticker": ticker,
+                    "m3_rank": int(float(row["m3_rank"])),
+                    "score_m3": float(score) if pd.notna(score) else None,
+                    "ret_62": float(ret62) if pd.notna(ret62) else None,
+                    "band_exp20": float(band_exp20) if pd.notna(band_exp20) else None,
+                    "mono20": float(mono20) if pd.notna(mono20) else None,
+                }
+            )
+
     top20_info_df = day_scores.head(top_n)[["ticker", "m3_rank", "score_m3"]].copy()
     top20_by_score: list[dict[str, object]] = []
     for _, row in top20_info_df.iterrows():
@@ -213,10 +270,12 @@ def run(target_date: date | None = None, *, dry_run: bool = False) -> dict:
         "action": action,
         "is_rebalance_day": bool(is_rebalance_day),
         "rebalance_trigger_reason": rebalance_trigger_reason,
-        "ranking_schema_version": 2,
+        "ranking_schema_version": 3,
         "selected_tickers": selected,
         "operational_ranking": operational_ranking,
         "top20_by_score": top20_by_score,
+        "bandexp_ret62_veto_events": bandexp_ret62_veto_events,
+        "bandexp_ret62_rule_ref": "R-060",
         "target_weights": weights,
         "portfolio": [{"ticker": t, "target_weight": float(weights[t])} for t in selected],
         "defensive_actions": defensive_actions,

@@ -536,6 +536,35 @@ def build_context(
                 "alerta": alerta,
             }
         )
+
+    veto_events = daily_doc.get("bandexp_ret62_veto_events", []) or []
+    candidate_tickers_set = {str(c.get("ticker", "")).upper().strip() for c in candidates_out}
+    held_tickers_set = set(held_tickers)
+    for event in veto_events:
+        if not isinstance(event, dict):
+            continue
+        tk = str(event.get("ticker", "")).upper().strip()
+        if not tk or tk in candidate_tickers_set or tk in held_tickers_set:
+            continue
+        m3_rank = pd.to_numeric(event.get("m3_rank"), errors="coerce")
+        score = pd.to_numeric(event.get("score_m3"), errors="coerce")
+        ret_62 = pd.to_numeric(event.get("ret_62"), errors="coerce")
+        candidates_out.append(
+            {
+                "ticker": tk,
+                "master_rank": int(m3_rank) if pd.notna(m3_rank) else -1,
+                "score_m3": float(score) if pd.notna(score) else None,
+                "close_d1": None,
+                "spc_status": None,
+                "spc_rules_fired": [],
+                "nelson_we_flags": [],
+                "ret_62": round(float(ret_62), 6) if pd.notna(ret_62) else None,
+                "persistencia": None,
+                "veto": "VETADO_BANDEXP_RET62",
+                "alerta": None,
+            }
+        )
+        candidate_tickers_set.add(tk)
     candidates_out.sort(key=lambda x: x["master_rank"])
 
     holdings_value_map = {h["ticker"]: float(h["valor_mercado"]) for h in holdings_out}
@@ -597,6 +626,7 @@ def build_context(
             "date": str(daily_doc.get("target_date", daily_doc.get("date", ""))),
             "operational_ranking": master_entries,
             "top20_by_score": top20_by_score,
+            "bandexp_ret62_veto_events": veto_events,
             "selected_tickers": selected_tickers,
             "target_weights": target_weights,
         },

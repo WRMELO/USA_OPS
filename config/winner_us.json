@@ -27,6 +27,16 @@
     "settlement_days": 1,
     "base_capital": 100000.0
   },
+  "bandexp_ret62_veto": {
+    "active": true,
+    "rule_ref": "R-060",
+    "decision_ref": "D-131",
+    "study_ref": "T-SDC-BANDEXP-RET62-ENTRY-US-V1",
+    "verdict_ref": "backtest/t_bandexp_ret62_entry_us_v1/results/verdict_bandexp_ret62_entry_us_v1.json",
+    "gate_definition": "Flag_BandExp(d_prev) AND ret_62(d_prev)>=1.00",
+    "motor_tag": "v1.19.0-motor-us",
+    "activated_at": "2026-07-21"
+  },
   "holdout_period": {
     "start": "2023-01-02",
     "end": "2026-03-16"
@@ -210,7 +220,9 @@
     "D-019",
     "D-020",
     "D-021",
-    "USA D-122"
+    "USA D-122",
+    "D-131",
+    "USA D-149"
   ],
   "traceability": {
     "supersedes_implicit_memory_only": true,
