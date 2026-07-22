@@ -1,0 +1,5 @@
+arm,split,n_days,n_cycles,equity_final,mean_cvar5,mean_sharpe_cost_adj,mean_veto_rate,avg_tickers,cash_idle_days_pct,turnover_mean_pct,defensive_sells_total,defensive_sells_per_cycle
+Zero-A,TRAIN,503,1,100000.0,0.0,,0.0,0.0,100.0,0.0,0,0.0
+Zero-B,TRAIN,503,1,100000.0,0.0,,0.0,0.0,100.0,0.0,0,0.0
+A1,TRAIN,503,1,100000.0,0.0,,0.0,0.0,100.0,0.0,0,0.0
+A2,TRAIN,503,1,91900.82871625003,-0.02431268008828177,-0.31187671649720244,0.002485089463220676,17.411530815109344,95.02982107355865,0.6483685338362445,25,25.0

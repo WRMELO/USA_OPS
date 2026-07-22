@@ -1,0 +1,5 @@
+arm,split,n_days,n_cycles,equity_final,mean_cvar5,mean_sharpe_cost_adj,mean_veto_rate,avg_tickers,cash_idle_days_pct,turnover_mean_pct,defensive_sells_total,defensive_sells_per_cycle
+Zero-A,SW1,374,1,100000.0,0.0,,0.0,0.0,100.0,0.0,0,0.0
+Zero-B,SW1,374,1,100000.0,0.0,,0.0,0.0,100.0,0.0,0,0.0
+A1,SW1,374,1,100000.0,0.0,,0.0,0.0,100.0,0.0,0,0.0
+A2,SW1,374,1,92080.75851625003,-0.0004386241941784545,0.3799356620533098,0.0,20.0,100.0,0.0,0,0.0

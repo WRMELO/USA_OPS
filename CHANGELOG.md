@@ -2,6 +2,7 @@
 
 ## 2026-07-22
 
+- docs(curadoria): T-SDC-DEFENSIVE-REINVEST-POLICY-US-V1 — fecha a rastreabilidade do estudo read-only pre-registrado de 4 braços para politica de venda defensiva/reinvestimento com liquidacao D0, com vereditos `INCONCLUSIVO` em todos os pares e artefatos em `backtest/t_defensive_reinvest_policy_us_v1/`. Artefatos: `DECISION_LOG.md`, `backtest/t_defensive_reinvest_policy_us_v1/`, `../SALA_DE_CONTROLE/DECISION_LOG.md`, `../SALA_DE_CONTROLE/CHANGELOG.md`. Decision: D-153 (ref cruzada: SALA D-135).
 - feat(web+ledger): T-SDC-BOLETIM-DFC-LIQUIDACAO-FLAG-US-V1 — adiciona flag obrigatória de liquidação por venda no `/painel` (`JA_NO_CAIXA`/`EM_LIQUIDACAO`), persiste `SETTLEMENT` same-day referenciado ao `SELL` quando aplicável, ajusta `pipeline/ledger.py::compute_cash` para reconciliar `cash_accounting` por `SELL - settled_by_ref` mesmo com `settle_date` futuro, remodela as seções 07/08 para Balancete+DFC simplificados (Caixa Livre Real BTG, corretagem dia/acumulada, delta ajustado por liquidação) e inclui script de remediação append-only do caso PENG 21/07 (`scripts/migrate_ledger_20260721_peng_ja_no_caixa.py`) com testes dedicados. Decision: D-150 (ref cruzada: SALA D-132).
 
 ## 2026-07-21

@@ -1,0 +1,74 @@
+{
+  "task_id": "T-SDC-DEFENSIVE-REINVEST-POLICY-US-V1",
+  "hypothesis": "Politicas de venda defensiva com realocacao imediata D0 podem reduzir risco de cauda e melhorar Sharpe ajustado quando comparadas ao C4 puro e entre si, mantendo taxa de eventos defensivos em patamar operacional controlado.",
+  "arms": {
+    "Zero-A": "C4 puro sem venda defensiva adicional (baseline).",
+    "Zero-B": "Venda defensiva somente por violacao SPC ativa; caixa D0 reinvestido apenas no Top-20 congelado do rebalanceamento vigente.",
+    "A1": "Venda defensiva por violacao SPC ativa OU cruzamento de deriva MEDIO->GRAVE (R-035/R-036); caixa D0 reinvestido apenas no Top-20 congelado do rebalanceamento vigente.",
+    "A2": "Mesmo gatilho de venda do A1; caixa D0 preenche posicoes existentes ate o limite e, com residual, compra do melhor ranking disponivel no Top-20 recalculado no dia."
+  },
+  "pairwise_comparisons": [
+    "Zero-A vs Zero-B",
+    "Zero-A vs A1",
+    "Zero-A vs A2",
+    "A1 vs A2"
+  ],
+  "defensive_trigger_definition": {
+    "spc_violation": "viol_any_t = violacao SPC ativa (i_value fora [i_lcl,i_ucl] OU xbar fora [xbar_lcl,xbar_ucl] OU mr_value>mr_ucl OU r_value>r_ucl).",
+    "medium_to_grave_cross": "heat_pct_t = (close_d1 / custo_medio_lote - 1) * 100; trigger quando heat_pct_(t-1) em MEDIO (-12.85% >= heat > -32.42%) e heat_pct_t em GRAVE (<= -32.42%).",
+    "threshold_ref": "R-035/R-036 (US: MEDIO=-12.85%, GRAVE=-32.42%)."
+  },
+  "reinvestment_definition": {
+    "frozen_top20_source": "Lista operacional congelada no dia de rebalanceamento (selecionada por C4 com cadence=10 e K=10).",
+    "daily_top20_source": "Top-20 por m3_rank recalculado no dia d_prev (informativo).",
+    "a2_limit_rule": "Limite por posicao = max_weight_cap do winner C4 (6%)."
+  },
+  "liquidation": {
+    "mode": "D0",
+    "description": "Toda venda defensiva considera caixa disponivel no mesmo dia da execucao.",
+    "d_plus_1_scope": "Fora de escopo desta task por decisao explicita do Owner."
+  },
+  "dataset": {
+    "path": "USA_OPS/backtest/research_dataset_us_v2/",
+    "freeze_asof": "2026-07-15",
+    "decision_ref_freeze": "D-110",
+    "required_hash_verification": true
+  },
+  "subwindows": {
+    "TRAIN": {
+      "start": "2021-01-01",
+      "end": "2022-12-30"
+    },
+    "HOLDOUT": {
+      "start": "2023-01-02",
+      "end": "2026-07-15"
+    },
+    "SW1": {
+      "start": "2023-01-02",
+      "end": "2024-06-30"
+    },
+    "SW2": {
+      "start": "2024-07-01",
+      "end": "2026-07-15"
+    }
+  },
+  "bootstrap": {
+    "method": "cluster por dia",
+    "n_resamples": 2000,
+    "seed": 42,
+    "metrics": [
+      "delta_cvar5",
+      "delta_sharpe_cost_adj"
+    ]
+  },
+  "max_veto_rate": 0.35,
+  "materiality_threshold": "abs(delta_sharpe_cost_adj_holdout)>=0.30 OU abs(delta_cvar5_holdout)>=0.02",
+  "verdict_tiers": {
+    "DOMINA_FORTE": "IC95 de delta_cvar5 e delta_sharpe_cost_adj inteiramente favoraveis no HOLDOUT, SW1 e SW2 para o arm comparado, com mean_veto_rate_arm<=0.35 nessas janelas.",
+    "FAVORECIDO_LADO": "Sem DOMINA_FORTE: massa bootstrap favoravel >=90% nas duas metricas no HOLDOUT, concordancia direcional em HOLDOUT/SW1/SW2, materialidade acima do limiar e mean_veto_rate_arm_holdout<=0.35.",
+    "INCONCLUSIVO": "Qualquer caso fora das condicoes acima."
+  },
+  "post_hoc_prohibition": "Criterio fixo e imutavel. Proibido reinterpretar metrica, janela ou threshold apos observacao dos resultados.",
+  "registered_at": "2026-07-22",
+  "registered_before_execution": true
+}
