@@ -1,0 +1,427 @@
+{
+  "task_id": "T-SDC-DEFENSIVE-REINVEST-POLICY-US-V2",
+  "criteria_file": "backtest/t_defensive_reinvest_policy_us_v2/decision_criterion_defensive_reinvest_policy_us_v2.json",
+  "dataset_manifest": "backtest/research_dataset_us_v2/manifest.json",
+  "freeze_asof": "2026-07-15",
+  "arms": [
+    "Zero-A",
+    "Zero-B",
+    "A1",
+    "A2"
+  ],
+  "offsets": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "pairs": {
+    "Zero-A_vs_Zero-B": {
+      "baseline": "Zero-A",
+      "arm": "Zero-B",
+      "representative_offset": 8,
+      "favorable_offsets_joint_holdout": 10,
+      "phase_robustness_pass": true,
+      "representative_offset_tier": "INCONCLUSIVO",
+      "final_verdict": "INCONCLUSIVO",
+      "representative_details": {
+        "offset": 8,
+        "offset_tier_before_phase_robustness": "INCONCLUSIVO",
+        "deltas": {
+          "HOLDOUT": {
+            "delta_cvar5": 0.041201617468136054,
+            "delta_sharpe_cost_adj": 0.351636854058592,
+            "mean_veto_rate_arm": 0.027796610169491524
+          },
+          "SW1": {
+            "delta_cvar5": -0.000725709321907124,
+            "delta_sharpe_cost_adj": -0.09117886774521294,
+            "mean_veto_rate_arm": 0.025802139037433152
+          },
+          "SW2": {
+            "delta_cvar5": 0.05854229067570539,
+            "delta_sharpe_cost_adj": 0.5210383323641762,
+            "mean_veto_rate_arm": 0.029256360078277886
+          }
+        },
+        "bootstrap": {
+          "HOLDOUT": {
+            "subset": "HOLDOUT",
+            "n_dates": 885,
+            "n_pairs": 885,
+            "delta_cvar5": {
+              "delta_mean": 0.04075613839972181,
+              "ic95": [
+                0.021983940209734123,
+                0.06524327502228391
+              ],
+              "mass_same_sign_pct": 100.0
+            },
+            "delta_sharpe_cost_adj": {
+              "delta_mean": 0.36928030872041756,
+              "ic95": [
+                -0.38413208815285776,
+                1.151984376474
+              ],
+              "mass_same_sign_pct": 83.65
+            },
+            "mean_veto_rate_arm": 0.027843474576271187
+          },
+          "SW1": {
+            "subset": "SW1",
+            "n_dates": 374,
+            "n_pairs": 374,
+            "delta_cvar5": {
+              "delta_mean": -0.0007732976424384843,
+              "ic95": [
+                -0.004022619255928269,
+                0.0026107871537381744
+              ],
+              "mass_same_sign_pct": 68.60000000000001
+            },
+            "delta_sharpe_cost_adj": {
+              "delta_mean": -0.09602343571527404,
+              "ic95": [
+                -0.671479407367051,
+                0.4455450881056621
+              ],
+              "mass_same_sign_pct": 62.949999999999996
+            },
+            "mean_veto_rate_arm": 0.025784625668449197
+          },
+          "SW2": {
+            "subset": "SW2",
+            "n_dates": 511,
+            "n_pairs": 511,
+            "delta_cvar5": {
+              "delta_mean": 0.05779922417262485,
+              "ic95": [
+                0.028752533033284084,
+                0.09436826777553962
+              ],
+              "mass_same_sign_pct": 100.0
+            },
+            "delta_sharpe_cost_adj": {
+              "delta_mean": 0.5549542526854128,
+              "ic95": [
+                -0.46994815642151805,
+                1.685453278445243
+              ],
+              "mass_same_sign_pct": 85.2
+            },
+            "mean_veto_rate_arm": 0.029312866927592957
+          }
+        },
+        "delta_sharpe_holdout": 0.351636854058592,
+        "delta_cvar5_holdout": 0.041201617468136054
+      }
+    },
+    "Zero-A_vs_A1": {
+      "baseline": "Zero-A",
+      "arm": "A1",
+      "representative_offset": 1,
+      "favorable_offsets_joint_holdout": 10,
+      "phase_robustness_pass": true,
+      "representative_offset_tier": "INCONCLUSIVO",
+      "final_verdict": "INCONCLUSIVO",
+      "representative_details": {
+        "offset": 1,
+        "offset_tier_before_phase_robustness": "INCONCLUSIVO",
+        "deltas": {
+          "HOLDOUT": {
+            "delta_cvar5": 0.04668045527087477,
+            "delta_sharpe_cost_adj": 0.27301971909643896,
+            "mean_veto_rate_arm": 0.02757062146892655
+          },
+          "SW1": {
+            "delta_cvar5": 0.0005071055230582919,
+            "delta_sharpe_cost_adj": -0.2758786375744583,
+            "mean_veto_rate_arm": 0.025668449197860967
+          },
+          "SW2": {
+            "delta_cvar5": 0.06754499537519533,
+            "delta_sharpe_cost_adj": 0.49345533261872776,
+            "mean_veto_rate_arm": 0.028962818003913895
+          }
+        },
+        "bootstrap": {
+          "HOLDOUT": {
+            "subset": "HOLDOUT",
+            "n_dates": 885,
+            "n_pairs": 885,
+            "delta_cvar5": {
+              "delta_mean": 0.046384606137676684,
+              "ic95": [
+                0.026061112400819528,
+                0.07316763353517962
+              ],
+              "mass_same_sign_pct": 100.0
+            },
+            "delta_sharpe_cost_adj": {
+              "delta_mean": 0.30324583680616896,
+              "ic95": [
+                -0.5193843680159336,
+                1.193282861645532
+              ],
+              "mass_same_sign_pct": 75.6
+            },
+            "mean_veto_rate_arm": 0.027554067796610168
+          },
+          "SW1": {
+            "subset": "SW1",
+            "n_dates": 374,
+            "n_pairs": 374,
+            "delta_cvar5": {
+              "delta_mean": 0.00046092170930983064,
+              "ic95": [
+                -0.0024349505117821344,
+                0.0030721889241372
+              ],
+              "mass_same_sign_pct": 63.949999999999996
+            },
+            "delta_sharpe_cost_adj": {
+              "delta_mean": -0.2821503882598205,
+              "ic95": [
+                -0.8764787294438466,
+                0.2927143799645191
+              ],
+              "mass_same_sign_pct": 82.65
+            },
+            "mean_veto_rate_arm": 0.02564291443850267
+          },
+          "SW2": {
+            "subset": "SW2",
+            "n_dates": 511,
+            "n_pairs": 511,
+            "delta_cvar5": {
+              "delta_mean": 0.06673354310771452,
+              "ic95": [
+                0.03372721288972581,
+                0.10935274275757646
+              ],
+              "mass_same_sign_pct": 100.0
+            },
+            "delta_sharpe_cost_adj": {
+              "delta_mean": 0.5558740342580761,
+              "ic95": [
+                -0.5264163256676055,
+                1.7461369926112906
+              ],
+              "mass_same_sign_pct": 82.65
+            },
+            "mean_veto_rate_arm": 0.02896536203522505
+          }
+        },
+        "delta_sharpe_holdout": 0.27301971909643896,
+        "delta_cvar5_holdout": 0.04668045527087477
+      }
+    },
+    "Zero-A_vs_A2": {
+      "baseline": "Zero-A",
+      "arm": "A2",
+      "representative_offset": 0,
+      "favorable_offsets_joint_holdout": 10,
+      "phase_robustness_pass": true,
+      "representative_offset_tier": "INCONCLUSIVO",
+      "final_verdict": "INCONCLUSIVO",
+      "representative_details": {
+        "offset": 0,
+        "offset_tier_before_phase_robustness": "INCONCLUSIVO",
+        "deltas": {
+          "HOLDOUT": {
+            "delta_cvar5": 0.04999768919060989,
+            "delta_sharpe_cost_adj": 0.2378367770711356,
+            "mean_veto_rate_arm": 0.03175141242937853
+          },
+          "SW1": {
+            "delta_cvar5": -0.0016163170928781279,
+            "delta_sharpe_cost_adj": -0.11892012673419361,
+            "mean_veto_rate_arm": 0.025668449197860963
+          },
+          "SW2": {
+            "delta_cvar5": 0.07435976957972244,
+            "delta_sharpe_cost_adj": 0.36793631454624653,
+            "mean_veto_rate_arm": 0.036203522504892366
+          }
+        },
+        "bootstrap": {
+          "HOLDOUT": {
+            "subset": "HOLDOUT",
+            "n_dates": 885,
+            "n_pairs": 885,
+            "delta_cvar5": {
+              "delta_mean": 0.049686578230114485,
+              "ic95": [
+                0.02640676608565953,
+                0.0779619151068733
+              ],
+              "mass_same_sign_pct": 100.0
+            },
+            "delta_sharpe_cost_adj": {
+              "delta_mean": 0.25715077475406717,
+              "ic95": [
+                -0.59592045615597,
+                1.1179766115373262
+              ],
+              "mass_same_sign_pct": 72.2
+            },
+            "mean_veto_rate_arm": 0.0317464406779661
+          },
+          "SW1": {
+            "subset": "SW1",
+            "n_dates": 374,
+            "n_pairs": 374,
+            "delta_cvar5": {
+              "delta_mean": -0.0014632310329143806,
+              "ic95": [
+                -0.004071013834016863,
+                0.00114556249005776
+              ],
+              "mass_same_sign_pct": 86.1
+            },
+            "delta_sharpe_cost_adj": {
+              "delta_mean": -0.12023607612893966,
+              "ic95": [
+                -0.6983963400872909,
+                0.49242500586437377
+              ],
+              "mass_same_sign_pct": 66.35
+            },
+            "mean_veto_rate_arm": 0.025622927807486633
+          },
+          "SW2": {
+            "subset": "SW2",
+            "n_dates": 511,
+            "n_pairs": 511,
+            "delta_cvar5": {
+              "delta_mean": 0.07291651245562913,
+              "ic95": [
+                0.037820334762179234,
+                0.11659272496467583
+              ],
+              "mass_same_sign_pct": 100.0
+            },
+            "delta_sharpe_cost_adj": {
+              "delta_mean": 0.3935948717547448,
+              "ic95": [
+                -0.7336977550910709,
+                1.5940881276552934
+              ],
+              "mass_same_sign_pct": 75.25
+            },
+            "mean_veto_rate_arm": 0.03615278864970646
+          }
+        },
+        "delta_sharpe_holdout": 0.2378367770711356,
+        "delta_cvar5_holdout": 0.04999768919060989
+      }
+    },
+    "A1_vs_A2": {
+      "baseline": "A1",
+      "arm": "A2",
+      "representative_offset": 3,
+      "favorable_offsets_joint_holdout": 0,
+      "phase_robustness_pass": false,
+      "representative_offset_tier": "INCONCLUSIVO",
+      "final_verdict": "INCONCLUSIVO",
+      "representative_details": {
+        "offset": 3,
+        "offset_tier_before_phase_robustness": "INCONCLUSIVO",
+        "deltas": {
+          "HOLDOUT": {
+            "delta_cvar5": -0.0002514835248547259,
+            "delta_sharpe_cost_adj": -0.020082408748799407,
+            "mean_veto_rate_arm": 0.032090395480225985
+          },
+          "SW1": {
+            "delta_cvar5": -0.0007019207374558759,
+            "delta_sharpe_cost_adj": 0.04378622390855627,
+            "mean_veto_rate_arm": 0.02967914438502674
+          },
+          "SW2": {
+            "delta_cvar5": -0.0009454854739804064,
+            "delta_sharpe_cost_adj": -0.05085645953830564,
+            "mean_veto_rate_arm": 0.033855185909980434
+          }
+        },
+        "bootstrap": {
+          "HOLDOUT": {
+            "subset": "HOLDOUT",
+            "n_dates": 885,
+            "n_pairs": 885,
+            "delta_cvar5": {
+              "delta_mean": -0.0002945674225418873,
+              "ic95": [
+                -0.002563977088663986,
+                0.0021909526591054928
+              ],
+              "mass_same_sign_pct": 61.25000000000001
+            },
+            "delta_sharpe_cost_adj": {
+              "delta_mean": -0.022593205547605882,
+              "ic95": [
+                -0.2699504850724374,
+                0.22255683833081935
+              ],
+              "mass_same_sign_pct": 56.49999999999999
+            },
+            "mean_veto_rate_arm": 0.03210344632768361
+          },
+          "SW1": {
+            "subset": "SW1",
+            "n_dates": 374,
+            "n_pairs": 374,
+            "delta_cvar5": {
+              "delta_mean": -0.00048597006768790553,
+              "ic95": [
+                -0.00263641766344281,
+                0.0015435794362486943
+              ],
+              "mass_same_sign_pct": 66.45
+            },
+            "delta_sharpe_cost_adj": {
+              "delta_mean": 0.03971179992502259,
+              "ic95": [
+                -0.33075852466356437,
+                0.4258865561556871
+              ],
+              "mass_same_sign_pct": 56.99999999999999
+            },
+            "mean_veto_rate_arm": 0.029701804812834225
+          },
+          "SW2": {
+            "subset": "SW2",
+            "n_dates": 511,
+            "n_pairs": 511,
+            "delta_cvar5": {
+              "delta_mean": -0.0008793580309464602,
+              "ic95": [
+                -0.00425839163525366,
+                0.003141237744030274
+              ],
+              "mass_same_sign_pct": 70.6
+            },
+            "delta_sharpe_cost_adj": {
+              "delta_mean": -0.05131057713106939,
+              "ic95": [
+                -0.3732892669410246,
+                0.26917399514401813
+              ],
+              "mass_same_sign_pct": 61.7
+            },
+            "mean_veto_rate_arm": 0.03399535225048924
+          }
+        },
+        "delta_sharpe_holdout": -0.020082408748799407,
+        "delta_cvar5_holdout": -0.0002514835248547259
+      }
+    }
+  },
+  "sanity_gates": "PASS"
+}

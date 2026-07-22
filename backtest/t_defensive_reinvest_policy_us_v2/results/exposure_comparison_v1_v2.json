@@ -1,0 +1,168 @@
+{
+  "task_id": "T-SDC-DEFENSIVE-REINVEST-POLICY-US-V2",
+  "comparison_offset_v2": 0,
+  "rows": [
+    {
+      "split": "TRAIN",
+      "arm": "Zero-A",
+      "v1_days_invested_pct": 0.0,
+      "v2_days_invested_pct": 87.47514910536779,
+      "v1_avg_tickers": 0.0,
+      "v2_avg_tickers": 17.63220675944334,
+      "v1_cash_idle_days_pct": 100.0,
+      "v2_cash_idle_days_pct": 12.524850894632205
+    },
+    {
+      "split": "TRAIN",
+      "arm": "Zero-B",
+      "v1_days_invested_pct": 0.0,
+      "v2_days_invested_pct": 87.47514910536779,
+      "v1_avg_tickers": 0.0,
+      "v2_avg_tickers": 14.371769383697814,
+      "v1_cash_idle_days_pct": 100.0,
+      "v2_cash_idle_days_pct": 12.524850894632205
+    },
+    {
+      "split": "TRAIN",
+      "arm": "A1",
+      "v1_days_invested_pct": 0.0,
+      "v2_days_invested_pct": 87.47514910536779,
+      "v1_avg_tickers": 0.0,
+      "v2_avg_tickers": 14.371769383697814,
+      "v1_cash_idle_days_pct": 100.0,
+      "v2_cash_idle_days_pct": 12.524850894632205
+    },
+    {
+      "split": "TRAIN",
+      "arm": "A2",
+      "v1_days_invested_pct": 87.47514910536779,
+      "v2_days_invested_pct": 87.47514910536779,
+      "v1_avg_tickers": 17.411530815109344,
+      "v2_avg_tickers": 15.107355864811133,
+      "v1_cash_idle_days_pct": 95.02982107355865,
+      "v2_cash_idle_days_pct": 12.524850894632205
+    },
+    {
+      "split": "HOLDOUT",
+      "arm": "Zero-A",
+      "v1_days_invested_pct": 7.005649717514125,
+      "v2_days_invested_pct": 100.0,
+      "v1_avg_tickers": 1.5570621468926553,
+      "v2_avg_tickers": 17.119774011299434,
+      "v1_cash_idle_days_pct": 92.99435028248587,
+      "v2_cash_idle_days_pct": 0.0
+    },
+    {
+      "split": "HOLDOUT",
+      "arm": "Zero-B",
+      "v1_days_invested_pct": 7.005649717514125,
+      "v2_days_invested_pct": 100.0,
+      "v1_avg_tickers": 1.5785310734463276,
+      "v2_avg_tickers": 16.307344632768363,
+      "v1_cash_idle_days_pct": 92.99435028248587,
+      "v2_cash_idle_days_pct": 0.0
+    },
+    {
+      "split": "HOLDOUT",
+      "arm": "A1",
+      "v1_days_invested_pct": 7.005649717514125,
+      "v2_days_invested_pct": 100.0,
+      "v1_avg_tickers": 1.5649717514124293,
+      "v2_avg_tickers": 16.177401129943505,
+      "v1_cash_idle_days_pct": 92.99435028248587,
+      "v2_cash_idle_days_pct": 0.0
+    },
+    {
+      "split": "HOLDOUT",
+      "arm": "A2",
+      "v1_days_invested_pct": 100.0,
+      "v2_days_invested_pct": 100.0,
+      "v1_avg_tickers": 20.210169491525424,
+      "v2_avg_tickers": 16.25423728813559,
+      "v1_cash_idle_days_pct": 93.67231638418079,
+      "v2_cash_idle_days_pct": 1.0169491525423728
+    },
+    {
+      "split": "SW1",
+      "arm": "Zero-A",
+      "v1_days_invested_pct": 0.0,
+      "v2_days_invested_pct": 100.0,
+      "v1_avg_tickers": 0.0,
+      "v2_avg_tickers": 18.962566844919785,
+      "v1_cash_idle_days_pct": 100.0,
+      "v2_cash_idle_days_pct": 0.0
+    },
+    {
+      "split": "SW1",
+      "arm": "Zero-B",
+      "v1_days_invested_pct": 0.0,
+      "v2_days_invested_pct": 100.0,
+      "v1_avg_tickers": 0.0,
+      "v2_avg_tickers": 17.425133689839573,
+      "v1_cash_idle_days_pct": 100.0,
+      "v2_cash_idle_days_pct": 0.0
+    },
+    {
+      "split": "SW1",
+      "arm": "A1",
+      "v1_days_invested_pct": 0.0,
+      "v2_days_invested_pct": 100.0,
+      "v1_avg_tickers": 0.0,
+      "v2_avg_tickers": 17.37433155080214,
+      "v1_cash_idle_days_pct": 100.0,
+      "v2_cash_idle_days_pct": 0.0
+    },
+    {
+      "split": "SW1",
+      "arm": "A2",
+      "v1_days_invested_pct": 100.0,
+      "v2_days_invested_pct": 100.0,
+      "v1_avg_tickers": 20.0,
+      "v2_avg_tickers": 16.86898395721925,
+      "v1_cash_idle_days_pct": 100.0,
+      "v2_cash_idle_days_pct": 0.0
+    },
+    {
+      "split": "SW2",
+      "arm": "Zero-A",
+      "v1_days_invested_pct": 12.13307240704501,
+      "v2_days_invested_pct": 100.0,
+      "v1_avg_tickers": 2.696673189823875,
+      "v2_avg_tickers": 15.771037181996086,
+      "v1_cash_idle_days_pct": 87.866927592955,
+      "v2_cash_idle_days_pct": 0.0
+    },
+    {
+      "split": "SW2",
+      "arm": "Zero-B",
+      "v1_days_invested_pct": 12.13307240704501,
+      "v2_days_invested_pct": 100.0,
+      "v1_avg_tickers": 2.7338551859099804,
+      "v2_avg_tickers": 15.489236790606654,
+      "v1_cash_idle_days_pct": 87.866927592955,
+      "v2_cash_idle_days_pct": 0.0
+    },
+    {
+      "split": "SW2",
+      "arm": "A1",
+      "v1_days_invested_pct": 12.13307240704501,
+      "v2_days_invested_pct": 100.0,
+      "v1_avg_tickers": 2.710371819960861,
+      "v2_avg_tickers": 15.301369863013699,
+      "v1_cash_idle_days_pct": 87.866927592955,
+      "v2_cash_idle_days_pct": 0.0
+    },
+    {
+      "split": "SW2",
+      "arm": "A2",
+      "v1_days_invested_pct": 100.0,
+      "v2_days_invested_pct": 100.0,
+      "v1_avg_tickers": 20.36399217221135,
+      "v2_avg_tickers": 15.804305283757339,
+      "v1_cash_idle_days_pct": 89.04109589041096,
+      "v2_cash_idle_days_pct": 1.761252446183953
+    }
+  ],
+  "a2_offset0_cash_ratio_le5_days_pct": 99.32075471698113,
+  "owner_symptom_pass": true
+}

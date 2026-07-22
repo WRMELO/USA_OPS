@@ -675,6 +675,32 @@ endurecido para eliminar dupla contagem estrutural e blindar investido/caixa:
 
 Ref: SALA D-125, USA D-147, SALA D-124, USA D-146, R-038, R-056, R-058, R-059.
 
+### 6.23 Invalidacao do estudo defensivo V1 e contrato de harness V2 (D-154)
+
+Os vereditos registrados em USA D-153 para
+`T-SDC-DEFENSIVE-REINVEST-POLICY-US-V1` sao invalidos para qualquer finalidade
+decisoria. A V1 herdou a ancora LIVE `2026-04-16` em uma janela iniciada em
+2021, deixando os bracos-base sem exposicao na maior parte da amostra e o A2
+em deadlock por bloqueios sem reset e posicoes-po ocupando vagas. Os artefatos
+da V1 permanecem preservados como evidencia historica invalida.
+
+O harness de `T-SDC-DEFENSIVE-REINVEST-POLICY-US-V2` adota:
+
+1. primeiro rebalance no primeiro dia elegivel por scores;
+2. phase sweep dos offsets 0 a 9 da cadencia 10;
+3. pool de caixa defensivo, impedindo compra fora do gatilho estudado;
+4. venda defensiva integral por contagem exata de acoes;
+5. reset de `defensive_blocked` em cada ciclo;
+6. posicao-po abaixo de 0,1% do equity sem ocupar vaga ativa;
+7. gates G1-G6 executados antes de metricas ou bootstrap.
+
+O teste regressivo comprovou que o helper compartilhado de venda integral pode
+vender 98 de 99 acoes por divisao em ponto flutuante. Sua correcao e avaliacao
+de impacto historico exigem task separada; a V2 usa wrapper local exato. Nenhum
+arquivo blindado de §6.6 foi tocado.
+
+Ref: SALA D-136, USA D-154, USA D-153, R-041, R-046, R-048, R-061.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.

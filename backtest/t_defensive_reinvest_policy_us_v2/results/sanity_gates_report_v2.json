@@ -1,0 +1,79 @@
+{
+  "task_id": "T-SDC-DEFENSIVE-REINVEST-POLICY-US-V2",
+  "overall_status": "PASS",
+  "gates": [
+    {
+      "gate": "G1",
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "gate": "G2",
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "gate": "G3",
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "gate": "G4",
+      "status": "PASS",
+      "failure_count": 0,
+      "max_abs_error": 0.0
+    },
+    {
+      "gate": "G5",
+      "status": "PASS",
+      "note": "_sell_all_shares_exact aborta imediatamente se saldo remanescente != 0"
+    },
+    {
+      "gate": "G6",
+      "status": "PASS",
+      "failures": [],
+      "means": {
+        "A1/offset=0": 16.261132075471696,
+        "A1/offset=1": 16.365558912386707,
+        "A1/offset=2": 16.142857142857142,
+        "A1/offset=3": 16.216338880484116,
+        "A1/offset=4": 16.09689629068887,
+        "A1/offset=5": 16.15,
+        "A1/offset=6": 16.420773313115998,
+        "A1/offset=7": 16.169195751138087,
+        "A1/offset=8": 15.997722095671982,
+        "A1/offset=9": 15.912613981762918,
+        "A2/offset=0": 16.591698113207546,
+        "A2/offset=1": 16.726586102719033,
+        "A2/offset=2": 16.69009826152683,
+        "A2/offset=3": 16.751134644478064,
+        "A2/offset=4": 16.52006056018168,
+        "A2/offset=5": 16.784848484848485,
+        "A2/offset=6": 16.733889310083395,
+        "A2/offset=7": 16.750379362670714,
+        "A2/offset=8": 16.518602885345484,
+        "A2/offset=9": 16.59726443768997,
+        "Zero-A/offset=0": 18.128301886792453,
+        "Zero-A/offset=1": 18.47129909365559,
+        "Zero-A/offset=2": 18.417233560090704,
+        "Zero-A/offset=3": 18.049924357034797,
+        "Zero-A/offset=4": 18.134746404239213,
+        "Zero-A/offset=5": 18.381818181818183,
+        "Zero-A/offset=6": 18.345716451857466,
+        "Zero-A/offset=7": 18.131259484066767,
+        "Zero-A/offset=8": 18.084282460136674,
+        "Zero-A/offset=9": 18.33434650455927,
+        "Zero-B/offset=0": 16.34792452830189,
+        "Zero-B/offset=1": 16.369335347432024,
+        "Zero-B/offset=2": 16.179138321995463,
+        "Zero-B/offset=3": 16.308623298033282,
+        "Zero-B/offset=4": 16.141559424678274,
+        "Zero-B/offset=5": 16.14318181818182,
+        "Zero-B/offset=6": 16.451099317664898,
+        "Zero-B/offset=7": 16.241274658573598,
+        "Zero-B/offset=8": 16.06378132118451,
+        "Zero-B/offset=9": 16.00531914893617
+      }
+    }
+  ]
+}

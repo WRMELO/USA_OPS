@@ -1,0 +1,14 @@
+{
+  "fixture": "3 lotes x 33 acoes; preco=10.37",
+  "shared_helper": {
+    "status": "FAIL",
+    "sold_shares": 98,
+    "remaining_shares": 1
+  },
+  "v2_exact_wrapper": {
+    "status": "PASS",
+    "sold_shares": 99,
+    "remaining_shares": 0
+  },
+  "recommend_separate_historical_impact_task": true
+}
