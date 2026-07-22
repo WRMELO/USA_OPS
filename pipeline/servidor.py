@@ -433,6 +433,7 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
 
                 tipo = str(form.get("tipo", "")).upper().strip()
                 ticker = str(form.get("ticker", "")).upper().strip()
+                liquidacao = str(form.get("liquidacao", "")).upper().strip()
                 try:
                     raw_qtd = str(form.get("qtd", "")).strip()
                     qtd = float(raw_qtd) if raw_qtd else None
@@ -456,6 +457,12 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 if corretagem < 0:
                     self._respond_html("<h3>Corretagem invalida.</h3>", code=400)
                     return
+                if tipo == "VENDA" and liquidacao not in {"JA_NO_CAIXA", "EM_LIQUIDACAO"}:
+                    self._respond_html(
+                        "<h3>Liquidacao invalida para VENDA (use JA_NO_CAIXA ou EM_LIQUIDACAO).</h3>",
+                        code=400,
+                    )
+                    return
 
                 try:
                     real_boletim_web.add_operation(
@@ -467,6 +474,7 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                         corretagem=corretagem,
                         preco_sombra=preco_sombra,
                         valor_investido=valor_investido,
+                        liquidacao=liquidacao if tipo == "VENDA" else None,
                     )
                 except ValueError as exc:
                     self._respond_html(f"<h3>{str(exc)}</h3>", code=400)

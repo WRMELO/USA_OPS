@@ -154,6 +154,50 @@ def test_unmatched_settlement_reduces_accounting(tmp_path):
     assert ledger.pending_settlements(date(2026, 1, 4)) == []
 
 
+def test_compute_cash_honors_settlement_even_with_future_settle_date(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+    day = date(2026, 1, 3)
+
+    _append(
+        LedgerEvent(
+            id="AP2",
+            type=EventType.APORTE,
+            exec_date=day,
+            created_at=datetime.now(tz=UTC),
+            amount=1000.0,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="S2",
+            type=EventType.SELL,
+            exec_date=day,
+            created_at=datetime.now(tz=UTC),
+            ticker="PENG",
+            qtd=10.0,
+            price=20.0,
+            amount=200.0,
+            settle_date=date(2026, 1, 4),
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="T2",
+            type=EventType.SETTLEMENT,
+            exec_date=day,
+            created_at=datetime.now(tz=UTC),
+            amount=200.0,
+            ref_id="S2",
+            settle_date=day,
+            reason="liquidacao=JA_NO_CAIXA",
+        )
+    )
+
+    cash = ledger.compute_cash(day)
+    assert abs(cash["cash_free"] - 1200.0) < 1e-9
+    assert abs(cash["cash_accounting"]) < 1e-9
+
+
 def test_duplicate_event_not_appended(tmp_path):
     ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
 

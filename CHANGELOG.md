@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-22
+
+- feat(web+ledger): T-SDC-BOLETIM-DFC-LIQUIDACAO-FLAG-US-V1 — adiciona flag obrigatória de liquidação por venda no `/painel` (`JA_NO_CAIXA`/`EM_LIQUIDACAO`), persiste `SETTLEMENT` same-day referenciado ao `SELL` quando aplicável, ajusta `pipeline/ledger.py::compute_cash` para reconciliar `cash_accounting` por `SELL - settled_by_ref` mesmo com `settle_date` futuro, remodela as seções 07/08 para Balancete+DFC simplificados (Caixa Livre Real BTG, corretagem dia/acumulada, delta ajustado por liquidação) e inclui script de remediação append-only do caso PENG 21/07 (`scripts/migrate_ledger_20260721_peng_ja_no_caixa.py`) com testes dedicados. Decision: D-150 (ref cruzada: SALA D-132).
+
 ## 2026-07-21
 
 - feat(motor-us): T-SDC-MOTOR-BANDEXP-RET62-VETO-US-V1 — promove o gate `Flag_BandExp ∩ ret_62>=1.00` a veto operacional efetivo no Top-20 US (remoção + substituição pelo próximo elegível), adiciona o módulo `lib/band_exp_gate.py`, integra o veto em `pipeline/09_decide.py` (blindado) com `ranking_schema_version=3`, registra ativação em `config/winner_us.json` (blindado) e compatibiliza exibição consultiva em `pipeline/analise_us.py`. Inclui testes `tests/test_band_exp_gate.py`, `tests/test_09_decide_bandexp_ret62_veto.py` e paridade formal em `backtest/t_motor_bandexp_ret62_veto_us_v1/verify_operational_parity_v1.py`. Decision: SALA D-131 (ref cruzada: USA D-149).

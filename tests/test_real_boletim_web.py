@@ -4,6 +4,9 @@ import json
 from datetime import date
 from pathlib import Path
 
+import pytest
+
+import pipeline.ledger as ledger
 import pipeline.real_boletim_web as real_boletim_web
 
 
@@ -54,6 +57,7 @@ def test_remove_operation_keeps_remaining_rows(tmp_path, monkeypatch):
         preco=16.0,
         corretagem=1.2,
         preco_sombra=15.8,
+        liquidacao="EM_LIQUIDACAO",
     )
     op_ids = [op["id"] for op in draft["operations"]]
     assert len(op_ids) == 2
@@ -115,6 +119,96 @@ def test_apply_draft_to_ledger_creates_buy_fee_and_shadow_and_preserves_ssot(tmp
 
     ssot_after = _count_lines(ssot_path)
     assert ssot_after == ssot_before
+
+
+def test_add_operation_venda_requires_liquidacao(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    exec_day = date(2026, 7, 16)
+    with pytest.raises(ValueError):
+        real_boletim_web.add_operation(
+            exec_day,
+            tipo="VENDA",
+            ticker="PENG",
+            qtd=3,
+            preco=55.6,
+            corretagem=2.5,
+        )
+
+
+def test_apply_draft_venda_ja_no_caixa_creates_settlement_and_zeros_accounting(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    exec_day = date(2026, 7, 21)
+    ledger_dir = tmp_path / "live_real"
+    operations = [
+        {
+            "id": "op-v1",
+            "type": "VENDA",
+            "ticker": "PENG",
+            "qtd": 16.734846,
+            "preco": 55.6,
+            "corretagem": 0.0,
+            "preco_sombra": 0.0,
+            "liquidacao": "JA_NO_CAIXA",
+        }
+    ]
+
+    real_boletim_web.apply_draft_to_ledger(exec_day, ledger_dir, operations)
+    real_events = [
+        json.loads(line)
+        for line in (ledger_dir / "ledger_real.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    sells = [ev for ev in real_events if ev.get("type") == "SELL"]
+    settlements = [ev for ev in real_events if ev.get("type") == "SETTLEMENT"]
+    assert len(sells) == 1
+    assert len(settlements) == 1
+    assert settlements[0]["ref_id"] == sells[0]["id"]
+    assert "liquidacao=JA_NO_CAIXA" in str(sells[0].get("reason", ""))
+
+    prev = ledger.LEDGER_PATH
+    try:
+        ledger.LEDGER_PATH = ledger_dir / "ledger_real.jsonl"
+        cash = ledger.compute_cash(exec_day)
+    finally:
+        ledger.LEDGER_PATH = prev
+    assert abs(float(cash["cash_accounting"])) < 0.01
+
+
+def test_apply_draft_venda_em_liquidacao_keeps_accounting(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    exec_day = date(2026, 7, 21)
+    ledger_dir = tmp_path / "live_real"
+    operations = [
+        {
+            "id": "op-v2",
+            "type": "VENDA",
+            "ticker": "PENG",
+            "qtd": 16.734846,
+            "preco": 55.6,
+            "corretagem": 0.0,
+            "preco_sombra": 0.0,
+            "liquidacao": "EM_LIQUIDACAO",
+        }
+    ]
+
+    real_boletim_web.apply_draft_to_ledger(exec_day, ledger_dir, operations)
+    real_events = [
+        json.loads(line)
+        for line in (ledger_dir / "ledger_real.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    sells = [ev for ev in real_events if ev.get("type") == "SELL"]
+    settlements = [ev for ev in real_events if ev.get("type") == "SETTLEMENT"]
+    assert len(sells) == 1
+    assert settlements == []
+
+    prev = ledger.LEDGER_PATH
+    try:
+        ledger.LEDGER_PATH = ledger_dir / "ledger_real.jsonl"
+        cash = ledger.compute_cash(exec_day)
+    finally:
+        ledger.LEDGER_PATH = prev
+    assert abs(float(cash["cash_accounting"]) - float(sells[0]["amount"])) < 0.02
 
 
 def test_close_day_generates_artifacts_and_archives_draft(tmp_path, monkeypatch):
@@ -215,8 +309,8 @@ def test_render_live_html_orders_by_m3_rank():
     }
     html = real_boletim_web.render_live_html(view)
     assert "Carteira real" in html
-    assert "Livro de operacoes por ativo" in html
-    assert "Top-20 operacional (m3_rank)" in html
+    assert "Livro de operacoes" in html
+    assert "Top-20 operacional" in html
     assert "M3 Rank" in html
     assert html.index("AAAA") < html.index("ZZZZ")
 
@@ -332,11 +426,13 @@ def test_load_live_view_exposes_base1_bridge_keys(tmp_path, monkeypatch):
     view = real_boletim_web.load_live_view(exec_day, ledger_dir)
 
     assert "base1_series" in view
+    assert "corretagem_dia" in view
     assert "corretagem_total" in view
     assert "capital_em_uso" in view
     assert "carteira_d1_valor" in view
     assert "sparklines_tickers" in view
     assert isinstance(view["base1_series"], list)
+    assert isinstance(view["corretagem_dia"], float)
     assert isinstance(view["sparklines_tickers"], list)
     assert isinstance(view["corretagem_total"], float)
     assert isinstance(view["capital_em_uso"], float)
@@ -400,7 +496,8 @@ def test_render_live_html_has_bridge_spark_and_no_cdn(monkeypatch):
         "sparklines_tickers": ["AAAA"],
     }
     html = real_boletim_web.render_live_html(view)
-    assert "Ponte de friccao" in html
+    assert "Balancete simplificado" in html
+    assert "DFC simplificado" in html
     assert "class='spark'" in html
     assert "QTY_FIXES" not in html
     assert "cdn." not in html

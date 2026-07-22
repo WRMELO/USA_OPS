@@ -273,6 +273,8 @@ do dia, com três estados explícitos:
 - A existência do fallback não altera o papel de `/painel` como primário.
 
 Ref: SALA D-111, USA D-136, D-133, D-132, R-018, R-020, R-049, R-050.
+Complemento de liquidação por venda em `VENDA` (`JA_NO_CAIXA` x
+`EM_LIQUIDACAO`): ver §6.21 (D-150).
 
 ### 6.11 Autosave autonomo do dry-run US (F-18, D-137)
 
@@ -456,6 +458,7 @@ explicitamente:
 - Nenhum arquivo blindado de §6.6 foi tocado.
 
 Ref: SALA D-118, USA D-142, R-018, R-020, R-023, R-049, R-056.
+Granularidade por venda e delta ajustado por liquidação: ver §6.21 (D-150).
 
 ### 6.17 Integracao do preview no /painel LIVE-REAL-TEST com Base 1 por cotizacao plena e ponte de friccao dinamica (D-143)
 
@@ -492,6 +495,7 @@ seus atalhos de dados:
   desta task (R-056 / D-141).
 
 Ref: SALA D-119, USA D-143, USA D-142, USA D-141, R-018, R-023, R-049, R-056.
+Balancete/DFC simplificados com flag por venda: ver §6.21 (D-150).
 
 ### 6.18 Reconciliacao autonoma BTG com invariante de caixa (D-145)
 
@@ -593,7 +597,48 @@ material:
 Ref: SALA D-124, USA D-146, SALA D-116, USA D-140, SALA D-123, USA D-145,
 R-056, R-058.
 
-### 6.21 Novacao da reconciliacao 17/07 e novo contrato RECON_ADJUST (D-147)
+### 6.21 Flag de liquidação por venda no /painel + Balancete/DFC simplificados (D-150)
+
+A partir de D-150, o `/painel` LIVE-REAL-TEST US passa a carregar, por venda,
+o estado operacional de liquidação e a refletir isso de forma auditável no
+ledger e no fechamento:
+
+1. **Flag obrigatoria por venda (`liquidacao`)**:
+   o rascunho web passa a exigir, para cada `VENDA`, uma das opcoes:
+   `JA_NO_CAIXA` ou `EM_LIQUIDACAO`.
+2. **Persistencia append-only no ledger real**:
+   o evento `SELL` preserva o registro economico da ordem; quando a opcao e
+   `JA_NO_CAIXA`, o fechamento gera tambem `SETTLEMENT` same-day com `ref_id`
+   do `SELL`, sem sobrescrever eventos historicos.
+3. **Semantica de caixa ajustada para conciliacao por ref_id**:
+   `compute_cash` passa a calcular `cash_accounting` por `SELL.amount -
+   settled_by_ref`, mesmo quando `settle_date` do `SELL` estiver no futuro,
+   eliminando dupla contagem quando ja existe `SETTLEMENT` antecipado.
+4. **Balancete simplificado e DFC simplificado no `/painel`**:
+   secoes 07/08 passam a explicitar:
+   Caixa Livre de Balanco, Caixa Contabil, Caixa Livre Real BTG,
+   Delta Livre-Real, corretagem do dia/acumulada e (quando houver caixa
+   contabil) Delta ajustado por liquidacao.
+5. **Neutralidade de NAV/Base1 preservada**:
+   a reclassificacao entre `cash_accounting` e `cash_free` nao altera o total
+   economico (`carteira + cash_free + cash_accounting`) nem a cotizacao plena
+   (R-049).
+6. **Remediacao historica PENG 21/07**:
+   a correcao ocorre por script supervisionado append-only que adiciona
+   `SETTLEMENT` referenciado ao `SELL` de 2026-07-21 (sem rewrite da linha
+   original), com regeneracao de artefato derivado do dia.
+
+**Contrato de escopo**:
+
+- Nenhum arquivo blindado de §6.6 e tocado.
+- A flag e obrigatoria no fluxo web atual; rascunhos legados sem o campo
+  recebem fallback de compatibilidade para `JA_NO_CAIXA` no fechamento.
+- O valor de `CAIXA_REAL_INFORMADO` segue observacional (D-142), sem entrada
+  em `compute_cash`.
+
+Ref: SALA D-132, USA D-150, USA D-142, USA D-143, R-006, R-018, R-023, R-049.
+
+### 6.22 Novacao da reconciliacao 17/07 e novo contrato RECON_ADJUST (D-147)
 
 A partir de D-147, o contrato tecnico da reconciliacao autonoma BTG e
 endurecido para eliminar dupla contagem estrutural e blindar investido/caixa:

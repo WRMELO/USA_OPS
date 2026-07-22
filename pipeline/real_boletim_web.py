@@ -19,6 +19,8 @@ from scripts.lookup_shadow_price import DEFAULT_WINDOW_PATH, lookup_close
 DRAFT_DIR = ROOT / "data" / "live_real_test"
 REAL_LEDGER_NAME = "ledger_real.jsonl"
 SHADOW_LEDGER_NAME = "ledger_shadow.jsonl"
+LIQUIDACAO_JA_NO_CAIXA = "JA_NO_CAIXA"
+LIQUIDACAO_EM_LIQUIDACAO = "EM_LIQUIDACAO"
 
 
 def _now_iso() -> str:
@@ -37,6 +39,13 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return int(value)
     except Exception:
         return default
+
+
+def _normalize_liquidacao(value: Any) -> str | None:
+    raw = str(value or "").upper().strip()
+    if raw in {LIQUIDACAO_JA_NO_CAIXA, LIQUIDACAO_EM_LIQUIDACAO}:
+        return raw
+    return None
 
 
 def _fmt_usd(value: Any) -> str:
@@ -248,6 +257,7 @@ def add_operation(
     corretagem: float,
     preco_sombra: float | None = None,
     valor_investido: float | None = None,
+    liquidacao: str | None = None,
 ) -> dict[str, Any]:
     op_type = str(tipo or "").upper().strip()
     op_ticker = str(ticker or "").upper().strip()
@@ -261,6 +271,9 @@ def add_operation(
         raise ValueError("Preco invalido")
     if op_corretagem < 0:
         raise ValueError("Corretagem invalida")
+    op_liquidacao = _normalize_liquidacao(liquidacao)
+    if op_type == "VENDA" and op_liquidacao is None:
+        raise ValueError("Liquidacao invalida para VENDA (use JA_NO_CAIXA ou EM_LIQUIDACAO)")
 
     op_valor_investido = _safe_float(valor_investido, 0.0) if valor_investido is not None else 0.0
     if op_valor_investido > 0:
@@ -289,6 +302,7 @@ def add_operation(
         "preco_sombra": shadow_price,
         "preco_sombra_auto": shadow_auto,
         "valor_investido_informado": op_valor_investido if op_valor_investido > 0 else None,
+        "liquidacao": op_liquidacao if op_type == "VENDA" else None,
         "created_at": _now_iso(),
     }
     payload = load_draft(exec_day)
@@ -343,6 +357,11 @@ def apply_draft_to_ledger(exec_day: date, ledger_dir: Path, operations: list[dic
             preco = _safe_float(raw.get("preco"))
             corretagem = _safe_float(raw.get("corretagem"))
             preco_sombra = _safe_float(raw.get("preco_sombra"), 0.0)
+            liquidacao_raw = raw.get("liquidacao")
+            liquidacao = _normalize_liquidacao(liquidacao_raw)
+            if op_type == "VENDA" and liquidacao is None:
+                # Compatibilidade para rascunhos legados sem o campo.
+                liquidacao = LIQUIDACAO_JA_NO_CAIXA
 
             if op_type not in {"COMPRA", "VENDA"}:
                 warnings.append(f"Operacao {idx} ignorada: tipo invalido.")
@@ -350,10 +369,18 @@ def apply_draft_to_ledger(exec_day: date, ledger_dir: Path, operations: list[dic
             if not ticker or qtd <= 0 or preco <= 0:
                 warnings.append(f"Operacao {idx} ignorada: dados incompletos.")
                 continue
+            if op_type == "VENDA" and liquidacao not in {LIQUIDACAO_JA_NO_CAIXA, LIQUIDACAO_EM_LIQUIDACAO}:
+                warnings.append(f"Operacao {idx} ignorada: liquidacao invalida para VENDA.")
+                continue
 
             event_type = EventType.BUY if op_type == "COMPRA" else EventType.SELL
             amount = float(qtd * preco)
             event_reason = "LIVE-REAL-TEST web close"
+            settle_date = None
+            if op_type == "VENDA":
+                event_reason += f" | liquidacao={liquidacao}"
+                if liquidacao == LIQUIDACAO_JA_NO_CAIXA:
+                    settle_date = exec_day
             event = create_event(
                 event_type,
                 exec_day,
@@ -362,6 +389,7 @@ def apply_draft_to_ledger(exec_day: date, ledger_dir: Path, operations: list[dic
                 qtd=qtd,
                 price=preco,
                 reason=event_reason,
+                settle_date=settle_date,
             )
             if is_duplicate(event):
                 warnings.append(f"Operacao {idx} ignorada: duplicada no ledger real.")
@@ -377,6 +405,26 @@ def apply_draft_to_ledger(exec_day: date, ledger_dir: Path, operations: list[dic
                     "amount": amount,
                 }
             )
+
+            if op_type == "VENDA" and liquidacao == LIQUIDACAO_JA_NO_CAIXA:
+                settlement = create_event(
+                    EventType.SETTLEMENT,
+                    exec_day,
+                    amount,
+                    settle_date=exec_day,
+                    ref_id=event.id,
+                    reason="Liquidacao same-day via boletim web (liquidacao=JA_NO_CAIXA)",
+                )
+                if not is_duplicate(settlement):
+                    append_event(settlement)
+                    events_created.append(
+                        {
+                            "kind": settlement.type.value,
+                            "id": settlement.id,
+                            "amount": amount,
+                            "ref_id": event.id,
+                        }
+                    )
 
             if corretagem > 0:
                 fee = create_event(
@@ -534,6 +582,7 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
     informed: dict[str, Any] | None = None
     base1_series: list[dict[str, Any]] = []
     corretagem_total = 0.0
+    corretagem_dia = 0.0
     capital_uso = 0.0
     try:
         ledger_mod.LEDGER_PATH = real_ledger_path
@@ -547,6 +596,10 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
             live_cash_free=float(cash.get("cash_free", 0.0)),
             live_cash_accounting=float(cash.get("cash_accounting", 0.0)),
         )
+        events_today = [
+            ev for ev in ledger_mod.read_all_events() if ev.type == EventType.FEE and ev.exec_date == today
+        ]
+        corretagem_dia = sum(float(ev.amount) for ev in events_today)
         corretagem_total = ledger_mod.total_fees(today)
         capital_uso = ledger_mod.capital_em_uso(today)
     finally:
@@ -645,6 +698,7 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         "target_weights": target_weights,
         "operations_book": operations_book,
         "base1_series": base1_series,
+        "corretagem_dia": round(float(corretagem_dia), 4),
         "corretagem_total": round(float(corretagem_total), 4),
         "capital_em_uso": round(float(capital_uso), 4),
         "carteira_d1_valor": carteira_d1_valor,
@@ -731,17 +785,24 @@ def render_live_html(view: dict[str, Any]) -> str:
         _fmt_usd(friccao_balanco_real_raw) if friccao_balanco_real_raw is not None else "pendente"
     )
 
+    corretagem_dia_raw = _safe_float(view.get("corretagem_dia", 0.0), 0.0)
     corretagem_total_raw = _safe_float(view.get("corretagem_total", 0.0), 0.0)
     capital_em_uso_raw = _safe_float(view.get("capital_em_uso", 0.0), 0.0)
     carteira_d1_valor_raw = _safe_float(view.get("carteira_d1_valor", 0.0), 0.0)
-    total_bruto_raw = carteira_d1_valor_raw + cash_free_raw + cash_accounting_raw
+    total_ativo_raw = carteira_d1_valor_raw + cash_free_raw + cash_accounting_raw
+    total_bruto_raw = total_ativo_raw
     has_caixa_real = caixa_real_informado_raw is not None
     caixa_real_atual = _safe_float(caixa_real_informado_raw, 0.0) if has_caixa_real else 0.0
     friccao_operacional_raw = cash_free_raw - caixa_real_atual if has_caixa_real else 0.0
     friccao_total_raw = corretagem_total_raw + friccao_operacional_raw
-    nav_raw = total_bruto_raw - friccao_operacional_raw
+    nav_raw = total_ativo_raw - friccao_operacional_raw
     resultado_raw = nav_raw - capital_em_uso_raw
     rent_raw = (resultado_raw / capital_em_uso_raw * 100.0) if capital_em_uso_raw > 0 else 0.0
+    delta_ajustado_liquidacao_raw = (
+        (cash_free_raw + cash_accounting_raw) - caixa_real_atual
+        if has_caixa_real and cash_accounting_raw > 0
+        else None
+    )
 
     delta_fmt = "pendente"
     delta_cls = "flat"
@@ -750,6 +811,10 @@ def render_live_html(view: dict[str, Any]) -> str:
     if has_caixa_real:
         delta_fmt, delta_cls = _fmt_signed_usd(friccao_operacional_raw)
         fric_op_fmt, fric_op_cls = _fmt_signed_usd(friccao_operacional_raw)
+    delta_liq_fmt = "n/a"
+    delta_liq_cls = "flat"
+    if delta_ajustado_liquidacao_raw is not None:
+        delta_liq_fmt, delta_liq_cls = _fmt_signed_usd(delta_ajustado_liquidacao_raw)
 
     fric_total_fmt, fric_total_cls = _fmt_signed_usd(friccao_total_raw)
     resultado_fmt, resultado_cls = _fmt_signed_usd(resultado_raw)
@@ -914,14 +979,19 @@ def render_live_html(view: dict[str, Any]) -> str:
     draft_rows: list[str] = []
     for op in operations:
         op_id = html.escape(str(op.get("id", "")))
+        op_type = str(op.get("type", "")).upper().strip()
+        liquidacao_txt = "-"
+        if op_type == "VENDA":
+            liquidacao_txt = html.escape(str(op.get("liquidacao") or LIQUIDACAO_JA_NO_CAIXA))
         draft_rows.append(
             "<tr>"
-            f"<td>{html.escape(str(op.get('type', '')))}</td>"
+            f"<td>{html.escape(op_type)}</td>"
             f"<td>{html.escape(str(op.get('ticker', '')))}</td>"
             f"<td style='text-align:right'>{_fmt_qtd(op.get('qtd'))}</td>"
             f"<td style='text-align:right'>{_fmt_usd(op.get('preco', 0.0))}</td>"
             f"<td style='text-align:right'>{_fmt_usd(op.get('corretagem', 0.0))}</td>"
             f"<td style='text-align:right'>{_fmt_usd(op.get('preco_sombra', 0.0)) if _safe_float(op.get('preco_sombra', 0.0)) > 0 else '-'}</td>"
+            f"<td>{liquidacao_txt}</td>"
             "<td>"
             "<form method='POST' action='/painel/rascunho/remover'>"
             f"<input type='hidden' name='exec_day' value='{html.escape(today)}' />"
@@ -932,7 +1002,7 @@ def render_live_html(view: dict[str, Any]) -> str:
             "</tr>"
         )
     if not draft_rows:
-        draft_rows.append("<tr><td colspan='7'>Nenhuma operacao em rascunho.</td></tr>")
+        draft_rows.append("<tr><td colspan='8'>Nenhuma operacao em rascunho.</td></tr>")
 
     base1_series = view.get("base1_series", []) if isinstance(view.get("base1_series"), list) else []
     base_chart = _base1_chart_svg(base1_series)
@@ -940,6 +1010,8 @@ def render_live_html(view: dict[str, Any]) -> str:
     expect_now = _safe_float(base1_series[-1].get("cagr_expect"), 0.0) if base1_series else 0.0
     base_delta_txt, base_delta_cls = _fmt_signed_pct((base_now - 1.0) * 100.0)
     vs_cagr_txt, vs_cagr_cls = _fmt_signed_pct((base_now - expect_now) * 100.0)
+    cota_preco_raw = base_now * 100.0 if base_now > 0 else 0.0
+    cotas_estimadas = (total_ativo_raw / cota_preco_raw) if cota_preco_raw > 0 else 0.0
 
     closed_note = (
         "<p class='pill'>Dia encerrado: boletim de fechamento ja existe para hoje.</p>"
@@ -1170,57 +1242,65 @@ def render_live_html(view: dict[str, Any]) -> str:
     <div class="op-rows" id="analystOpsRows"></div>
   </div>
 
-  <div class="sec-label"><span class="idx">07</span> Balanco - fechamento real <span class="tag governs">Total -> Friccao -> NAV</span></div>
+  <div class="sec-label"><span class="idx">07</span> Balancete simplificado <span class="tag governs">caixa + ativo + cota</span></div>
   <div class="card">
     <div class="wf">
       <div class="row"><div class="l"><span class="op">&nbsp;</span>Carteira (Fech. D-1)</div><div class="v" id="bridgeCarteira">{_fmt_usd(carteira_d1_valor_raw)}</div></div>
       <div class="row"><div class="l"><span class="op">+</span>Caixa Livre de Balanco</div><div class="v" id="bridgeCaixaBalanco">{_fmt_usd(cash_free_raw)}</div></div>
-      <div class="row"><div class="l"><span class="op">+</span>Caixa Contabil</div><div class="v" id="bridgeCaixaContabil">{_fmt_usd(cash_accounting_raw)}</div></div>
-      <div class="row sub"><div class="l">= Total do Ativo (bruto)</div><div class="v" id="bridgeTotalBruto">{_fmt_usd(total_bruto_raw)}</div></div>
-      <div class="row fric"><div class="l"><span class="op">-</span>Caixa Livre Real</div><div class="v" id="bridgeCaixaReal">{caixa_real_bridge}</div></div>
-      <div class="row fric"><div class="l"><span class="op">=</span>Delta (Balanco - Real)</div><div class="v {delta_cls}" id="bridgeDelta">{delta_fmt}</div></div>
-      <div class="row fric"><div class="l"><span class="op">=</span>Friccao operacional</div><div class="v {fric_op_cls}" id="bridgeFriccaoOperacional">{fric_op_fmt}</div></div>
-      <div class="row fric"><div class="l"><span class="op">+</span>Corretagem acumulada</div><div class="v" id="bridgeCorretagem">{_fmt_usd(corretagem_total_raw)}</div></div>
-      <div class="row fric"><div class="l"><span class="op">=</span>Friccao total</div><div class="v {fric_total_cls}" id="bridgeFriccaoTotal">{fric_total_fmt}</div></div>
-      <div class="row nav"><div class="l">NAV (patrimonio liquido real)</div><div class="v" id="bridgeNav">{_fmt_usd(nav_raw)}</div></div>
+      <div class="row"><div class="l"><span class="op">+</span>Caixa Contabil (em liquidacao)</div><div class="v" id="bridgeCaixaContabil">{_fmt_usd(cash_accounting_raw)}</div></div>
+      <div class="row sub"><div class="l">= Total do Ativo</div><div class="v" id="bridgeTotalBruto">{_fmt_usd(total_ativo_raw)}</div></div>
       <div class="row"><div class="l">Capital em uso</div><div class="v" id="bridgeCapital">{_fmt_usd(capital_em_uso_raw)}</div></div>
-      <div class="row res"><div class="l">Resultado acumulado</div><div class="v {resultado_cls}" id="bridgeResultado">{resultado_fmt}</div></div>
-      <div class="row res"><div class="l">Rentabilidade acumulada</div><div class="v {rent_cls}" id="bridgeRent">{rent_fmt}</div></div>
+      <div class="row"><div class="l">Preco da cota (Base 1 x 100)</div><div class="v mono">{_fmt_usd(cota_preco_raw)}</div></div>
+      <div class="row"><div class="l">Cotas estimadas</div><div class="v mono">{cotas_estimadas:,.4f}</div></div>
+      <div class="row"><div class="l">Base 1 atual</div><div class="v mono">{base_now:.4f}</div></div>
+      <div class="row nav"><div class="l">NAV reconciliado (Total - Delta Balanco-Real)</div><div class="v" id="bridgeNav">{_fmt_usd(nav_raw)}</div></div>
     </div>
     <h3 style="margin-top:12px">Encerramento definitivo do dia</h3>
     <form method="POST" action="/painel/encerrar">
       <input type="hidden" name="exec_day" value="{html.escape(today)}" />
-      <label>Caixa Livre Real (saldo do app BTG, opcional)<input id="caixaRealInput" type="number" name="caixa_real" min="0.00" step="0.01" placeholder="ex: 950.00" {caixa_real_value_attr} /></label>
+      <label>Caixa Livre Real BTG (saldo do app, opcional)<input id="caixaRealInput" type="number" name="caixa_real" min="0.00" step="0.01" placeholder="ex: 950.00" {caixa_real_value_attr} /></label>
       <label style="display:flex; align-items:center; gap:8px; margin-top:8px"><input type="checkbox" name="confirmar" value="sim" required style="width:auto" /> Confirmo encerramento definitivo.</label>
       <button type="submit" style="margin-top:8px">Encerrar o Dia</button>
     </form>
-    <p class="muted">Se informado, o saldo alimenta Caixa Livre Real e Delta Friccao (Balanco - Real).</p>
+    <p class="muted">Caixa Real permanece observacional: nao altera compute_cash; serve para reconciliacao do fechamento.</p>
   </div>
 
-  <div class="sec-label"><span class="idx">08</span> Reconciliacao de caixa - friccao <span class="tag">Balanco vs Real</span></div>
+  <div class="sec-label"><span class="idx">08</span> DFC simplificado + reconciliacao <span class="tag">balanco vs BTG</span></div>
   <div class="card">
     <div class="sources">
       <div class="src">
         <div class="sk">Caixa Livre de Balanco</div>
-        <div class="sv">Valor derivado das movimentacoes financeiras do ledger real.</div>
+        <div class="sv">Derivado do ledger real: APORTE/DIVIDENDO/SETTLEMENT - RETIRADA/BUY/FEE.</div>
       </div>
       <div class="src manual">
-        <div class="sk">Caixa Livre Real</div>
-        <div class="sv">Valor informado pelo Owner para reconciliacao operacional.</div>
+        <div class="sk">Caixa Livre Real BTG</div>
+        <div class="sv">Observacional, informado pelo Owner no encerramento.</div>
       </div>
     </div>
-    <div class="recon">
-      <div class="rcol"><div class="rk">Caixa Livre de Balanco</div><div class="rv" id="reconCaixaBalanco">{_fmt_usd(cash_free_raw)}</div></div>
-      <div class="rgap"><div class="gk">Delta</div><div class="gv {delta_cls}" id="reconDelta">{delta_fmt}</div></div>
-      <div class="rcol real"><div class="rk">Caixa Livre Real</div><div class="rv" id="reconCaixaRealMirror">{caixa_real_bridge}</div></div>
+    <div class="wf" style="margin-top:10px">
+      <div class="row"><div class="l">Caixa Livre de Balanco</div><div class="v" id="reconCaixaBalanco">{_fmt_usd(cash_free_raw)}</div></div>
+      <div class="row"><div class="l">Caixa Livre Real BTG</div><div class="v" id="bridgeCaixaReal">{caixa_real_bridge}</div></div>
+      <div class="row"><div class="l">Delta Livre - Real</div><div class="v {delta_cls}" id="bridgeDelta">{delta_fmt}</div></div>
+      <div class="row"><div class="l">Caixa Contabil (em liquidacao)</div><div class="v">{_fmt_usd(cash_accounting_raw)}</div></div>
+      <div class="row"><div class="l">Delta ajustado por liquidacao</div><div class="v {delta_liq_cls}" id="bridgeDeltaAjustadoLiquidacao">{delta_liq_fmt}</div></div>
+      <div class="row"><div class="l">Corretagem do dia</div><div class="v">{_fmt_usd(corretagem_dia_raw)}</div></div>
+      <div class="row"><div class="l">Corretagem acumulada</div><div class="v" id="bridgeCorretagem">{_fmt_usd(corretagem_total_raw)}</div></div>
+      <div class="row fric"><div class="l">Friccao operacional (Livre - Real)</div><div class="v {fric_op_cls}" id="bridgeFriccaoOperacional">{fric_op_fmt}</div></div>
+      <div class="row fric"><div class="l">Friccao total</div><div class="v {fric_total_cls}" id="bridgeFriccaoTotal">{fric_total_fmt}</div></div>
+      <div class="row res"><div class="l">Resultado acumulado</div><div class="v {resultado_cls}" id="bridgeResultado">{resultado_fmt}</div></div>
+      <div class="row res"><div class="l">Rentabilidade acumulada</div><div class="v {rent_cls}" id="bridgeRent">{rent_fmt}</div></div>
     </div>
-    <p class="muted" style="margin-top:10px">Corretagem acumulada: {_fmt_usd(corretagem_total_raw)}. Delta operacional monitora divergencia Balanco vs Real.</p>
+    <div class="recon" style="margin-top:12px">
+      <div class="rcol"><div class="rk">Caixa Livre de Balanco</div><div class="rv" id="reconCaixaBalancoMirror">{_fmt_usd(cash_free_raw)}</div></div>
+      <div class="rgap"><div class="gk">Delta</div><div class="gv {delta_cls}" id="reconDelta">{delta_fmt}</div></div>
+      <div class="rcol real"><div class="rk">Caixa Livre Real BTG</div><div class="rv" id="reconCaixaRealMirror">{caixa_real_bridge}</div></div>
+    </div>
   </div>
 
   <div class="card">
     <h2>Rascunho operacional (persistente)</h2>
     <table>
-      <tr><th>Tipo</th><th>Ticker</th><th style="text-align:right">Qtd</th><th style="text-align:right">Preco real</th><th style="text-align:right">Corretagem</th><th style="text-align:right">Preco-sombra</th><th>Acoes</th></tr>
+      <tr><th>Tipo</th><th>Ticker</th><th style="text-align:right">Qtd</th><th style="text-align:right">Preco real</th><th style="text-align:right">Corretagem</th><th style="text-align:right">Preco-sombra</th><th>Liquidacao</th><th>Acoes</th></tr>
       {''.join(draft_rows)}
     </table>
     <p class="muted">Salvar rascunho nao modifica o ledger definitivo.</p>
@@ -1243,8 +1323,14 @@ def render_live_html(view: dict[str, Any]) -> str:
         <label>Preco real<input type="number" name="preco" min="0.01" step="0.01" required /></label>
         <label>Corretagem<input type="number" name="corretagem" min="0.00" step="0.01" value="2.50" /></label>
         <label>Preco-sombra (opcional)<input type="number" name="preco_sombra" min="0.00" step="0.01" placeholder="auto-lookup se vazio" /></label>
+        <label>Liquidacao da venda
+          <select name="liquidacao">
+            <option value="JA_NO_CAIXA">JA_NO_CAIXA</option>
+            <option value="EM_LIQUIDACAO">EM_LIQUIDACAO</option>
+          </select>
+        </label>
       </div>
-      <p class="muted">Se preco-sombra ficar vazio, o sistema tenta auto-lookup no SSOT operacional.</p>
+      <p class="muted">Se preco-sombra ficar vazio, o sistema tenta auto-lookup no SSOT operacional. Para VENDA, o campo Liquidacao e obrigatorio.</p>
       <button type="submit">Salvar rascunho</button>
     </form>
   </div>
@@ -1320,14 +1406,21 @@ def render_live_html(view: dict[str, Any]) -> str:
       if (has) {{
         setText("bridgeCaixaReal", fmtUsd(caixaReal), "");
         const d = fmtSignedUsd(delta);
+        const dLiq = fmtSignedUsd(delta + caixaContabil);
         setText("bridgeDelta", d.txt, d.cls);
         setText("bridgeFriccaoOperacional", d.txt, d.cls);
+        if (Math.abs(caixaContabil) > 1e-9) {{
+          setText("bridgeDeltaAjustadoLiquidacao", dLiq.txt, dLiq.cls);
+        }} else {{
+          setText("bridgeDeltaAjustadoLiquidacao", "n/a", "flat");
+        }}
         setText("reconDelta", d.txt, d.cls);
         setText("reconCaixaRealMirror", fmtUsd(caixaReal), "");
       }} else {{
         setText("bridgeCaixaReal", "pendente", "flat");
         setText("bridgeDelta", "pendente", "flat");
         setText("bridgeFriccaoOperacional", "pendente", "flat");
+        setText("bridgeDeltaAjustadoLiquidacao", "n/a", "flat");
         setText("reconDelta", "pendente", "flat");
         setText("reconCaixaRealMirror", "pendente", "flat");
       }}
