@@ -1,0 +1,145 @@
+{
+  "task_id": "T-SDC-DEFENSIVE-HOLD-CASH-DRIFT-LADDER-US-V1",
+  "overall_status": "FAIL",
+  "gates": [
+    {
+      "gate": "G1",
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "gate": "G2",
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "gate": "G3",
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "gate": "G4",
+      "status": "PASS",
+      "failure_count": 0,
+      "max_abs_error": 0.0
+    },
+    {
+      "gate": "G5",
+      "status": "PASS",
+      "note": "_sell_all_shares_exact aborta imediatamente se saldo remanescente != 0"
+    },
+    {
+      "gate": "G6",
+      "status": "FAIL",
+      "failures": [
+        {
+          "arm": "A1_LEVE",
+          "offset": 0,
+          "mean": 7.394716981132076
+        },
+        {
+          "arm": "A1_LEVE",
+          "offset": 1,
+          "mean": 7.158610271903323
+        },
+        {
+          "arm": "A1_LEVE",
+          "offset": 2,
+          "mean": 7.049886621315193
+        },
+        {
+          "arm": "A1_LEVE",
+          "offset": 3,
+          "mean": 7.422844175491679
+        },
+        {
+          "arm": "A1_LEVE",
+          "offset": 4,
+          "mean": 6.943224829674489
+        },
+        {
+          "arm": "A1_LEVE",
+          "offset": 5,
+          "mean": 6.832575757575758
+        },
+        {
+          "arm": "A1_LEVE",
+          "offset": 6,
+          "mean": 7.3297952994692945
+        },
+        {
+          "arm": "A1_LEVE",
+          "offset": 7,
+          "mean": 6.940060698027314
+        },
+        {
+          "arm": "A1_LEVE",
+          "offset": 8,
+          "mean": 7.122247532270311
+        },
+        {
+          "arm": "A1_LEVE",
+          "offset": 9,
+          "mean": 7.052431610942249
+        }
+      ],
+      "means": {
+        "A0_R1/offset=0": 16.133584905660378,
+        "A0_R1/offset=1": 16.219033232628398,
+        "A0_R1/offset=2": 16.191232048374907,
+        "A0_R1/offset=3": 16.181543116490168,
+        "A0_R1/offset=4": 15.955336866010597,
+        "A0_R1/offset=5": 16.138636363636362,
+        "A0_R1/offset=6": 16.24715693707354,
+        "A0_R1/offset=7": 16.028831562974204,
+        "A0_R1/offset=8": 15.912680334092634,
+        "A0_R1/offset=9": 16.038753799392097,
+        "A1_LEVE/offset=0": 7.394716981132076,
+        "A1_LEVE/offset=1": 7.158610271903323,
+        "A1_LEVE/offset=2": 7.049886621315193,
+        "A1_LEVE/offset=3": 7.422844175491679,
+        "A1_LEVE/offset=4": 6.943224829674489,
+        "A1_LEVE/offset=5": 6.832575757575758,
+        "A1_LEVE/offset=6": 7.3297952994692945,
+        "A1_LEVE/offset=7": 6.940060698027314,
+        "A1_LEVE/offset=8": 7.122247532270311,
+        "A1_LEVE/offset=9": 7.052431610942249,
+        "A2_MEDIO/offset=0": 15.243018867924528,
+        "A2_MEDIO/offset=1": 15.256042296072508,
+        "A2_MEDIO/offset=2": 15.26984126984127,
+        "A2_MEDIO/offset=3": 15.27912254160363,
+        "A2_MEDIO/offset=4": 15.000757002271007,
+        "A2_MEDIO/offset=5": 15.11969696969697,
+        "A2_MEDIO/offset=6": 15.253980288097043,
+        "A2_MEDIO/offset=7": 15.047799696509863,
+        "A2_MEDIO/offset=8": 15.024297646165527,
+        "A2_MEDIO/offset=9": 15.268996960486323,
+        "A3_GRAVE/offset=0": 16.074716981132074,
+        "A3_GRAVE/offset=1": 16.17522658610272,
+        "A3_GRAVE/offset=2": 16.117913832199548,
+        "A3_GRAVE/offset=3": 16.13161875945537,
+        "A3_GRAVE/offset=4": 15.93565480696442,
+        "A3_GRAVE/offset=5": 16.087878787878786,
+        "A3_GRAVE/offset=6": 16.217589082638362,
+        "A3_GRAVE/offset=7": 15.925644916540213,
+        "A3_GRAVE/offset=8": 15.863325740318906,
+        "A3_GRAVE/offset=9": 16.022036474164135,
+        "Zero-A/offset=0": 18.128301886792453,
+        "Zero-A/offset=1": 18.47129909365559,
+        "Zero-A/offset=2": 18.417233560090704,
+        "Zero-A/offset=3": 18.049924357034797,
+        "Zero-A/offset=4": 18.134746404239213,
+        "Zero-A/offset=5": 18.381818181818183,
+        "Zero-A/offset=6": 18.345716451857466,
+        "Zero-A/offset=7": 18.131259484066767,
+        "Zero-A/offset=8": 18.084282460136674,
+        "Zero-A/offset=9": 18.33434650455927
+      }
+    },
+    {
+      "gate": "G7",
+      "status": "PASS",
+      "failures": []
+    }
+  ]
+}

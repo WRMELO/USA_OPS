@@ -701,6 +701,26 @@ arquivo blindado de §6.6 foi tocado.
 
 Ref: SALA D-136, USA D-154, USA D-153, R-041, R-046, R-048, R-061.
 
+### 6.24 Gate de sanidade deve medir a mecanica compartilhada, nao o efeito em teste (D-155)
+
+O estudo `T-SDC-DEFENSIVE-HOLD-CASH-DRIFT-LADDER-US-V2` mostrou que, em
+harnesses sem reinvestimento intra-ciclo, um gate de diversificacao medido ao
+longo de todo o ciclo pode confundir o proprio efeito sob teste com uma falha de
+dados. A correcao aplicada nao alterou a banda numerica do gate, apenas
+restringiu a janela de medicao aos dias de rebalanceamento, onde a mecanica de
+compra e compartilhada por todos os bracos.
+
+Regra operacional resultante:
+
+1. Gates de sanidade devem medir somente a mecanica comum ao desenho do estudo.
+2. Se o tratamento proposto altera a distribuicao intra-ciclo por construcao,
+   essa contracao nao deve ser tratada como falha do harness.
+3. A leitura obrigatoria de qualquer estudo defensivo sem reinvestimento deve
+   incluir a concentracao intra-ciclo por braco, junto dos deltas de Sharpe e
+   CVaR5, para evitar conclusao cega por diversificacao aparente.
+
+Ref: SALA D-137, USA D-155, R-041, R-048, R-061.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.

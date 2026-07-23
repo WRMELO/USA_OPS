@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-23
+
+- docs(curadoria): T-SDC-DEFENSIVE-HOLD-CASH-DRIFT-LADDER-US-V2 — fecha a rastreabilidade do estudo read-only de caixa parado ate o proximo rebalanceamento; V1 preservada como evidencia do aborto correto do gate G6, V2 corrige apenas a janela de medicao do G6 e conclui com PASS do Auditor, G1-G7 PASS e vereditos `INCONCLUSIVO` em todos os pares. Artefatos: `backtest/t_defensive_hold_cash_drift_ladder_us_v1/`, `backtest/t_defensive_hold_cash_drift_ladder_us_v2/`, `../SALA_DE_CONTROLE/DECISION_LOG.md`, `../SALA_DE_CONTROLE/CHANGELOG.md`, `../SALA_DE_CONTROLE/ROADMAP.md`. Decision: SALA D-137 / USA D-155.
+
 ## 2026-07-22
 
 - docs(curadoria): T-SDC-DEFENSIVE-REINVEST-POLICY-US-V2 — errata de D-135/D-153 (V1 invalida por ancora LIVE + deadlock A2), reexecucao pre-registrada com harness corrigido (phase sweep, pool defensivo, venda exata, gates G1-G6) e regra R-061. Vereditos V2: `Zero-A_vs_Zero-B=INCONCLUSIVO`, `Zero-A_vs_A1=INCONCLUSIVO`, `Zero-A_vs_A2=INCONCLUSIVO`, `A1_vs_A2=INCONCLUSIVO`. Artefatos: `DECISION_LOG.md`, `GOVERNANCE.md`, `ROADMAP.md`, `backtest/t_defensive_reinvest_policy_us_v2/`, `../SALA_DE_CONTROLE/DECISION_LOG.md`, `../SALA_DE_CONTROLE/REGRAS_OPERACIONAIS.md`, `../SALA_DE_CONTROLE/CHANGELOG.md`. Decision: SALA D-136 / USA D-154.

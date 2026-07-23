@@ -1,0 +1,94 @@
+{
+  "task_id": "T-SDC-DEFENSIVE-HOLD-CASH-DRIFT-LADDER-US-V2",
+  "overall_status": "PASS",
+  "gates": [
+    {
+      "gate": "G1",
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "gate": "G2",
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "gate": "G3",
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "gate": "G4",
+      "status": "PASS",
+      "failure_count": 0,
+      "max_abs_error": 0.0
+    },
+    {
+      "gate": "G5",
+      "status": "PASS",
+      "note": "_sell_all_shares_exact aborta imediatamente se saldo remanescente != 0"
+    },
+    {
+      "gate": "G6",
+      "status": "PASS",
+      "failures": [],
+      "means": {
+        "A0_R1/offset=0": 18.270676691729324,
+        "A0_R1/offset=1": 18.39097744360902,
+        "A0_R1/offset=2": 18.345864661654137,
+        "A0_R1/offset=3": 18.353383458646615,
+        "A0_R1/offset=4": 18.172932330827066,
+        "A0_R1/offset=5": 18.265151515151516,
+        "A0_R1/offset=6": 18.303030303030305,
+        "A0_R1/offset=7": 18.075757575757574,
+        "A0_R1/offset=8": 17.924242424242426,
+        "A0_R1/offset=9": 18.015151515151516,
+        "A1_LEVE/offset=0": 16.86466165413534,
+        "A1_LEVE/offset=1": 16.984962406015036,
+        "A1_LEVE/offset=2": 16.7593984962406,
+        "A1_LEVE/offset=3": 16.81954887218045,
+        "A1_LEVE/offset=4": 16.69924812030075,
+        "A1_LEVE/offset=5": 16.90909090909091,
+        "A1_LEVE/offset=6": 16.856060606060606,
+        "A1_LEVE/offset=7": 16.416666666666668,
+        "A1_LEVE/offset=8": 16.681818181818183,
+        "A1_LEVE/offset=9": 16.386363636363637,
+        "A2_MEDIO/offset=0": 18.25563909774436,
+        "A2_MEDIO/offset=1": 18.32330827067669,
+        "A2_MEDIO/offset=2": 18.263157894736842,
+        "A2_MEDIO/offset=3": 18.398496240601503,
+        "A2_MEDIO/offset=4": 18.157894736842106,
+        "A2_MEDIO/offset=5": 18.189393939393938,
+        "A2_MEDIO/offset=6": 18.21212121212121,
+        "A2_MEDIO/offset=7": 17.954545454545453,
+        "A2_MEDIO/offset=8": 17.833333333333332,
+        "A2_MEDIO/offset=9": 18.015151515151516,
+        "A3_GRAVE/offset=0": 18.278195488721803,
+        "A3_GRAVE/offset=1": 18.42105263157895,
+        "A3_GRAVE/offset=2": 18.31578947368421,
+        "A3_GRAVE/offset=3": 18.345864661654137,
+        "A3_GRAVE/offset=4": 18.218045112781954,
+        "A3_GRAVE/offset=5": 18.28030303030303,
+        "A3_GRAVE/offset=6": 18.333333333333332,
+        "A3_GRAVE/offset=7": 18.022727272727273,
+        "A3_GRAVE/offset=8": 17.90909090909091,
+        "A3_GRAVE/offset=9": 18.03030303030303,
+        "Zero-A/offset=0": 18.090225563909776,
+        "Zero-A/offset=1": 18.458646616541355,
+        "Zero-A/offset=2": 18.428571428571427,
+        "Zero-A/offset=3": 18.05263157894737,
+        "Zero-A/offset=4": 18.13533834586466,
+        "Zero-A/offset=5": 18.386363636363637,
+        "Zero-A/offset=6": 18.34090909090909,
+        "Zero-A/offset=7": 18.12121212121212,
+        "Zero-A/offset=8": 18.075757575757574,
+        "Zero-A/offset=9": 18.333333333333332
+      }
+    },
+    {
+      "gate": "G7",
+      "status": "PASS",
+      "failures": []
+    }
+  ]
+}

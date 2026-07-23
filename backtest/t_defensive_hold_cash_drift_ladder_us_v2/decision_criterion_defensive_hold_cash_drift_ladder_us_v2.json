@@ -1,0 +1,125 @@
+{
+  "task_id": "T-SDC-DEFENSIVE-HOLD-CASH-DRIFT-LADDER-US-V2",
+  "supersedes_invalid_study": "T-SDC-DEFENSIVE-HOLD-CASH-DRIFT-LADDER-US-V1",
+  "hypothesis": "Vender defensivamente por rompimento de limite SPC (R1) e/ou por cruzamento da deriva pos-compra para faixas de severidade crescente (LEVE/MEDIO/GRAVE), mantendo o caixa liberado parado ate o proximo rebalanceamento (sem reinvestimento intra-ciclo), pode proteger ganhos acumulados e reduzir risco de cauda frente ao C4 puro, com custo de oportunidade mensuravel por caixa ocioso.",
+  "owner_framing": "Prioridade declarada pelo Owner: nao perder o que ja foi ganho, mesmo ao custo de arriscar menos. Motivacao: estabilidade de decisao percebida como menor no dia a dia/intraday do que na cadencia do rebalanceamento; objetivo e proteger os ganhos acumulados desde a ultima janela de rebalance.",
+  "arms": {
+    "Zero-A": "C4 puro sem venda defensiva adicional (controle).",
+    "A0_R1": "Venda defensiva somente por violacao de limite de controle SPC (R1, equivalente ao gatilho 'SPC'/viol_any_t de V1/V2). Caixa da venda fica parado (cash_free sem reinvestimento intra-ciclo) ate o proximo rebalanceamento.",
+    "A1_LEVE": "Venda defensiva por R1 OU cruzamento do aquecimento pos-compra para LEVE-ou-pior (heat_(t-1) >= 0 e heat_t < 0). Mesma politica de caixa parado do A0_R1.",
+    "A2_MEDIO": "Venda defensiva por R1 OU cruzamento do aquecimento pos-compra para MEDIO-ou-pior (heat_(t-1) > -12.85% e heat_t <= -12.85%). Mesma politica de caixa parado.",
+    "A3_GRAVE": "Venda defensiva por R1 OU cruzamento do aquecimento pos-compra para GRAVE-ou-pior (heat_(t-1) > -32.42% e heat_t <= -32.42%). Mesma politica de caixa parado."
+  },
+  "naming_note": "Os rotulos A0_R1/A1_LEVE/A2_MEDIO/A3_GRAVE sao deliberadamente distintos dos rotulos A1/A2 usados em T-SDC-DEFENSIVE-REINVEST-POLICY-US-V1/V2 (semantica de reinvestimento D0, nao de caixa parado). Nenhuma comparacao cross-task entre vereditos V2 e esta nova task e implicita.",
+  "cash_policy": {
+    "rule": "Proventos de qualquer venda defensiva (A0_R1..A3_GRAVE) entram em cash_free e NAO sao usados para nenhuma compra ate o proximo dia de rebalanceamento programado do proprio braco. Nenhuma funcao de compra e chamada fora do bloco de rebalanceamento (is_rebalance_day).",
+    "distinction_from_v2": "Diferente de V1/V2 (T-SDC-DEFENSIVE-REINVEST-POLICY-US), que reinvestiam o caixa defensivo no mesmo dia (D0). Esta task testa a politica oposta: segurar o caixa (Opcao B de SALA D-030) em vez de reinvestir (Opcao A de D-030)."
+  },
+  "defensive_trigger_definition": {
+    "spc_violation_r1": "viol_any_t = violacao SPC ativa (i_value fora [i_lcl,i_ucl] OU xbar fora [xbar_lcl,xbar_ucl] OU mr_value>mr_ucl OU r_value>r_ucl). Presente em todos os bracos A0_R1..A3_GRAVE.",
+    "heat_pct_definition": "heat_pct_t = (close_d1 / custo_medio_lote - 1) * 100, calculado desde o preco medio de compra do lote, igual a V1/V2.",
+    "cross_below_generic": "cross_below(heat_prev, heat_curr, threshold) = heat_prev > threshold E heat_curr <= threshold (ambos finitos). Generaliza _cross_medium_to_grave de V1/V2 (que exigia heat_prev especificamente na classe MEDIO); aqui heat_prev pode estar em qualquer classe acima do limiar, capturando quedas que saltam direto para a faixa mais severa.",
+    "leve_trigger": "cross_below(heat_prev, heat_curr, 0.0) - entrada em LEVE-ou-pior.",
+    "medio_trigger": "cross_below(heat_prev, heat_curr, -12.85) - entrada em MEDIO-ou-pior (R-035/R-036).",
+    "grave_trigger": "cross_below(heat_prev, heat_curr, -32.42) - entrada em GRAVE-ou-pior (R-035/R-036).",
+    "threshold_ref": "R-035/R-036 (US: MEDIO=-12.85%, GRAVE=-32.42%)."
+  },
+  "trigger_logic_semantics": "OU explicito confirmado pelo Owner em 2026-07-23: cada braco vende se R1 romper OU se o aquecimento cruzar para a faixa correspondente (nao E). A0_R1 nunca usa gatilho de deriva.",
+  "pairwise_comparisons": [
+    "Zero-A vs A0_R1",
+    "Zero-A vs A1_LEVE",
+    "Zero-A vs A2_MEDIO",
+    "Zero-A vs A3_GRAVE",
+    "A0_R1 vs A1_LEVE",
+    "A1_LEVE vs A2_MEDIO",
+    "A2_MEDIO vs A3_GRAVE"
+  ],
+  "liquidation": {
+    "mode": "D0",
+    "description": "Toda venda defensiva disponibiliza caixa no mesmo dia da execucao; o caixa liberado permanece em cash_free sem reinvestimento ate o proximo rebalanceamento (ver cash_policy).",
+    "sell_all_contract": "Venda defensiva integral usa contagem total de acoes e deve deixar saldo final exatamente zero (wrapper exato de V2, _sell_all_shares_exact, sem dust).",
+    "d_plus_1_scope": "Fora de escopo por decisao explicita do Owner."
+  },
+  "dataset": {
+    "path": "backtest/research_dataset_us_v2/",
+    "freeze_asof": "2026-07-15",
+    "decision_ref_freeze": "SALA D-110",
+    "required_hash_verification": true
+  },
+  "subwindows": {
+    "TRAIN": {
+      "start": "2021-01-01",
+      "end": "2022-12-30"
+    },
+    "HOLDOUT": {
+      "start": "2023-01-02",
+      "end": "2026-07-15"
+    },
+    "SW1": {
+      "start": "2023-01-02",
+      "end": "2024-06-30"
+    },
+    "SW2": {
+      "start": "2024-07-01",
+      "end": "2026-07-15"
+    }
+  },
+  "bootstrap": {
+    "method": "cluster por dia, separadamente por offset",
+    "n_resamples": 2000,
+    "seed": 42,
+    "metrics": [
+      "delta_cvar5",
+      "delta_sharpe_cost_adj"
+    ]
+  },
+  "max_veto_rate": 0.35,
+  "materiality_threshold": "abs(delta_sharpe_cost_adj_holdout)>=0.30 OU abs(delta_cvar5_holdout)>=0.02",
+  "verdict_tiers": {
+    "DOMINA_FORTE": "No offset representativo: IC95 de delta_cvar5 e delta_sharpe_cost_adj inteiramente favoraveis em HOLDOUT, SW1 e SW2, mean_veto_rate_arm<=0.35 nas tres janelas; adicionalmente, concordancia direcional conjunta das duas metricas no HOLDOUT em pelo menos 8 dos 10 offsets.",
+    "FAVORECIDO_LADO": "Sem DOMINA_FORTE: no offset representativo, massa bootstrap favoravel >=90% nas duas metricas no HOLDOUT, concordancia de sinal em HOLDOUT/SW1/SW2, materialidade acima do limiar e mean_veto_rate_arm_holdout<=0.35; adicionalmente, concordancia direcional conjunta das duas metricas no HOLDOUT em pelo menos 8 dos 10 offsets.",
+    "INCONCLUSIVO": "Qualquer caso fora das condicoes acima."
+  },
+  "harness_contract": {
+    "rebalance_calendar": "Primeiro rebalance no primeiro pregao de execucao que tenha scores validos de d_prev; proibido ler rebalance_anchor_date do circuito LIVE (R-061).",
+    "phase_sweep_offsets": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "cadence": 10,
+    "blocked_lifecycle": "defensive_blocked e zerado em todo rebalance simulado e nunca sobrevive alem do ciclo de cadencia.",
+    "arm_parity": "Dentro de cada offset, todos os cinco bracos usam o mesmo capital, calendario, scores, primeiro rebalance e carteira antes da primeira divergencia defensiva.",
+    "no_intracycle_reinvestment": "Nenhuma funcao de compra e chamada fora do bloco is_rebalance_day para nenhum braco A0_R1..A3_GRAVE; caixa de venda defensiva so e utilizado no rebalance seguinte, junto com o caixa remanescente do braco.",
+    "metrics_after_sanity_only": true
+  },
+  "inference_aggregation": {
+    "pairing": "Deltas sao pareados por data dentro de cada offset.",
+    "offset_independence": false,
+    "representative_offset_definition": "Para cada par, selecionar o offset cuja soma padronizada dos deltas HOLDOUT de Sharpe e CVaR5 esteja mais proxima da mediana entre os 10 offsets; empate pelo menor offset.",
+    "directional_agreement_definition": "Um offset e favoravel somente quando delta_sharpe_cost_adj>0 E delta_cvar5>0 no HOLDOUT.",
+    "minimum_favorable_offsets": 8,
+    "no_pooling_as_independent_rows": true
+  },
+  "sanity_gates": {
+    "G1": "Primeiro rebalance de cada arm/offset ocorre exatamente no primeiro indice elegivel + offset.",
+    "G2": "Dentro do offset, equity dos cinco bracos e igual ate a primeira venda defensiva de qualquer braco, tolerancia 1e-6.",
+    "G3": "Nenhum braco permanece cash_free/equity>0.95 por mais de 10 pregoes consecutivos apos seu primeiro rebalance quando ha scores.",
+    "G4": "abs(equity-(cash_free+cash_pending+holdings_value)) <= 1e-6*equity em todos os dias.",
+    "G5": "Toda venda defensiva integral deixa zero acoes do ticker.",
+    "G6": "Media de tickers ativos por arm/offset, medida SOMENTE nos dias de rebalanceamento (is_rebalance_day==1), pertence a [10,27]. Esta e a mecanica de compra compartilhada por todos os bracos; a contracao intra-ciclo entre rebalanceamentos e o efeito em teste, nao um alvo deste gate.",
+    "G7": "Para os bracos A0_R1..A3_GRAVE, gross_buys_today>0 implica is_rebalance_day==1 em 100% dos dias de todos os offsets - nenhuma compra intra-ciclo e permitida; gate especifico do mecanismo de caixa parado desta task."
+  },
+  "correction_note": "A V1 foi abortada pelo proprio gate G6 antes de qualquer metrica (nenhum resultado enganoso foi gerado). Causa: G6 original media diversificacao ao longo de todo o ciclo, premissa valida apenas quando ha reposicao intra-ciclo (V1/V2 do estudo de reinvestimento). Neste desenho sem reinvestimento, a contracao intra-ciclo em bracos mais sensiveis (ex.: A1_LEVE) e o proprio efeito em teste, nao uma falha de dados. Correcao: G6 passa a medir apenas nos dias de rebalanceamento (is_rebalance_day==1), onde a mecanica de compra e identica para os cinco bracos; a banda numerica [10,27] nao foi alterada.",
+  "mandatory_disclosure": "avg_tickers por braco/split (coluna ja existente em summary_<SPLIT>_...csv, calculada sobre todos os dias) deve ser reportada de forma destacada junto de qualquer delta de Sharpe/CVaR5, pois reflete o grau de concentracao intra-ciclo real de cada braco.",
+  "post_hoc_prohibition": "Criterio fixo e imutavel. Proibido reinterpretar metrica, janela, offset representativo, gate ou threshold apos observar os resultados.",
+  "registered_at": "2026-07-23T09:26:00-03:00",
+  "registered_before_execution": true
+}
