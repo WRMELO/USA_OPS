@@ -2,6 +2,7 @@
 
 ## 2026-07-23
 
+- docs(backtest): T-SDC-R001-R037-ENTRY-VETO-US-V1 — fecha a rastreabilidade do estudo read-only de veto de entrada no Top-20 por R-001 restrito a downside e R-037 severo sobre baseline C4+R-060, com phase sweep e tiers independentes; vereditos `R001_DOWNSIDE=INCONCLUSIVO` e `R037_SEVERE=FAVORECIDO_R037_SEVERE`. Artefatos: `backtest/t_r001_r037_entry_veto_us_v1/`, `DECISION_LOG.md`, `ROADMAP.md`, `../SALA_DE_CONTROLE/DECISION_LOG.md`, `../SALA_DE_CONTROLE/CHANGELOG.md`. Decision: SALA D-139 / USA D-156.
 - docs(curadoria): T-SDC-DEFENSIVE-HOLD-CASH-DRIFT-LADDER-US-V2 — fecha a rastreabilidade do estudo read-only de caixa parado ate o proximo rebalanceamento; V1 preservada como evidencia do aborto correto do gate G6, V2 corrige apenas a janela de medicao do G6 e conclui com PASS do Auditor, G1-G7 PASS e vereditos `INCONCLUSIVO` em todos os pares. Artefatos: `backtest/t_defensive_hold_cash_drift_ladder_us_v1/`, `backtest/t_defensive_hold_cash_drift_ladder_us_v2/`, `../SALA_DE_CONTROLE/DECISION_LOG.md`, `../SALA_DE_CONTROLE/CHANGELOG.md`, `../SALA_DE_CONTROLE/ROADMAP.md`. Decision: SALA D-137 / USA D-155.
 
 ## 2026-07-22

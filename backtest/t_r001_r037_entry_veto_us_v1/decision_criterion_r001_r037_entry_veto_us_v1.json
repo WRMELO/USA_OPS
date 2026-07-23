@@ -1,0 +1,65 @@
+{
+  "task_id": "T-SDC-R001-R037-ENTRY-VETO-US-V1",
+  "hypothesis": "Vetar entrada no Top-20 do Forno US por R-001 restrito a downside (i_value<i_lcl OU xbar_value<xbar_lcl) e/ou por R-037 severo (ret_62>=1.00 E persistencia<=2/10 na receita do Master) melhora risco-retorno sobre o motor atual (C4+R-060), com taxa de veto controlada, isolando merito por par independente.",
+  "baseline_definition": "Baseline_R060 = C4 puro + veto R-060 (Flag_BandExp(d_prev) AND ret_62(d_prev)>=1.00) ja ativo no motor produtivo (D-131/D-149). Todos os bracos partem deste baseline; R-060 nao e reavaliado nesta task.",
+  "arms": {
+    "Baseline_R060": "C4 + R-060 (estado vivo do motor), sem veto adicional.",
+    "Arm_R001_Downside": "Baseline_R060 + veto quando i_value(d_prev)<i_lcl(d_prev) OU xbar_value(d_prev)<xbar_lcl(d_prev). Subconjunto downside do R-001 literal (simetrico), paridade conceitual com D-109.",
+    "Arm_R037_Severe": "Baseline_R060 + veto quando ret_62(d_prev)>=1.00 E persistencia(ticker,d_prev,lookback=10)<=2, onde persistencia = numero de vezes que o ticker esteve no Baseline_R060 selecionado nos 10 ciclos de rebalance anteriores (mesma fase do phase-sweep). Honra a condicao de reabertura R-037 V3.",
+    "Arm_R001_Downside_R037_Severe": "Baseline_R060 + uniao dos vetos de Arm_R001_Downside e Arm_R037_Severe. Decomposicao/interacao, NAO participa do tier R-048.",
+    "Arm_R001_Any_Decomposition": "Baseline_R060 + veto R-001 simetrico (qualquer violacao SPC ativa). Decomposicao descritiva para medir contribuicao marginal do upside sobre Arm_R001_Downside; NAO participa do tier R-048."
+  },
+  "tier_pairs": [
+    {"baseline": "Baseline_R060", "arm": "Arm_R001_Downside", "label": "R001_DOWNSIDE", "note": "Prioridade do Owner"},
+    {"baseline": "Baseline_R060", "arm": "Arm_R037_Severe", "label": "R037_SEVERE", "note": "Reabertura R-037 V3"}
+  ],
+  "decomposition_note": "Arm_R001_Downside_R037_Severe e Arm_R001_Any_Decomposition existem para atribuicao de merito e nao participam do tier R-048 desta task.",
+  "persistence_definition": {
+    "lookback_cycles": 10,
+    "severe_max_persistence": 2,
+    "source": "Contagem interna ao harness: presenca do ticker no Baseline_R060 selecionado nos 10 ciclos de rebalance anteriores, na mesma fase do phase-sweep. NAO usa analise_us.py._compute_persistencia (le data/daily/decision_*.json da operacao viva, indisponivel para o periodo historico do freeze)."
+  },
+  "indicator_definition": {
+    "source_table": "canonical_us.parquet (freeze research_dataset_us_v2)",
+    "formulas": {
+      "viol_any_t": "i_value fora [i_lcl,i_ucl] OU xbar fora [xbar_lcl,xbar_ucl] OU mr_value>mr_ucl OU r_value>r_ucl (R-001 literal, simetrico)",
+      "downside_t": "i_value<i_lcl OU xbar_value<xbar_lcl (R-001 restrito a downside, paridade D-109)",
+      "r060_gate_t": "Flag_BandExp(t) AND ret_62(t)>=1.00 (regra ja ativa no motor, D-131/D-149)",
+      "ret62_severe_t": "ret_62_t>=1.00"
+    }
+  },
+  "dataset": {
+    "path": "USA_OPS/backtest/research_dataset_us_v2/",
+    "freeze_asof": "2026-07-15",
+    "decision_ref_freeze": "D-110",
+    "required_hash_verification": true
+  },
+  "subwindows": {
+    "TRAIN": {"start": "2021-01-01", "end": "2022-12-30"},
+    "HOLDOUT": {"start": "2023-01-02", "end": "2026-07-15"},
+    "SW1": {"start": "2023-01-02", "end": "2024-06-30"},
+    "SW2": {"start": "2024-07-01", "end": "2026-07-15"}
+  },
+  "bootstrap": {
+    "method": "cluster por dia de rebalance",
+    "n_resamples": 2000,
+    "seed": 42,
+    "metrics": ["delta_cvar5", "delta_sharpe_cost_adj"]
+  },
+  "max_veto_rate": 0.35,
+  "materiality_threshold": "abs(delta_sharpe_cost_adj_holdout)>=0.30 OU abs(delta_cvar5_holdout)>=0.02",
+  "verdict_tiers": {
+    "DOMINA_FORTE": "IC95 do delta inteiramente do lado favoravel nas duas metricas no HOLDOUT completo e tambem em SW1 e SW2, com mean_veto_rate<=0.35 nas tres janelas. Unico tier que autoriza task futura de promocao ao motor (R-048).",
+    "FAVORECIDO_<ARM>": "Preponderancia de evidencia sem DOMINA_FORTE: massa bootstrap favoravel >=90% para as duas metricas no HOLDOUT, concordancia direcional em HOLDOUT/SW1/SW2, materialidade economica acima do limiar e mean_veto_rate_holdout<=0.35.",
+    "INCONCLUSIVO": "Ausencia de direcao clara, materialidade abaixo do limiar, violacao de teto de veto, ou qualquer outro caso fora dos tiers acima."
+  },
+  "sanity_gates": {
+    "G1_veto_rate_not_degenerate": "Para Arm_R001_Downside e Arm_R037_Severe, 0.0 < mean_veto_rate_holdout < 0.90.",
+    "G2_baseline_selection_sane": "Baseline_R060 deve selecionar em media >= 0.90*top_n tickers distintos por ciclo no HOLDOUT.",
+    "G3_persistence_not_vacuous": "Entre tickers com ret_62(d_prev)>=1.00 no HOLDOUT, a fracao com persistencia<=2 deve estar estritamente entre 0% e 100%."
+  },
+  "post_hoc_prohibition": "O criterio acima e fixo e imutavel. E proibido reinterpretar, redefinir metricas, gates ou escolher subperiodos apos ver os resultados. PARCIAL e INCONCLUSIVO sao resultados legitimos para qualquer um dos dois pares de tier, independentemente.",
+  "governance_note": "Task read-only. Nenhum arquivo blindado de USA GOVERNANCE §6.6 (09_decide.py, config/winner_us.json) e alterado. Promocao ao motor exige DOMINA_FORTE neste estudo E nova task formal (CTO->Architect->Executor->Auditor duplo->Curator) com nova tag de motor, por par, seguindo o precedente D-130/D-131.",
+  "registered_at": "2026-07-23",
+  "registered_before_execution": true
+}

@@ -1,0 +1,272 @@
+{
+  "meta": {
+    "task_id": "T-SDC-R001-R037-ENTRY-VETO-US-V1",
+    "cadence": 10,
+    "top_n": 20,
+    "min_market_cap": 300000000.0,
+    "anchor_date_effective": "2021-01-04",
+    "arms": [
+      "Baseline_R060",
+      "Arm_R001_Downside",
+      "Arm_R037_Severe",
+      "Arm_R001_Downside_R037_Severe",
+      "Arm_R001_Any_Decomposition"
+    ],
+    "tier_pairs": [
+      {
+        "baseline": "Baseline_R060",
+        "arm": "Arm_R001_Downside",
+        "label": "R001_DOWNSIDE"
+      },
+      {
+        "baseline": "Baseline_R060",
+        "arm": "Arm_R037_Severe",
+        "label": "R037_SEVERE"
+      }
+    ]
+  },
+  "decision_criterion": {
+    "task_id": "T-SDC-R001-R037-ENTRY-VETO-US-V1",
+    "hypothesis": "Vetar entrada no Top-20 do Forno US por R-001 restrito a downside (i_value<i_lcl OU xbar_value<xbar_lcl) e/ou por R-037 severo (ret_62>=1.00 E persistencia<=2/10 na receita do Master) melhora risco-retorno sobre o motor atual (C4+R-060), com taxa de veto controlada, isolando merito por par independente.",
+    "baseline_definition": "Baseline_R060 = C4 puro + veto R-060 (Flag_BandExp(d_prev) AND ret_62(d_prev)>=1.00) ja ativo no motor produtivo (D-131/D-149). Todos os bracos partem deste baseline; R-060 nao e reavaliado nesta task.",
+    "arms": {
+      "Baseline_R060": "C4 + R-060 (estado vivo do motor), sem veto adicional.",
+      "Arm_R001_Downside": "Baseline_R060 + veto quando i_value(d_prev)<i_lcl(d_prev) OU xbar_value(d_prev)<xbar_lcl(d_prev). Subconjunto downside do R-001 literal (simetrico), paridade conceitual com D-109.",
+      "Arm_R037_Severe": "Baseline_R060 + veto quando ret_62(d_prev)>=1.00 E persistencia(ticker,d_prev,lookback=10)<=2, onde persistencia = numero de vezes que o ticker esteve no Baseline_R060 selecionado nos 10 ciclos de rebalance anteriores (mesma fase do phase-sweep). Honra a condicao de reabertura R-037 V3.",
+      "Arm_R001_Downside_R037_Severe": "Baseline_R060 + uniao dos vetos de Arm_R001_Downside e Arm_R037_Severe. Decomposicao/interacao, NAO participa do tier R-048.",
+      "Arm_R001_Any_Decomposition": "Baseline_R060 + veto R-001 simetrico (qualquer violacao SPC ativa). Decomposicao descritiva para medir contribuicao marginal do upside sobre Arm_R001_Downside; NAO participa do tier R-048."
+    },
+    "tier_pairs": [
+      {
+        "baseline": "Baseline_R060",
+        "arm": "Arm_R001_Downside",
+        "label": "R001_DOWNSIDE",
+        "note": "Prioridade do Owner"
+      },
+      {
+        "baseline": "Baseline_R060",
+        "arm": "Arm_R037_Severe",
+        "label": "R037_SEVERE",
+        "note": "Reabertura R-037 V3"
+      }
+    ],
+    "decomposition_note": "Arm_R001_Downside_R037_Severe e Arm_R001_Any_Decomposition existem para atribuicao de merito e nao participam do tier R-048 desta task.",
+    "persistence_definition": {
+      "lookback_cycles": 10,
+      "severe_max_persistence": 2,
+      "source": "Contagem interna ao harness: presenca do ticker no Baseline_R060 selecionado nos 10 ciclos de rebalance anteriores, na mesma fase do phase-sweep. NAO usa analise_us.py._compute_persistencia (le data/daily/decision_*.json da operacao viva, indisponivel para o periodo historico do freeze)."
+    },
+    "indicator_definition": {
+      "source_table": "canonical_us.parquet (freeze research_dataset_us_v2)",
+      "formulas": {
+        "viol_any_t": "i_value fora [i_lcl,i_ucl] OU xbar fora [xbar_lcl,xbar_ucl] OU mr_value>mr_ucl OU r_value>r_ucl (R-001 literal, simetrico)",
+        "downside_t": "i_value<i_lcl OU xbar_value<xbar_lcl (R-001 restrito a downside, paridade D-109)",
+        "r060_gate_t": "Flag_BandExp(t) AND ret_62(t)>=1.00 (regra ja ativa no motor, D-131/D-149)",
+        "ret62_severe_t": "ret_62_t>=1.00"
+      }
+    },
+    "dataset": {
+      "path": "USA_OPS/backtest/research_dataset_us_v2/",
+      "freeze_asof": "2026-07-15",
+      "decision_ref_freeze": "D-110",
+      "required_hash_verification": true
+    },
+    "subwindows": {
+      "TRAIN": {
+        "start": "2021-01-01",
+        "end": "2022-12-30"
+      },
+      "HOLDOUT": {
+        "start": "2023-01-02",
+        "end": "2026-07-15"
+      },
+      "SW1": {
+        "start": "2023-01-02",
+        "end": "2024-06-30"
+      },
+      "SW2": {
+        "start": "2024-07-01",
+        "end": "2026-07-15"
+      }
+    },
+    "bootstrap": {
+      "method": "cluster por dia de rebalance",
+      "n_resamples": 2000,
+      "seed": 42,
+      "metrics": [
+        "delta_cvar5",
+        "delta_sharpe_cost_adj"
+      ]
+    },
+    "max_veto_rate": 0.35,
+    "materiality_threshold": "abs(delta_sharpe_cost_adj_holdout)>=0.30 OU abs(delta_cvar5_holdout)>=0.02",
+    "verdict_tiers": {
+      "DOMINA_FORTE": "IC95 do delta inteiramente do lado favoravel nas duas metricas no HOLDOUT completo e tambem em SW1 e SW2, com mean_veto_rate<=0.35 nas tres janelas. Unico tier que autoriza task futura de promocao ao motor (R-048).",
+      "FAVORECIDO_<ARM>": "Preponderancia de evidencia sem DOMINA_FORTE: massa bootstrap favoravel >=90% para as duas metricas no HOLDOUT, concordancia direcional em HOLDOUT/SW1/SW2, materialidade economica acima do limiar e mean_veto_rate_holdout<=0.35.",
+      "INCONCLUSIVO": "Ausencia de direcao clara, materialidade abaixo do limiar, violacao de teto de veto, ou qualquer outro caso fora dos tiers acima."
+    },
+    "sanity_gates": {
+      "G1_veto_rate_not_degenerate": "Para Arm_R001_Downside e Arm_R037_Severe, 0.0 < mean_veto_rate_holdout < 0.90.",
+      "G2_baseline_selection_sane": "Baseline_R060 deve selecionar em media >= 0.90*top_n tickers distintos por ciclo no HOLDOUT.",
+      "G3_persistence_not_vacuous": "Entre tickers com ret_62(d_prev)>=1.00 no HOLDOUT, a fracao com persistencia<=2 deve estar estritamente entre 0% e 100%."
+    },
+    "post_hoc_prohibition": "O criterio acima e fixo e imutavel. E proibido reinterpretar, redefinir metricas, gates ou escolher subperiodos apos ver os resultados. PARCIAL e INCONCLUSIVO sao resultados legitimos para qualquer um dos dois pares de tier, independentemente.",
+    "governance_note": "Task read-only. Nenhum arquivo blindado de USA GOVERNANCE §6.6 (09_decide.py, config/winner_us.json) e alterado. Promocao ao motor exige DOMINA_FORTE neste estudo E nova task formal (CTO->Architect->Executor->Auditor duplo->Curator) com nova tag de motor, por par, seguindo o precedente D-130/D-131.",
+    "registered_at": "2026-07-23",
+    "registered_before_execution": true
+  },
+  "means_by_split_arm": {
+    "TRAIN": {
+      "Baseline_R060": {
+        "mean_cvar5": -0.1361901216611974,
+        "mean_sharpe_cost_adj": -4.21576113523386,
+        "mean_veto_rate": 0.0,
+        "baseline_cvar5": -0.1361901216611974,
+        "baseline_sharpe": -4.21576113523386
+      },
+      "Arm_R001_Downside": {
+        "mean_cvar5": -0.1369906955092552,
+        "mean_sharpe_cost_adj": -4.280279913355112,
+        "mean_veto_rate": 0.008026881720430108,
+        "baseline_cvar5": -0.1361901216611974,
+        "baseline_sharpe": -4.21576113523386
+      },
+      "Arm_R037_Severe": {
+        "mean_cvar5": -0.13711195911982194,
+        "mean_sharpe_cost_adj": -4.139578631341209,
+        "mean_veto_rate": 0.01053225806451613,
+        "baseline_cvar5": -0.1361901216611974,
+        "baseline_sharpe": -4.21576113523386
+      },
+      "Arm_R001_Downside_R037_Severe": {
+        "mean_cvar5": -0.13776444649682273,
+        "mean_sharpe_cost_adj": -4.189877005133567,
+        "mean_veto_rate": 0.018392473118279573,
+        "baseline_cvar5": -0.1361901216611974,
+        "baseline_sharpe": -4.21576113523386
+      },
+      "Arm_R001_Any_Decomposition": {
+        "mean_cvar5": -0.14025284599519985,
+        "mean_sharpe_cost_adj": -4.174189367526413,
+        "mean_veto_rate": 0.06782795698924732,
+        "baseline_cvar5": -0.1361901216611974,
+        "baseline_sharpe": -4.21576113523386
+      }
+    },
+    "HOLDOUT": {
+      "Baseline_R060": {
+        "mean_cvar5": -0.17610362306548963,
+        "mean_sharpe_cost_adj": 0.30894780085847173,
+        "mean_veto_rate": 0.0,
+        "baseline_cvar5": -0.17610362306548963,
+        "baseline_sharpe": 0.30894780085847173
+      },
+      "Arm_R001_Downside": {
+        "mean_cvar5": -0.17575808371588666,
+        "mean_sharpe_cost_adj": 0.24922226370035655,
+        "mean_veto_rate": 0.009259404388714735,
+        "baseline_cvar5": -0.17610362306548963,
+        "baseline_sharpe": 0.30894780085847173
+      },
+      "Arm_R037_Severe": {
+        "mean_cvar5": -0.15530145522315153,
+        "mean_sharpe_cost_adj": 0.622341926384595,
+        "mean_veto_rate": 0.1135534221525601,
+        "baseline_cvar5": -0.17610362306548963,
+        "baseline_sharpe": 0.30894780085847173
+      },
+      "Arm_R001_Downside_R037_Severe": {
+        "mean_cvar5": -0.1553359024159813,
+        "mean_sharpe_cost_adj": 0.5851529090969525,
+        "mean_veto_rate": 0.12001436781609195,
+        "baseline_cvar5": -0.17610362306548963,
+        "baseline_sharpe": 0.30894780085847173
+      },
+      "Arm_R001_Any_Decomposition": {
+        "mean_cvar5": -0.16649694933989923,
+        "mean_sharpe_cost_adj": 0.5935640419066852,
+        "mean_veto_rate": 0.09562565308254964,
+        "baseline_cvar5": -0.17610362306548963,
+        "baseline_sharpe": 0.30894780085847173
+      }
+    },
+    "SW1": {
+      "Baseline_R060": {
+        "mean_cvar5": -0.11513613143887609,
+        "mean_sharpe_cost_adj": -0.7297616348632199,
+        "mean_veto_rate": 0.0,
+        "baseline_cvar5": -0.11513613143887609,
+        "baseline_sharpe": -0.7297616348632199
+      },
+      "Arm_R001_Downside": {
+        "mean_cvar5": -0.11562604189329309,
+        "mean_sharpe_cost_adj": -0.8332334641967432,
+        "mean_veto_rate": 0.00561877667140825,
+        "baseline_cvar5": -0.11513613143887609,
+        "baseline_sharpe": -0.7297616348632199
+      },
+      "Arm_R037_Severe": {
+        "mean_cvar5": -0.11198372807286668,
+        "mean_sharpe_cost_adj": -0.45973655990950996,
+        "mean_veto_rate": 0.07545874822190611,
+        "baseline_cvar5": -0.11513613143887609,
+        "baseline_sharpe": -0.7297616348632199
+      },
+      "Arm_R001_Downside_R037_Severe": {
+        "mean_cvar5": -0.11247363852728368,
+        "mean_sharpe_cost_adj": -0.5470515267050348,
+        "mean_veto_rate": 0.08040540540540539,
+        "baseline_cvar5": -0.11513613143887609,
+        "baseline_sharpe": -0.7297616348632199
+      },
+      "Arm_R001_Any_Decomposition": {
+        "mean_cvar5": -0.1149300254333256,
+        "mean_sharpe_cost_adj": -0.4428838587025664,
+        "mean_veto_rate": 0.07409672830725461,
+        "baseline_cvar5": -0.11513613143887609,
+        "baseline_sharpe": -0.7297616348632199
+      }
+    },
+    "SW2": {
+      "Baseline_R060": {
+        "mean_cvar5": -0.2022211183727133,
+        "mean_sharpe_cost_adj": 0.8277608007142648,
+        "mean_veto_rate": 0.0,
+        "baseline_cvar5": -0.2022211183727133,
+        "baseline_sharpe": 0.8277608007142648
+      },
+      "Arm_R001_Downside": {
+        "mean_cvar5": -0.20308675908265802,
+        "mean_sharpe_cost_adj": 0.7927660307628026,
+        "mean_veto_rate": 0.011976470588235293,
+        "baseline_cvar5": -0.2022211183727133,
+        "baseline_sharpe": 0.8277608007142648
+      },
+      "Arm_R037_Severe": {
+        "mean_cvar5": -0.17796508206292952,
+        "mean_sharpe_cost_adj": 1.184160626894252,
+        "mean_veto_rate": 0.1420313725490196,
+        "baseline_cvar5": -0.2022211183727133,
+        "baseline_sharpe": 0.8277608007142648
+      },
+      "Arm_R001_Downside_R037_Severe": {
+        "mean_cvar5": -0.17789909710779864,
+        "mean_sharpe_cost_adj": 1.1764331579032556,
+        "mean_veto_rate": 0.14961764705882355,
+        "baseline_cvar5": -0.2022211183727133,
+        "baseline_sharpe": 0.8277608007142648
+      },
+      "Arm_R001_Any_Decomposition": {
+        "mean_cvar5": -0.19401628378944183,
+        "mean_sharpe_cost_adj": 1.1484715075388676,
+        "mean_veto_rate": 0.11169411764705883,
+        "baseline_cvar5": -0.2022211183727133,
+        "baseline_sharpe": 0.8277608007142648
+      }
+    }
+  },
+  "tier_verdicts": {
+    "R001_DOWNSIDE": "INCONCLUSIVO",
+    "R037_SEVERE": "FAVORECIDO_R037_SEVERE"
+  }
+}
