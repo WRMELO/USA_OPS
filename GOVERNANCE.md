@@ -721,6 +721,47 @@ Regra operacional resultante:
 
 Ref: SALA D-137, USA D-155, R-041, R-048, R-061.
 
+### 6.25 Projecao de rascunho no LIVE-REAL + confirmacao de liquidacao pendente (D-158)
+
+A partir de D-158, o `/painel` LIVE-REAL-TEST passa a fechar a lacuna entre
+rascunho persistido e leitura financeira exibida ao Owner, sem violar o
+contrato append-only do ledger:
+
+1. **Projecao financeira por `extra_events` (sem escrita)**:
+   `pipeline/ledger.py` aceita `extra_events` opcionais em
+   `_effective_events`, `compute_positions`, `compute_cash`,
+   `export_snapshot` e `build_operations_book`.
+   O `/painel` usa esse caminho para projetar Balancete/DFC com
+   `ledger real + operacoes salvas no rascunho`, sem gravar eventos antes do
+   encerramento definitivo.
+2. **Construcao pura de eventos de rascunho**:
+   `pipeline/real_boletim_web.py` extrai
+   `_draft_operations_to_ledger_events(...)` para gerar, de forma pura,
+   `BUY/SELL/SETTLEMENT(FECHA_CAIXA_NO_DIA)/FEE` a partir do rascunho.
+   `apply_draft_to_ledger(...)` persiste esses eventos depois (com dedupe),
+   preservando o comportamento operacional.
+3. **Confirmacao manual de liquidacao pendente**:
+   novo fluxo `POST /painel/liquidar` em `pipeline/servidor.py`, chamando
+   `real_boletim_web.confirm_settlement(...)`, adiciona `SETTLEMENT`
+   referenciado ao `SELL` pendente (`ref_id`) em modo append-only.
+4. **Alinhamento de limiar no LIVE-REAL**:
+   `_suggested_defensive_sells` passa a usar `heat <= -32,42%` para gatilho
+   por aquecimento acumulado, mantendo SPC e drawdown como gatilhos OR.
+5. **Reorganizacao de layout operacional**:
+   `Encerramento definitivo` vira o ultimo card; `Adicionar operacao`
+   antecede `Rascunho operacional`; secao 06 deixa de repetir sugestoes do
+   motor ja exibidas na secao 02.
+
+**Contrato de escopo**:
+
+- Nenhum arquivo blindado de §6.6 foi tocado.
+- `CAIXA_REAL_INFORMADO` permanece observacional e fora de `compute_cash`
+  (D-142).
+- `close_day` segue como unico ponto oficial de persistencia das operacoes do
+  rascunho em `ledger_real.jsonl`.
+
+Ref: SALA D-141, USA D-158, USA D-150, USA D-142, R-020, R-035, R-036.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.

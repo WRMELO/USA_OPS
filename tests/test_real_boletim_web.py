@@ -277,6 +277,227 @@ def test_close_stale_drafts_closes_only_open_stale_files(tmp_path, monkeypatch):
     assert (ledger_dir / f"friction_report_{stale_day.isoformat()}.json").exists()
 
 
+def test_suggested_defensive_sells_uses_grave_threshold_for_heat():
+    view = {
+        "forno": {},
+        "holdings": [
+            {
+                "ticker": "AAA",
+                "heat_pct": -20.0,
+                "spc_status": "ESTAVEL",
+                "drawdown_pct": -5.0,
+                "qty": 1.0,
+                "close_d1": 10.0,
+            },
+            {
+                "ticker": "BBB",
+                "heat_pct": -33.0,
+                "spc_status": "ESTAVEL",
+                "drawdown_pct": -5.0,
+                "qty": 2.0,
+                "close_d1": 20.0,
+            },
+        ],
+        "held_set": ["AAA", "BBB"],
+    }
+    out = real_boletim_web._suggested_defensive_sells(view)
+    defensive = out.get("defensive", [])
+    tickers = [row.get("ticker") for row in defensive if isinstance(row, dict)]
+    assert "AAA" not in tickers
+    assert "BBB" in tickers
+
+
+def test_confirm_settlement_creates_append_only_event(tmp_path):
+    ledger_dir = tmp_path / "live_real"
+    ledger_dir.mkdir(parents=True, exist_ok=True)
+    exec_day = date(2026, 7, 23)
+    sell_amount = 240.0
+    prev = ledger.LEDGER_PATH
+    try:
+        ledger.LEDGER_PATH = ledger_dir / "ledger_real.jsonl"
+        sell = ledger.create_event(
+            ledger.EventType.SELL,
+            exec_day,
+            sell_amount,
+            ticker="PENG",
+            qtd=4.0,
+            price=60.0,
+            settle_date=exec_day,
+        )
+        ledger.append_event(sell)
+        before = ledger.compute_cash(exec_day)
+    finally:
+        ledger.LEDGER_PATH = prev
+
+    result = real_boletim_web.confirm_settlement(exec_day, ledger_dir, sell_id=sell.id)
+    assert result["ok"] is True
+    assert abs(float(result["amount"]) - sell_amount) < 1e-6
+
+    prev = ledger.LEDGER_PATH
+    try:
+        ledger.LEDGER_PATH = ledger_dir / "ledger_real.jsonl"
+        events = ledger.read_all_events()
+        settlements = [ev for ev in events if ev.type == ledger.EventType.SETTLEMENT and ev.ref_id == sell.id]
+        after = ledger.compute_cash(exec_day)
+    finally:
+        ledger.LEDGER_PATH = prev
+    assert len(settlements) == 1
+    assert abs(float(before["cash_accounting"]) - sell_amount) < 1e-6
+    assert abs(float(after["cash_accounting"])) < 1e-6
+
+
+def test_confirm_settlement_rejects_amount_above_pending(tmp_path):
+    ledger_dir = tmp_path / "live_real"
+    ledger_dir.mkdir(parents=True, exist_ok=True)
+    exec_day = date(2026, 7, 23)
+    prev = ledger.LEDGER_PATH
+    try:
+        ledger.LEDGER_PATH = ledger_dir / "ledger_real.jsonl"
+        sell = ledger.create_event(
+            ledger.EventType.SELL,
+            exec_day,
+            100.0,
+            ticker="PENG",
+            qtd=2.0,
+            price=50.0,
+            settle_date=exec_day,
+        )
+        ledger.append_event(sell)
+    finally:
+        ledger.LEDGER_PATH = prev
+
+    with pytest.raises(ValueError):
+        real_boletim_web.confirm_settlement(exec_day, ledger_dir, sell_id=sell.id, amount=200.0)
+
+
+def test_confirm_settlement_rejects_unknown_sell_id(tmp_path):
+    ledger_dir = tmp_path / "live_real"
+    ledger_dir.mkdir(parents=True, exist_ok=True)
+    exec_day = date(2026, 7, 23)
+    with pytest.raises(ValueError):
+        real_boletim_web.confirm_settlement(exec_day, ledger_dir, sell_id="SELL_INEXISTENTE")
+
+
+def test_confirm_settlement_rejects_duplicate_confirmation(tmp_path):
+    ledger_dir = tmp_path / "live_real"
+    ledger_dir.mkdir(parents=True, exist_ok=True)
+    exec_day = date(2026, 7, 23)
+    prev = ledger.LEDGER_PATH
+    try:
+        ledger.LEDGER_PATH = ledger_dir / "ledger_real.jsonl"
+        sell = ledger.create_event(
+            ledger.EventType.SELL,
+            exec_day,
+            120.0,
+            ticker="AAA",
+            qtd=3.0,
+            price=40.0,
+            settle_date=exec_day,
+        )
+        ledger.append_event(sell)
+    finally:
+        ledger.LEDGER_PATH = prev
+
+    first = real_boletim_web.confirm_settlement(exec_day, ledger_dir, sell_id=sell.id, amount=120.0)
+    assert first["ok"] is True
+    with pytest.raises(ValueError):
+        real_boletim_web.confirm_settlement(exec_day, ledger_dir, sell_id=sell.id, amount=120.0)
+
+
+def test_load_live_view_projects_draft_into_balancete_dfc(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    exec_day = date(2026, 7, 23)
+    ledger_dir = tmp_path / "live_real"
+    ledger_dir.mkdir(parents=True, exist_ok=True)
+
+    prev = ledger.LEDGER_PATH
+    try:
+        ledger.LEDGER_PATH = ledger_dir / "ledger_real.jsonl"
+        aporte = ledger.create_event(ledger.EventType.APORTE, exec_day, 1000.0)
+        ledger.append_event(aporte)
+        buy = ledger.create_event(
+            ledger.EventType.BUY,
+            exec_day,
+            500.0,
+            ticker="AAA",
+            qtd=5.0,
+            price=100.0,
+            settle_date=exec_day,
+        )
+        ledger.append_event(buy)
+    finally:
+        ledger.LEDGER_PATH = prev
+
+    real_boletim_web.add_operation(
+        exec_day,
+        tipo="COMPRA",
+        ticker="AAA",
+        qtd=1.0,
+        preco=100.0,
+        corretagem=2.5,
+        preco_sombra=0.0,
+    )
+
+    view = real_boletim_web.load_live_view(exec_day, ledger_dir)
+    assert abs(float(view["cash_free"]) - 500.0) < 1e-6
+    assert abs(float(view["cash_free_projetado"]) - 397.5) < 1e-6
+    assert len(view["positions"]) == 1
+    assert len(view["positions_projetado"]) == 2
+    assert abs(float(view["positions"][0]["qtd"]) - 5.0) < 1e-6
+    assert abs(sum(float(row["qtd"]) for row in view["positions_projetado"]) - 6.0) < 1e-6
+    assert "operations_book_projetado" in view
+    assert "AAA" in view["operations_book_projetado"]
+    assert abs(float(view["operations_book_projetado"]["AAA"]["qtd_liquida"]) - 6.0) < 1e-6
+
+
+def test_render_live_html_has_new_layout_and_pending_liquidations_block():
+    view = {
+        "today": "2026-07-23",
+        "market_day": "2026-07-22",
+        "cash_free": 500.0,
+        "cash_accounting": 100.0,
+        "cash_free_projetado": 450.0,
+        "cash_accounting_projetado": 120.0,
+        "carteira_d1_valor": 1000.0,
+        "carteira_projetada_valor": 980.0,
+        "caixa_real_informado": 430.0,
+        "friccao_balanco_real": 70.0,
+        "positions": [],
+        "positions_projetado": [],
+        "held_set": [],
+        "top_operational": [],
+        "target_weights": {},
+        "operations_book": {},
+        "operations_book_projetado": {},
+        "pending_settlements": [
+            {
+                "sell_id": "SELL123",
+                "sale_date": "2026-07-22",
+                "ticker": "PENG",
+                "valor_venda": 200.0,
+                "ja_transferido": 50.0,
+                "pendente": 150.0,
+            }
+        ],
+        "forno": {},
+        "draft": {"operations": []},
+        "closed_boletim_exists": False,
+        "base1_series": [
+            {"date": "2026-07-23", "nav": 1550.0, "base1": 1.0, "daily_var_pct": 0.0, "cagr_expect": 1.0}
+        ],
+        "corretagem_dia": 2.5,
+        "corretagem_total": 10.0,
+        "capital_em_uso": 1000.0,
+        "sparklines_tickers": [],
+    }
+    html = real_boletim_web.render_live_html(view)
+    assert "Liquidacoes pendentes de confirmacao" in html
+    assert "Carteira fechada (ledger)" in html
+    assert "Sugestao corrente do motor" not in html
+    assert html.index("Adicionar operacao") < html.index("Rascunho operacional (persistente)")
+    assert html.index("Encerramento definitivo do dia") > html.index("Mapa de custos")
+
+
 def test_render_live_html_orders_by_m3_rank():
     view = {
         "today": "2026-07-16",

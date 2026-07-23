@@ -13,6 +13,7 @@
 
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
+| T-SDC-LIVEREAL-BOLETIM-CASH-DFC-LAYOUT-US-V1 | Correcao do LIVE-REAL US: projeção de rascunho no Balancete/DFC, confirmacao de liquidacao pendente, limiar defensivo `-32,42%` e reorganizacao do layout com encerramento no fim | DONE | SALA D-141 / USA D-158 |
 | T-REBALANCE-WEAKNESS-US | Backtest HOLDOUT US de rank-decay pre-rebalance (paridade RENDA_OPS D-082/D-083) | DONE | D-070, D-066; Fase B-Prep concluida (D-075); Opcao A aprovada (D-076) |
 | T-088-SPC-ENRICHED-ABLATION-US | Ablacao de 3 bracos SPC enriquecido (Baseline/B/B+C, phase sweep 10 fases) para desbloquear gate de entrada no motor US | DONE (SUPERSEDED) | D-076, D-075, D-070; veredito IMPLEMENTAR_BC suspenso por gap metodologico (D-077); substituido por T-088B |
 | T-088B-SPC-ENRICHED-ABLATION-US-FIXED | Rerun da ablacao T-088 com filtro min_market_cap >= 300M por d_prev (paridade com pipeline/09_decide.py) para gerar veredito valido sobre universo do motor produtivo | DONE (SUPERSEDED) | D-077; veredito suspenso por violacao de paridade (D-078); substituido por T-088C |

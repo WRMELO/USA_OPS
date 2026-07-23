@@ -257,8 +257,13 @@ def is_duplicate(event: LedgerEvent) -> bool:
     return False
 
 
-def _effective_events(as_of_date: date) -> list[LedgerEvent]:
+def _effective_events(
+    as_of_date: date, *, extra_events: list[LedgerEvent] | None = None
+) -> list[LedgerEvent]:
     all_events = [e for e in read_all_events() if e.exec_date <= as_of_date]
+    if extra_events:
+        all_events.extend(e for e in extra_events if e.exec_date <= as_of_date)
+    all_events.sort(key=lambda e: (e.exec_date, e.created_at, e.id))
     cancelled = {e.ref_id for e in all_events if e.type == EventType.CORRECTION and e.ref_id}
     adjustments: dict[str, LedgerEvent] = {}
     for ev in all_events:
@@ -285,9 +290,11 @@ def _effective_events(as_of_date: date) -> list[LedgerEvent]:
     return out
 
 
-def compute_positions(as_of_date: date) -> dict[str, list[dict[str, Any]]]:
+def compute_positions(
+    as_of_date: date, *, extra_events: list[LedgerEvent] | None = None
+) -> dict[str, list[dict[str, Any]]]:
     lots: dict[str, list[dict[str, Any]]] = {}
-    events = _effective_events(as_of_date)
+    events = _effective_events(as_of_date, extra_events=extra_events)
     for ev in events:
         if ev.type == EventType.BUY and ev.ticker and float(ev.qtd or 0.0) > _QTD_EPS and (ev.price or 0.0) > 0:
             lots.setdefault(ev.ticker, []).append(
@@ -411,8 +418,10 @@ def sells_in_settlement(as_of_date: date) -> list[dict[str, Any]]:
     return out
 
 
-def compute_cash(as_of_date: date) -> dict[str, float]:
-    events = _effective_events(as_of_date)
+def compute_cash(
+    as_of_date: date, *, extra_events: list[LedgerEvent] | None = None
+) -> dict[str, float]:
+    events = _effective_events(as_of_date, extra_events=extra_events)
     free = 0.0
     for ev in events:
         if ev.type in {EventType.APORTE, EventType.DIVIDENDO, EventType.SETTLEMENT}:
@@ -453,8 +462,10 @@ def latest_informed_cash(as_of_date: date) -> dict[str, Any] | None:
     }
 
 
-def export_snapshot(as_of_date: date) -> list[dict[str, Any]]:
-    pos = compute_positions(as_of_date)
+def export_snapshot(
+    as_of_date: date, *, extra_events: list[LedgerEvent] | None = None
+) -> list[dict[str, Any]]:
+    pos = compute_positions(as_of_date, extra_events=extra_events)
     out: list[dict[str, Any]] = []
     for tk in sorted(pos.keys()):
         for lot in pos[tk]:
@@ -472,8 +483,10 @@ def export_snapshot(as_of_date: date) -> list[dict[str, Any]]:
     return out
 
 
-def build_operations_book(as_of_date: date) -> dict[str, Any]:
-    events = _effective_events(as_of_date)
+def build_operations_book(
+    as_of_date: date, *, extra_events: list[LedgerEvent] | None = None
+) -> dict[str, Any]:
+    events = _effective_events(as_of_date, extra_events=extra_events)
     buys: dict[str, list[dict[str, Any]]] = {}
     sells: dict[str, list[dict[str, Any]]] = {}
     fifo_queue: dict[str, list[dict[str, Any]]] = {}

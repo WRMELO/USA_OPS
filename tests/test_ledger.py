@@ -110,6 +110,82 @@ def test_compute_positions_cash_and_pending(tmp_path):
     assert abs(cash_d4["cash_accounting"]) < 1e-9
 
 
+def test_extra_events_projection_keeps_base_and_projects_state(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+    as_of = date(2026, 1, 3)
+
+    _append(
+        LedgerEvent(
+            id="AP0",
+            type=EventType.APORTE,
+            exec_date=as_of,
+            created_at=datetime.now(tz=UTC),
+            amount=1000.0,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="B0",
+            type=EventType.BUY,
+            exec_date=as_of,
+            created_at=datetime.now(tz=UTC),
+            ticker="AAA",
+            qtd=5.0,
+            price=100.0,
+            amount=500.0,
+            settle_date=as_of,
+        )
+    )
+
+    base_cash = ledger.compute_cash(as_of)
+    base_pos = ledger.compute_positions(as_of)
+    base_snapshot = ledger.export_snapshot(as_of)
+    base_book = ledger.build_operations_book(as_of)
+
+    extra_buy = LedgerEvent(
+        id="PX1",
+        type=EventType.BUY,
+        exec_date=as_of,
+        created_at=datetime.now(tz=UTC),
+        ticker="AAA",
+        qtd=1.25,
+        price=80.0,
+        amount=100.0,
+        settle_date=as_of,
+    )
+    extra_fee = LedgerEvent(
+        id="PX2",
+        type=EventType.FEE,
+        exec_date=as_of,
+        created_at=datetime.now(tz=UTC),
+        ticker="AAA",
+        amount=2.5,
+        ref_id="PX1",
+    )
+    projected_events = [extra_buy, extra_fee]
+
+    projected_cash = ledger.compute_cash(as_of, extra_events=projected_events)
+    projected_pos = ledger.compute_positions(as_of, extra_events=projected_events)
+    projected_snapshot = ledger.export_snapshot(as_of, extra_events=projected_events)
+    projected_book = ledger.build_operations_book(as_of, extra_events=projected_events)
+
+    # Estado base (sem extra_events) permanece identico.
+    assert ledger.compute_cash(as_of) == base_cash
+    assert ledger.compute_positions(as_of) == base_pos
+    assert ledger.export_snapshot(as_of) == base_snapshot
+    assert ledger.build_operations_book(as_of) == base_book
+    assert ledger.compute_cash(as_of, extra_events=None) == base_cash
+    assert ledger.compute_positions(as_of, extra_events=None) == base_pos
+    assert ledger.export_snapshot(as_of, extra_events=None) == base_snapshot
+    assert ledger.build_operations_book(as_of, extra_events=None) == base_book
+
+    assert abs(projected_cash["cash_free"] - 397.5) < 1e-9
+    assert abs(projected_cash["cash_accounting"]) < 1e-9
+    assert abs(float(projected_book["AAA"]["qtd_liquida"]) - 6.25) < 1e-9
+    assert abs(sum(float(row["qtd"]) for row in projected_snapshot) - 6.25) < 1e-9
+    assert abs(sum(float(row["qtd"]) for row in projected_pos["AAA"]) - 6.25) < 1e-9
+
+
 def test_unmatched_settlement_reduces_accounting(tmp_path):
     ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
 

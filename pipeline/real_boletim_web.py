@@ -339,6 +339,119 @@ def _resolve_ledger_dir(ledger_dir: Path) -> Path:
     return (ROOT / ledger_dir).resolve()
 
 
+def _draft_operations_to_ledger_events(
+    exec_day: date, operations: list[dict[str, Any]]
+) -> tuple[list[dict[str, Any]], list[str], list[dict[str, Any]]]:
+    event_plans: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    shadow_plans: list[dict[str, Any]] = []
+
+    for idx, raw in enumerate(operations, start=1):
+        op_type = str(raw.get("type", "")).upper().strip()
+        ticker = str(raw.get("ticker", "")).upper().strip()
+        qtd = _safe_float(raw.get("qtd"))
+        preco = _safe_float(raw.get("preco"))
+        corretagem = _safe_float(raw.get("corretagem"))
+        preco_sombra = _safe_float(raw.get("preco_sombra"), 0.0)
+        liquidacao_raw = raw.get("liquidacao")
+        liquidacao = _normalize_liquidacao(liquidacao_raw)
+        if op_type == "VENDA" and liquidacao is None:
+            # Compatibilidade para rascunhos legados sem o campo.
+            liquidacao = LIQUIDACAO_JA_NO_CAIXA
+
+        if op_type not in {"COMPRA", "VENDA"}:
+            warnings.append(f"Operacao {idx} ignorada: tipo invalido.")
+            continue
+        if not ticker or qtd <= 0 or preco <= 0:
+            warnings.append(f"Operacao {idx} ignorada: dados incompletos.")
+            continue
+        if op_type == "VENDA" and liquidacao not in {LIQUIDACAO_JA_NO_CAIXA, LIQUIDACAO_EM_LIQUIDACAO}:
+            warnings.append(f"Operacao {idx} ignorada: liquidacao invalida para VENDA.")
+            continue
+
+        event_type = EventType.BUY if op_type == "COMPRA" else EventType.SELL
+        amount = float(qtd * preco)
+        event_reason = "LIVE-REAL-TEST web close"
+        settle_date = None
+        if op_type == "VENDA":
+            event_reason += f" | liquidacao={liquidacao}"
+            if liquidacao == LIQUIDACAO_JA_NO_CAIXA:
+                settle_date = exec_day
+        event = create_event(
+            event_type,
+            exec_day,
+            amount,
+            ticker=ticker,
+            qtd=qtd,
+            price=preco,
+            reason=event_reason,
+            settle_date=settle_date,
+        )
+        event_plans.append(
+            {
+                "op_index": idx,
+                "kind": "PRIMARY",
+                "event": event,
+                "ticker": ticker,
+                "qtd": qtd,
+                "price": preco,
+                "amount": amount,
+            }
+        )
+
+        if op_type == "VENDA" and liquidacao == LIQUIDACAO_JA_NO_CAIXA:
+            settlement = create_event(
+                EventType.SETTLEMENT,
+                exec_day,
+                amount,
+                settle_date=exec_day,
+                ref_id=event.id,
+                reason="Liquidacao same-day via boletim web (liquidacao=JA_NO_CAIXA)",
+            )
+            event_plans.append(
+                {
+                    "op_index": idx,
+                    "kind": "SETTLEMENT",
+                    "event": settlement,
+                    "amount": amount,
+                    "ref_id": event.id,
+                }
+            )
+
+        if corretagem > 0:
+            fee = create_event(
+                EventType.FEE,
+                exec_day,
+                float(corretagem),
+                ticker=ticker,
+                ref_id=event.id,
+                reason="Corretagem registrada via boletim web",
+            )
+            event_plans.append(
+                {
+                    "op_index": idx,
+                    "kind": "FEE",
+                    "event": fee,
+                    "ticker": ticker,
+                    "amount": float(corretagem),
+                    "ref_id": event.id,
+                }
+            )
+
+        if preco_sombra > 0:
+            shadow_plans.append(
+                {
+                    "op_index": idx,
+                    "event_type": event_type,
+                    "ticker": ticker,
+                    "qtd": qtd,
+                    "preco_sombra": preco_sombra,
+                }
+            )
+
+    return event_plans, warnings, shadow_plans
+
+
 def apply_draft_to_ledger(exec_day: date, ledger_dir: Path, operations: list[dict[str, Any]]) -> dict[str, Any]:
     resolved_ledger_dir = _resolve_ledger_dir(ledger_dir)
     resolved_ledger_dir.mkdir(parents=True, exist_ok=True)
@@ -347,140 +460,163 @@ def apply_draft_to_ledger(exec_day: date, ledger_dir: Path, operations: list[dic
 
     events_created: list[dict[str, Any]] = []
     warnings: list[str] = []
+    event_plans, plan_warnings, shadow_plans = _draft_operations_to_ledger_events(exec_day, operations)
+    warnings.extend(plan_warnings)
 
     ledger_mod.LEDGER_PATH = real_ledger_path
     try:
-        for idx, raw in enumerate(operations, start=1):
-            op_type = str(raw.get("type", "")).upper().strip()
-            ticker = str(raw.get("ticker", "")).upper().strip()
-            qtd = _safe_float(raw.get("qtd"))
-            preco = _safe_float(raw.get("preco"))
-            corretagem = _safe_float(raw.get("corretagem"))
-            preco_sombra = _safe_float(raw.get("preco_sombra"), 0.0)
-            liquidacao_raw = raw.get("liquidacao")
-            liquidacao = _normalize_liquidacao(liquidacao_raw)
-            if op_type == "VENDA" and liquidacao is None:
-                # Compatibilidade para rascunhos legados sem o campo.
-                liquidacao = LIQUIDACAO_JA_NO_CAIXA
+        accepted_ops: set[int] = set()
 
-            if op_type not in {"COMPRA", "VENDA"}:
-                warnings.append(f"Operacao {idx} ignorada: tipo invalido.")
-                continue
-            if not ticker or qtd <= 0 or preco <= 0:
-                warnings.append(f"Operacao {idx} ignorada: dados incompletos.")
-                continue
-            if op_type == "VENDA" and liquidacao not in {LIQUIDACAO_JA_NO_CAIXA, LIQUIDACAO_EM_LIQUIDACAO}:
-                warnings.append(f"Operacao {idx} ignorada: liquidacao invalida para VENDA.")
+        for plan in event_plans:
+            idx = int(plan.get("op_index", 0))
+            kind = str(plan.get("kind", ""))
+            event = plan.get("event")
+            if not isinstance(event, ledger_mod.LedgerEvent):
                 continue
 
-            event_type = EventType.BUY if op_type == "COMPRA" else EventType.SELL
-            amount = float(qtd * preco)
-            event_reason = "LIVE-REAL-TEST web close"
-            settle_date = None
-            if op_type == "VENDA":
-                event_reason += f" | liquidacao={liquidacao}"
-                if liquidacao == LIQUIDACAO_JA_NO_CAIXA:
-                    settle_date = exec_day
-            event = create_event(
-                event_type,
-                exec_day,
-                amount,
-                ticker=ticker,
-                qtd=qtd,
-                price=preco,
-                reason=event_reason,
-                settle_date=settle_date,
-            )
+            if kind == "PRIMARY":
+                if is_duplicate(event):
+                    warnings.append(f"Operacao {idx} ignorada: duplicada no ledger real.")
+                    continue
+                append_event(event)
+                accepted_ops.add(idx)
+                events_created.append(
+                    {
+                        "kind": event.type.value,
+                        "id": event.id,
+                        "ticker": plan.get("ticker"),
+                        "qtd": plan.get("qtd"),
+                        "price": plan.get("price"),
+                        "amount": plan.get("amount"),
+                    }
+                )
+                continue
+
+            if idx not in accepted_ops:
+                continue
             if is_duplicate(event):
-                warnings.append(f"Operacao {idx} ignorada: duplicada no ledger real.")
                 continue
             append_event(event)
-            events_created.append(
-                {
-                    "kind": event.type.value,
-                    "id": event.id,
-                    "ticker": ticker,
-                    "qtd": qtd,
-                    "price": preco,
-                    "amount": amount,
-                }
-            )
-
-            if op_type == "VENDA" and liquidacao == LIQUIDACAO_JA_NO_CAIXA:
-                settlement = create_event(
-                    EventType.SETTLEMENT,
-                    exec_day,
-                    amount,
-                    settle_date=exec_day,
-                    ref_id=event.id,
-                    reason="Liquidacao same-day via boletim web (liquidacao=JA_NO_CAIXA)",
+            if kind == "SETTLEMENT":
+                events_created.append(
+                    {
+                        "kind": event.type.value,
+                        "id": event.id,
+                        "amount": plan.get("amount"),
+                        "ref_id": plan.get("ref_id"),
+                    }
                 )
-                if not is_duplicate(settlement):
-                    append_event(settlement)
-                    events_created.append(
-                        {
-                            "kind": settlement.type.value,
-                            "id": settlement.id,
-                            "amount": amount,
-                            "ref_id": event.id,
-                        }
-                    )
+            elif kind == "FEE":
+                events_created.append(
+                    {
+                        "kind": event.type.value,
+                        "id": event.id,
+                        "ticker": plan.get("ticker"),
+                        "amount": plan.get("amount"),
+                        "ref_id": plan.get("ref_id"),
+                    }
+                )
 
-            if corretagem > 0:
-                fee = create_event(
-                    EventType.FEE,
+        for shadow in shadow_plans:
+            idx = int(shadow.get("op_index", 0))
+            if idx not in accepted_ops:
+                continue
+            ticker = str(shadow.get("ticker", "")).upper().strip()
+            qtd = _safe_float(shadow.get("qtd"))
+            preco_sombra = _safe_float(shadow.get("preco_sombra"), 0.0)
+            shadow_event_type = shadow.get("event_type")
+            if (
+                not ticker
+                or qtd <= 0
+                or preco_sombra <= 0
+                or not isinstance(shadow_event_type, EventType)
+            ):
+                continue
+            try:
+                ledger_mod.LEDGER_PATH = shadow_ledger_path
+                shadow_amount = float(qtd * preco_sombra)
+                shadow_reason = "LIVE-REAL-TEST shadow via boletim web"
+                shadow_event = create_event(
+                    shadow_event_type,
                     exec_day,
-                    float(corretagem),
+                    shadow_amount,
                     ticker=ticker,
-                    ref_id=event.id,
-                    reason="Corretagem registrada via boletim web",
+                    qtd=qtd,
+                    price=preco_sombra,
+                    reason=shadow_reason,
                 )
-                if not is_duplicate(fee):
-                    append_event(fee)
+                if not is_duplicate(shadow_event):
+                    append_event(shadow_event)
                     events_created.append(
                         {
-                            "kind": fee.type.value,
-                            "id": fee.id,
+                            "kind": f"{shadow_event.type.value}_SHADOW",
+                            "id": shadow_event.id,
                             "ticker": ticker,
-                            "amount": float(corretagem),
-                            "ref_id": event.id,
+                            "qtd": qtd,
+                            "price": preco_sombra,
+                            "amount": shadow_amount,
                         }
                     )
-
-            if preco_sombra > 0:
-                try:
-                    ledger_mod.LEDGER_PATH = shadow_ledger_path
-                    shadow_amount = float(qtd * preco_sombra)
-                    shadow_reason = "LIVE-REAL-TEST shadow via boletim web"
-                    shadow_event = create_event(
-                        event_type,
-                        exec_day,
-                        shadow_amount,
-                        ticker=ticker,
-                        qtd=qtd,
-                        price=preco_sombra,
-                        reason=shadow_reason,
-                    )
-                    if not is_duplicate(shadow_event):
-                        append_event(shadow_event)
-                        events_created.append(
-                            {
-                                "kind": f"{shadow_event.type.value}_SHADOW",
-                                "id": shadow_event.id,
-                                "ticker": ticker,
-                                "qtd": qtd,
-                                "price": preco_sombra,
-                                "amount": shadow_amount,
-                            }
-                        )
-                    else:
-                        warnings.append(f"Operacao {idx}: sombra duplicada, ignorada.")
-                finally:
-                    ledger_mod.LEDGER_PATH = real_ledger_path
+                else:
+                    warnings.append(f"Operacao {idx}: sombra duplicada, ignorada.")
+            finally:
+                ledger_mod.LEDGER_PATH = real_ledger_path
     finally:
         ledger_mod.LEDGER_PATH = real_ledger_path
 
     return {"events_created": events_created, "warnings": warnings}
+
+
+def confirm_settlement(
+    exec_day: date, ledger_dir: Path, sell_id: str, amount: float | None = None
+) -> dict[str, Any]:
+    resolved_ledger_dir = _resolve_ledger_dir(ledger_dir)
+    real_ledger_path = resolved_ledger_dir / REAL_LEDGER_NAME
+    target_sell_id = str(sell_id or "").strip()
+    if not target_sell_id:
+        raise ValueError("sell_id obrigatorio.")
+
+    previous_ledger_path = ledger_mod.LEDGER_PATH
+    ledger_mod.LEDGER_PATH = real_ledger_path
+    try:
+        pending_rows = ledger_mod.pending_settlements(exec_day)
+        selected = next((row for row in pending_rows if str(row.get("sell_id", "")) == target_sell_id), None)
+        if selected is None:
+            raise ValueError("sell_id nao encontrado nas liquidacoes pendentes.")
+
+        pending_amount = _safe_float(selected.get("pendente"), 0.0)
+        if pending_amount <= 0.50:
+            raise ValueError("Venda sem saldo pendente para liquidacao.")
+
+        if amount is None:
+            settle_amount = pending_amount
+        else:
+            settle_amount = _safe_float(amount, -1.0)
+            if settle_amount <= 0:
+                raise ValueError("amount invalido para liquidacao.")
+            if settle_amount > pending_amount + 0.50:
+                raise ValueError("amount acima do saldo pendente da venda.")
+
+        settlement = create_event(
+            EventType.SETTLEMENT,
+            exec_day,
+            float(settle_amount),
+            settle_date=exec_day,
+            ref_id=target_sell_id,
+            reason="Liquidacao confirmada manualmente via /painel/liquidar",
+        )
+        if is_duplicate(settlement):
+            raise ValueError("Liquidacao duplicada para esta venda.")
+        append_event(settlement)
+
+        return {
+            "ok": True,
+            "sell_id": target_sell_id,
+            "amount": round(float(settle_amount), 4),
+            "event_id": settlement.id,
+        }
+    finally:
+        ledger_mod.LEDGER_PATH = previous_ledger_path
 
 
 def close_day(exec_day: date, ledger_dir: Path, caixa_real: float | None = None) -> dict[str, Any]:
@@ -578,7 +714,23 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
     resolved_ledger_dir = _resolve_ledger_dir(ledger_dir)
     real_ledger_path = resolved_ledger_dir / REAL_LEDGER_NAME
 
+    draft = load_draft(today)
+    draft_operations = draft.get("operations", []) if isinstance(draft.get("operations"), list) else []
+    draft_event_plans, _, _ = _draft_operations_to_ledger_events(today, draft_operations)
+    draft_events = [
+        plan.get("event")
+        for plan in draft_event_plans
+        if isinstance(plan, dict) and isinstance(plan.get("event"), ledger_mod.LedgerEvent)
+    ]
+
     previous_ledger_path = ledger_mod.LEDGER_PATH
+    cash: dict[str, float] = {"cash_free": 0.0, "cash_accounting": 0.0}
+    cash_projetado: dict[str, float] = {"cash_free": 0.0, "cash_accounting": 0.0}
+    positions: list[dict[str, Any]] = []
+    positions_projetado: list[dict[str, Any]] = []
+    operations_book_raw: dict[str, Any] = {}
+    operations_book_projetado_raw: dict[str, Any] = {}
+    pending_settlements_rows: list[dict[str, Any]] = []
     informed: dict[str, Any] | None = None
     base1_series: list[dict[str, Any]] = []
     corretagem_total = 0.0
@@ -589,6 +741,10 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         cash = compute_cash(today)
         positions = export_snapshot(today)
         operations_book_raw = ledger_mod.build_operations_book(today)
+        cash_projetado = compute_cash(today, extra_events=draft_events)
+        positions_projetado = export_snapshot(today, extra_events=draft_events)
+        operations_book_projetado_raw = ledger_mod.build_operations_book(today, extra_events=draft_events)
+        pending_settlements_rows = ledger_mod.pending_settlements(today)
         informed = ledger_mod.latest_informed_cash(today)
         base1_series = ledger_mod.build_real_base1_series(
             today,
@@ -634,6 +790,22 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         row_out["nao_realizado"] = nao_realizado
         operations_book[ticker] = row_out
 
+    operations_book_projetado: dict[str, Any] = {}
+    for ticker, row in operations_book_projetado_raw.items():
+        if not isinstance(row, dict):
+            continue
+        hold = holdings_map.get(ticker, {})
+        close_d1 = _safe_float(hold.get("close_d1"), 0.0)
+        qtd_liquida = _safe_float(row.get("qtd_liquida"), 0.0)
+        custo_medio = _safe_float(row.get("custo_medio"), 0.0)
+        nao_realizado: float | None = None
+        if qtd_liquida > 0 and close_d1 > 0:
+            nao_realizado = round(qtd_liquida * (close_d1 - custo_medio), 2)
+        row_out = dict(row)
+        row_out["close_d1"] = close_d1
+        row_out["nao_realizado"] = nao_realizado
+        operations_book_projetado[ticker] = row_out
+
     positions_enriched: list[dict[str, Any]] = []
     held_set: set[str] = set()
     for row in positions:
@@ -655,6 +827,28 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         4,
     )
 
+    positions_projetado_enriched: list[dict[str, Any]] = []
+    for row in positions_projetado:
+        ticker = str(row.get("ticker", "")).upper().strip()
+        hold = holdings_map.get(ticker, {})
+        positions_projetado_enriched.append(
+            {
+                "ticker": ticker,
+                "data_compra": row.get("data_compra", ""),
+                "qtd": round(_safe_float(row.get("qtd")), 8),
+                "preco_compra": _safe_float(row.get("preco_compra")),
+                "close_d1": _safe_float(hold.get("close_d1"), 0.0),
+                "heat_pct": _safe_float(hold.get("heat_pct"), 0.0),
+            }
+        )
+    carteira_projetada_valor = round(
+        sum(
+            _safe_float(row.get("qtd"), 0.0) * _safe_float(row.get("close_d1"), 0.0)
+            for row in positions_projetado_enriched
+        ),
+        4,
+    )
+
     top_operational = master.get("operational_ranking", [])
     if not isinstance(top_operational, list):
         top_operational = []
@@ -673,7 +867,6 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         | held_set
     )
 
-    draft = load_draft(today)
     closed_boletim_path = resolved_ledger_dir / f"{today.isoformat()}.json"
     caixa_real_informado = float(informed["amount"]) if informed else None
     caixa_real_informado_date = str(informed["exec_date"]) if informed else None
@@ -687,21 +880,27 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         "market_day": str(context.get("market_day", today.isoformat())),
         "cash_free": float(cash.get("cash_free", 0.0)),
         "cash_accounting": float(cash.get("cash_accounting", 0.0)),
+        "cash_free_projetado": float(cash_projetado.get("cash_free", 0.0)),
+        "cash_accounting_projetado": float(cash_projetado.get("cash_accounting", 0.0)),
         "caixa_real_informado": caixa_real_informado,
         "caixa_real_informado_date": caixa_real_informado_date,
         "friccao_balanco_real": friccao_balanco_real,
         "positions": positions_enriched,
+        "positions_projetado": positions_projetado_enriched,
         "holdings": holdings,
         "held_set": sorted(held_set),
         "sparklines_tickers": sparkline_tickers,
         "top_operational": top_operational,
         "target_weights": target_weights,
         "operations_book": operations_book,
+        "operations_book_projetado": operations_book_projetado,
         "base1_series": base1_series,
         "corretagem_dia": round(float(corretagem_dia), 4),
         "corretagem_total": round(float(corretagem_total), 4),
         "capital_em_uso": round(float(capital_uso), 4),
         "carteira_d1_valor": carteira_d1_valor,
+        "carteira_projetada_valor": carteira_projetada_valor,
+        "pending_settlements": pending_settlements_rows,
         "forno": forno,
         "draft": draft,
         "closed_boletim_exists": closed_boletim_path.exists(),
@@ -733,7 +932,7 @@ def _suggested_defensive_sells(view: dict[str, Any]) -> dict[str, Any]:
         spc = str(row.get("spc_status", "")).upper().strip()
         drawdown = _safe_float(row.get("drawdown_pct"), 0.0)
         reasons: list[str] = []
-        if heat <= -8.0:
+        if heat <= -32.42:
             reasons.append(f"heat {heat:.1f}%")
         if spc and spc != "ESTAVEL":
             reasons.append(f"SPC {spc}")
@@ -773,8 +972,14 @@ def render_live_html(view: dict[str, Any]) -> str:
     market_day = str(view.get("market_day", today))
     cash_free_raw = _safe_float(view.get("cash_free", 0.0), 0.0)
     cash_accounting_raw = _safe_float(view.get("cash_accounting", 0.0), 0.0)
+    cash_free_projetado_raw = _safe_float(view.get("cash_free_projetado", cash_free_raw), cash_free_raw)
+    cash_accounting_projetado_raw = _safe_float(
+        view.get("cash_accounting_projetado", cash_accounting_raw), cash_accounting_raw
+    )
     cash_free = _fmt_usd(cash_free_raw)
     cash_accounting = _fmt_usd(cash_accounting_raw)
+    cash_free_projetado = _fmt_usd(cash_free_projetado_raw)
+    cash_accounting_projetado = _fmt_usd(cash_accounting_projetado_raw)
 
     caixa_real_informado_raw = view.get("caixa_real_informado")
     caixa_real_informado_fmt = (
@@ -789,18 +994,21 @@ def render_live_html(view: dict[str, Any]) -> str:
     corretagem_total_raw = _safe_float(view.get("corretagem_total", 0.0), 0.0)
     capital_em_uso_raw = _safe_float(view.get("capital_em_uso", 0.0), 0.0)
     carteira_d1_valor_raw = _safe_float(view.get("carteira_d1_valor", 0.0), 0.0)
-    total_ativo_raw = carteira_d1_valor_raw + cash_free_raw + cash_accounting_raw
+    carteira_projetada_valor_raw = _safe_float(
+        view.get("carteira_projetada_valor", carteira_d1_valor_raw), carteira_d1_valor_raw
+    )
+    total_ativo_raw = carteira_projetada_valor_raw + cash_free_projetado_raw + cash_accounting_projetado_raw
     total_bruto_raw = total_ativo_raw
     has_caixa_real = caixa_real_informado_raw is not None
     caixa_real_atual = _safe_float(caixa_real_informado_raw, 0.0) if has_caixa_real else 0.0
-    friccao_operacional_raw = cash_free_raw - caixa_real_atual if has_caixa_real else 0.0
+    friccao_operacional_raw = cash_free_projetado_raw - caixa_real_atual if has_caixa_real else 0.0
     friccao_total_raw = corretagem_total_raw + friccao_operacional_raw
     nav_raw = total_ativo_raw - friccao_operacional_raw
     resultado_raw = nav_raw - capital_em_uso_raw
     rent_raw = (resultado_raw / capital_em_uso_raw * 100.0) if capital_em_uso_raw > 0 else 0.0
     delta_ajustado_liquidacao_raw = (
-        (cash_free_raw + cash_accounting_raw) - caixa_real_atual
-        if has_caixa_real and cash_accounting_raw > 0
+        (cash_free_projetado_raw + cash_accounting_projetado_raw) - caixa_real_atual
+        if has_caixa_real and cash_accounting_projetado_raw > 0
         else None
     )
 
@@ -1013,6 +1221,31 @@ def render_live_html(view: dict[str, Any]) -> str:
     cota_preco_raw = base_now * 100.0 if base_now > 0 else 0.0
     cotas_estimadas = (total_ativo_raw / cota_preco_raw) if cota_preco_raw > 0 else 0.0
 
+    def _ledger_reference_row(label: str, projected_value: float, closed_value: float) -> str:
+        if abs(projected_value - closed_value) <= 0.01:
+            return ""
+        return (
+            "<div class='row proj-note'>"
+            f"<div class='l'>{html.escape(label)}</div>"
+            f"<div class='v mono'>{_fmt_usd(closed_value)}</div>"
+            "</div>"
+        )
+
+    ref_carteira = _ledger_reference_row(
+        "Carteira fechada (ledger)", carteira_projetada_valor_raw, carteira_d1_valor_raw
+    )
+    ref_caixa_livre = _ledger_reference_row(
+        "Caixa livre fechado (ledger)", cash_free_projetado_raw, cash_free_raw
+    )
+    ref_caixa_contabil = _ledger_reference_row(
+        "Caixa contabil fechado (ledger)", cash_accounting_projetado_raw, cash_accounting_raw
+    )
+    ref_total_ativo = _ledger_reference_row(
+        "Total ativo fechado (ledger)",
+        total_ativo_raw,
+        carteira_d1_valor_raw + cash_free_raw + cash_accounting_raw,
+    )
+
     closed_note = (
         "<p class='pill'>Dia encerrado: boletim de fechamento ja existe para hoje.</p>"
         if bool(view.get("closed_boletim_exists"))
@@ -1043,6 +1276,39 @@ def render_live_html(view: dict[str, Any]) -> str:
             "<tr><td colspan='5'><span class='flat'>Nenhuma venda defensiva sugerida (heat/SPC/drawdown dentro dos limites).</span></td></tr>"
         )
     motor_html = "".join(f"<li>{html.escape(str(line))}</li>" for line in suggestions.get("motor_lines", []))
+
+    pending_settlements = (
+        view.get("pending_settlements", []) if isinstance(view.get("pending_settlements"), list) else []
+    )
+    pending_rows: list[str] = []
+    for row in pending_settlements:
+        if not isinstance(row, dict):
+            continue
+        sell_id = str(row.get("sell_id", "")).strip()
+        ticker = str(row.get("ticker", "")).upper().strip()
+        sale_date = str(row.get("sale_date", ""))
+        pendente = _safe_float(row.get("pendente"), 0.0)
+        if not sell_id or pendente <= 0.50:
+            continue
+        pending_rows.append(
+            "<tr>"
+            f"<td>{html.escape(ticker)}</td>"
+            f"<td>{html.escape(sale_date)}</td>"
+            f"<td style='text-align:right'>{_fmt_usd(row.get('valor_venda', 0.0))}</td>"
+            f"<td style='text-align:right'>{_fmt_usd(row.get('ja_transferido', 0.0))}</td>"
+            f"<td style='text-align:right'>{_fmt_usd(pendente)}</td>"
+            "<td>"
+            "<form method='POST' action='/painel/liquidar' style='display:flex; gap:6px; align-items:center'>"
+            f"<input type='hidden' name='exec_day' value='{html.escape(today)}' />"
+            f"<input type='hidden' name='sell_id' value='{html.escape(sell_id)}' />"
+            f"<input type='number' name='amount' min='0.01' step='0.01' value='{pendente:.2f}' style='max-width:130px' />"
+            "<button type='submit'>Confirmar liquidacao</button>"
+            "</form>"
+            "</td>"
+            "</tr>"
+        )
+    if not pending_rows:
+        pending_rows.append("<tr><td colspan='6'>Nenhuma liquidacao pendente.</td></tr>")
 
     return f"""<!doctype html>
 <html lang="pt-BR">
@@ -1120,6 +1386,8 @@ def render_live_html(view: dict[str, Any]) -> str:
     .wf .row.nav {{ background:rgba(82,185,163,.08); border:1px solid var(--teal-dim); border-radius:8px; padding:10px; margin-top:6px; }}
     .wf .row.nav .l, .wf .row.nav .v {{ color:var(--teal); font-weight:700; }}
     .wf .row.res .v {{ font-weight:700; }}
+    .wf .row.proj-note {{ border-bottom:none; padding-top:2px; }}
+    .wf .row.proj-note .l, .wf .row.proj-note .v {{ color:var(--muted-2); font-size:11px; }}
     .sources {{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }}
     .src {{ background:var(--surface-2); border:1px solid var(--hair); border-radius:8px; padding:10px; }}
     .src.manual {{ border-color:var(--teal-dim); }}
@@ -1179,7 +1447,7 @@ def render_live_html(view: dict[str, Any]) -> str:
       </div>
       <div class="fact">
         <div class="fk">Caixa Livre de Balanco</div>
-        <div class="fv mono">{cash_free}</div>
+        <div class="fv mono">{cash_free_projetado}</div>
       </div>
     </div>
     <p class="muted" style="margin-top:12px">Operacoes sugeridas pelo motor</p>
@@ -1226,43 +1494,34 @@ def render_live_html(view: dict[str, Any]) -> str:
   <div class="card">
     <div class="op-gate">
       <div class="gate-k">Caixa Livre de Balanco</div>
-      <div class="gate-v mono">{cash_free}</div>
+      <div class="gate-v mono">{cash_free_projetado}</div>
       <p class="muted">Ajuste local para analise: nao grava no ledger.</p>
       <div class="gate-k" style="margin-top:10px">Caixa Livre Real (espelho local)</div>
       <input class="cash-adj" id="analystCaixaReal" type="number" step="0.01" placeholder="saldo no app BTG" />
       <p class="muted" style="margin-top:8px">Friccao: Delta = Balanco - Real.</p>
     </div>
-    <p class="muted">Sugestao corrente do motor</p>
-    <ul class="motor">{motor_html}</ul>
-    <table style="margin-top:8px">
-      <tr><th>Ticker</th><th style="text-align:right">Qtd</th><th style="text-align:right">Fech. D-1</th><th style="text-align:right">Heat</th><th>Motivo</th></tr>
-      {''.join(defensive_rows)}
-    </table>
-    <p class="muted" style="margin-top:10px">Linhas locais de sugestao (sem persistencia):</p>
+    <p class="muted" style="margin-top:10px">Linhas locais de sugestao (sem persistencia e sem escrita em ledger):</p>
     <div class="op-rows" id="analystOpsRows"></div>
   </div>
 
   <div class="sec-label"><span class="idx">07</span> Balancete simplificado <span class="tag governs">caixa + ativo + cota</span></div>
   <div class="card">
+    <p class="muted">Valores principais incluem o rascunho salvo (projecao). Quando houver diferenca, o valor fechado em ledger aparece na linha seguinte.</p>
     <div class="wf">
-      <div class="row"><div class="l"><span class="op">&nbsp;</span>Carteira (Fech. D-1)</div><div class="v" id="bridgeCarteira">{_fmt_usd(carteira_d1_valor_raw)}</div></div>
-      <div class="row"><div class="l"><span class="op">+</span>Caixa Livre de Balanco</div><div class="v" id="bridgeCaixaBalanco">{_fmt_usd(cash_free_raw)}</div></div>
-      <div class="row"><div class="l"><span class="op">+</span>Caixa Contabil (em liquidacao)</div><div class="v" id="bridgeCaixaContabil">{_fmt_usd(cash_accounting_raw)}</div></div>
+      <div class="row"><div class="l"><span class="op">&nbsp;</span>Carteira (Fech. D-1)</div><div class="v" id="bridgeCarteira">{_fmt_usd(carteira_projetada_valor_raw)}</div></div>
+      {ref_carteira}
+      <div class="row"><div class="l"><span class="op">+</span>Caixa Livre de Balanco</div><div class="v" id="bridgeCaixaBalanco">{_fmt_usd(cash_free_projetado_raw)}</div></div>
+      {ref_caixa_livre}
+      <div class="row"><div class="l"><span class="op">+</span>Caixa Contabil (em liquidacao)</div><div class="v" id="bridgeCaixaContabil">{_fmt_usd(cash_accounting_projetado_raw)}</div></div>
+      {ref_caixa_contabil}
       <div class="row sub"><div class="l">= Total do Ativo</div><div class="v" id="bridgeTotalBruto">{_fmt_usd(total_ativo_raw)}</div></div>
+      {ref_total_ativo}
       <div class="row"><div class="l">Capital em uso</div><div class="v" id="bridgeCapital">{_fmt_usd(capital_em_uso_raw)}</div></div>
       <div class="row"><div class="l">Preco da cota (Base 1 x 100)</div><div class="v mono">{_fmt_usd(cota_preco_raw)}</div></div>
       <div class="row"><div class="l">Cotas estimadas</div><div class="v mono">{cotas_estimadas:,.4f}</div></div>
       <div class="row"><div class="l">Base 1 atual</div><div class="v mono">{base_now:.4f}</div></div>
       <div class="row nav"><div class="l">NAV reconciliado (Total - Delta Balanco-Real)</div><div class="v" id="bridgeNav">{_fmt_usd(nav_raw)}</div></div>
     </div>
-    <h3 style="margin-top:12px">Encerramento definitivo do dia</h3>
-    <form method="POST" action="/painel/encerrar">
-      <input type="hidden" name="exec_day" value="{html.escape(today)}" />
-      <label>Caixa Livre Real BTG (saldo do app, opcional)<input id="caixaRealInput" type="number" name="caixa_real" min="0.00" step="0.01" placeholder="ex: 950.00" {caixa_real_value_attr} /></label>
-      <label style="display:flex; align-items:center; gap:8px; margin-top:8px"><input type="checkbox" name="confirmar" value="sim" required style="width:auto" /> Confirmo encerramento definitivo.</label>
-      <button type="submit" style="margin-top:8px">Encerrar o Dia</button>
-    </form>
-    <p class="muted">Caixa Real permanece observacional: nao altera compute_cash; serve para reconciliacao do fechamento.</p>
   </div>
 
   <div class="sec-label"><span class="idx">08</span> DFC simplificado + reconciliacao <span class="tag">balanco vs BTG</span></div>
@@ -1270,7 +1529,7 @@ def render_live_html(view: dict[str, Any]) -> str:
     <div class="sources">
       <div class="src">
         <div class="sk">Caixa Livre de Balanco</div>
-        <div class="sv">Derivado do ledger real: APORTE/DIVIDENDO/SETTLEMENT - RETIRADA/BUY/FEE.</div>
+        <div class="sv">Projecao = ledger real + rascunho salvo: APORTE/DIVIDENDO/SETTLEMENT - RETIRADA/BUY/FEE.</div>
       </div>
       <div class="src manual">
         <div class="sk">Caixa Livre Real BTG</div>
@@ -1278,10 +1537,12 @@ def render_live_html(view: dict[str, Any]) -> str:
       </div>
     </div>
     <div class="wf" style="margin-top:10px">
-      <div class="row"><div class="l">Caixa Livre de Balanco</div><div class="v" id="reconCaixaBalanco">{_fmt_usd(cash_free_raw)}</div></div>
+      <div class="row"><div class="l">Caixa Livre de Balanco</div><div class="v" id="reconCaixaBalanco">{_fmt_usd(cash_free_projetado_raw)}</div></div>
+      {ref_caixa_livre}
       <div class="row"><div class="l">Caixa Livre Real BTG</div><div class="v" id="bridgeCaixaReal">{caixa_real_bridge}</div></div>
       <div class="row"><div class="l">Delta Livre - Real</div><div class="v {delta_cls}" id="bridgeDelta">{delta_fmt}</div></div>
-      <div class="row"><div class="l">Caixa Contabil (em liquidacao)</div><div class="v">{_fmt_usd(cash_accounting_raw)}</div></div>
+      <div class="row"><div class="l">Caixa Contabil (em liquidacao)</div><div class="v">{_fmt_usd(cash_accounting_projetado_raw)}</div></div>
+      {ref_caixa_contabil}
       <div class="row"><div class="l">Delta ajustado por liquidacao</div><div class="v {delta_liq_cls}" id="bridgeDeltaAjustadoLiquidacao">{delta_liq_fmt}</div></div>
       <div class="row"><div class="l">Corretagem do dia</div><div class="v">{_fmt_usd(corretagem_dia_raw)}</div></div>
       <div class="row"><div class="l">Corretagem acumulada</div><div class="v" id="bridgeCorretagem">{_fmt_usd(corretagem_total_raw)}</div></div>
@@ -1291,19 +1552,15 @@ def render_live_html(view: dict[str, Any]) -> str:
       <div class="row res"><div class="l">Rentabilidade acumulada</div><div class="v {rent_cls}" id="bridgeRent">{rent_fmt}</div></div>
     </div>
     <div class="recon" style="margin-top:12px">
-      <div class="rcol"><div class="rk">Caixa Livre de Balanco</div><div class="rv" id="reconCaixaBalancoMirror">{_fmt_usd(cash_free_raw)}</div></div>
+      <div class="rcol"><div class="rk">Caixa Livre de Balanco</div><div class="rv" id="reconCaixaBalancoMirror">{_fmt_usd(cash_free_projetado_raw)}</div></div>
       <div class="rgap"><div class="gk">Delta</div><div class="gv {delta_cls}" id="reconDelta">{delta_fmt}</div></div>
       <div class="rcol real"><div class="rk">Caixa Livre Real BTG</div><div class="rv" id="reconCaixaRealMirror">{caixa_real_bridge}</div></div>
     </div>
-  </div>
-
-  <div class="card">
-    <h2>Rascunho operacional (persistente)</h2>
+    <h3 style="margin-top:12px">Liquidacoes pendentes de confirmacao</h3>
     <table>
-      <tr><th>Tipo</th><th>Ticker</th><th style="text-align:right">Qtd</th><th style="text-align:right">Preco real</th><th style="text-align:right">Corretagem</th><th style="text-align:right">Preco-sombra</th><th>Liquidacao</th><th>Acoes</th></tr>
-      {''.join(draft_rows)}
+      <tr><th>Ticker</th><th>Data venda</th><th style="text-align:right">Valor venda</th><th style="text-align:right">Ja transferido</th><th style="text-align:right">Pendente</th><th>Acao</th></tr>
+      {''.join(pending_rows)}
     </table>
-    <p class="muted">Salvar rascunho nao modifica o ledger definitivo.</p>
   </div>
 
   <div class="card">
@@ -1336,6 +1593,15 @@ def render_live_html(view: dict[str, Any]) -> str:
   </div>
 
   <div class="card">
+    <h2>Rascunho operacional (persistente)</h2>
+    <table>
+      <tr><th>Tipo</th><th>Ticker</th><th style="text-align:right">Qtd</th><th style="text-align:right">Preco real</th><th style="text-align:right">Corretagem</th><th style="text-align:right">Preco-sombra</th><th>Liquidacao</th><th>Acoes</th></tr>
+      {''.join(draft_rows)}
+    </table>
+    <p class="muted">Salvar rascunho nao modifica o ledger definitivo.</p>
+  </div>
+
+  <div class="card">
     <h2>Mapa de custos</h2>
     <table>
       <tr><th>Componente</th><th>Onde vive</th><th>Nivel</th></tr>
@@ -1345,13 +1611,24 @@ def render_live_html(view: dict[str, Any]) -> str:
     </table>
   </div>
 
+  <div class="card">
+    <h2>Encerramento definitivo do dia</h2>
+    <form method="POST" action="/painel/encerrar">
+      <input type="hidden" name="exec_day" value="{html.escape(today)}" />
+      <label>Caixa Livre Real BTG (saldo do app, opcional)<input id="caixaRealInput" type="number" name="caixa_real" min="0.00" step="0.01" placeholder="ex: 950.00" {caixa_real_value_attr} /></label>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:8px"><input type="checkbox" name="confirmar" value="sim" required style="width:auto" /> Confirmo encerramento definitivo.</label>
+      <button type="submit" style="margin-top:8px">Encerrar o Dia</button>
+    </form>
+    <p class="muted">Caixa Real permanece observacional: nao altera compute_cash; serve para reconciliacao do fechamento.</p>
+  </div>
+
   <p class="muted">Fallback disponivel via scripts/atalhos: USA_REGISTRAR_ORDEM e USA_ENCERRAR_DIA. Base1/CAGR, sparklines 62d e ponte de friccao rodam localmente sem dependencias externas.</p>
 
   <script>
   (function() {{
-    const caixaBalanco = {cash_free_raw:.8f};
-    const caixaContabil = {cash_accounting_raw:.8f};
-    const carteira = {carteira_d1_valor_raw:.8f};
+    const caixaBalanco = {cash_free_projetado_raw:.8f};
+    const caixaContabil = {cash_accounting_projetado_raw:.8f};
+    const carteira = {carteira_projetada_valor_raw:.8f};
     const corretagem = {corretagem_total_raw:.8f};
     const capitalUso = {capital_em_uso_raw:.8f};
     const totalBruto = carteira + caixaBalanco + caixaContabil;

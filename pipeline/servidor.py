@@ -501,6 +501,43 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 self._redirect("/painel")
                 return
 
+            if path == "/painel/liquidar":
+                form = _read_form_payload()
+                raw_exec_day = str(form.get("exec_day", "")).strip()
+                sell_id = str(form.get("sell_id", "")).strip()
+                raw_amount = str(form.get("amount", "")).strip()
+                try:
+                    exec_day = date.fromisoformat(raw_exec_day)
+                except ValueError:
+                    self._respond_html("<h3>exec_day invalido.</h3>", code=400)
+                    return
+                if exec_day != today:
+                    self._respond_html("<h3>Somente o painel do dia atual pode confirmar liquidacao.</h3>", code=403)
+                    return
+                if not sell_id:
+                    self._respond_html("<h3>sell_id obrigatorio.</h3>", code=400)
+                    return
+
+                amount: float | None = None
+                if raw_amount:
+                    try:
+                        amount = float(raw_amount)
+                    except ValueError:
+                        self._respond_html("<h3>amount invalido.</h3>", code=400)
+                        return
+                try:
+                    real_boletim_web.confirm_settlement(
+                        exec_day,
+                        ROOT / "data" / "live_real_test",
+                        sell_id=sell_id,
+                        amount=amount,
+                    )
+                except ValueError as exc:
+                    self._respond_html(f"<h3>{str(exc)}</h3>", code=400)
+                    return
+                self._redirect("/painel")
+                return
+
             if path == "/painel/encerrar":
                 form = _read_form_payload()
                 raw_exec_day = str(form.get("exec_day", "")).strip()
