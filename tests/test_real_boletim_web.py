@@ -297,14 +297,23 @@ def test_suggested_defensive_sells_uses_grave_threshold_for_heat():
                 "qty": 2.0,
                 "close_d1": 20.0,
             },
+            {
+                "ticker": "CCC",
+                "heat_pct": -7.0,
+                "spc_status": "ATENCAO",
+                "drawdown_pct": -5.0,
+                "qty": 3.0,
+                "close_d1": 30.0,
+            },
         ],
-        "held_set": ["AAA", "BBB"],
+        "held_set": ["AAA", "BBB", "CCC"],
     }
     out = real_boletim_web._suggested_defensive_sells(view)
     defensive = out.get("defensive", [])
     tickers = [row.get("ticker") for row in defensive if isinstance(row, dict)]
     assert "AAA" not in tickers
     assert "BBB" in tickers
+    assert "CCC" not in tickers
 
 
 def test_confirm_settlement_creates_append_only_event(tmp_path):
@@ -607,6 +616,60 @@ def test_render_live_html_shows_fractional_quantities():
     html = real_boletim_web.render_live_html(view)
     assert "142.88572" in html
     assert "0.88572" in html
+
+
+def test_render_live_html_uses_lot_heat_and_lot_unrealized_values():
+    view = {
+        "today": "2026-07-23",
+        "market_day": "2026-07-22",
+        "cash_free": 500.0,
+        "cash_accounting": 0.0,
+        "positions": [
+            {
+                "ticker": "HNGE",
+                "data_compra": "2026-07-17",
+                "qtd": 11.554936,
+                "preco_compra": 86.54,
+                "close_d1": 79.08,
+                "heat_pct": -8.62,
+            },
+            {
+                "ticker": "HNGE",
+                "data_compra": "2026-07-22",
+                "qtd": 2.0,
+                "preco_compra": 81.21,
+                "close_d1": 79.08,
+                "heat_pct": -2.62,
+            },
+        ],
+        "held_set": ["HNGE"],
+        "top_operational": [],
+        "target_weights": {},
+        "operations_book": {
+            "HNGE": {
+                "ticker": "HNGE",
+                "compras": [
+                    {"date": "2026-07-17", "qtd": 11.554936, "preco": 86.54},
+                    {"date": "2026-07-22", "qtd": 2.0, "preco": 81.21},
+                ],
+                "vendas": [],
+                "qtd_liquida": 13.554936,
+                "custo_medio": 85.76,
+                "investido": 1162.4,
+                "realizado": 0.0,
+                "close_d1": 79.08,
+                "nao_realizado": -90.5,
+            }
+        },
+        "forno": {},
+        "draft": {"operations": []},
+        "closed_boletim_exists": False,
+    }
+    html = real_boletim_web.render_live_html(view)
+    assert "-8.62%" in html
+    assert "-2.62%" in html
+    assert "$ -86.20" in html
+    assert "$ -4.26" in html
 
 
 def test_close_day_records_caixa_real_informado_and_computes_friccao(tmp_path, monkeypatch):

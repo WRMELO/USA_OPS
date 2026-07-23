@@ -762,6 +762,46 @@ contrato append-only do ledger:
 
 Ref: SALA D-141, USA D-158, USA D-150, USA D-142, R-020, R-035, R-036.
 
+### 6.26 Fracionario ponta a ponta no contexto real + lote correto no boletim + fechamento do dust compartilhado (D-159)
+
+A partir de D-159, o LIVE-REAL-TEST US fecha tres lacunas de consistencia de
+dados sem tocar arquivos blindados de §6.6:
+
+1. **Fracionario no contexto do Analista (`analise_us.py`)**:
+   `_normalize_positions(...)` deixa de truncar `qtd` para inteiro e passa a
+   consolidar por `float`, preservando quantidade fracionaria no `holdings` que
+   alimenta o `/painel` real.
+2. **Heat e nao-realizado por lote na Carteira real**:
+   `pipeline/real_boletim_web.py` passa a calcular:
+   - `heat_pct` por lote usando `close_d1` do ticker contra `preco_compra` do
+     proprio lote;
+   - `nao_realizado` por linha da tabela como `qtd_lote * (close_d1 - preco_compra)`.
+   O agregado por ticker permanece apenas para sinalizacao visual da bolinha
+   no Top-20 (camada informativa por ativo).
+3. **Gatilho SPC defensivo no LIVE-REAL**:
+   `_suggested_defensive_sells(...)` passa a disparar por SPC somente em
+   `spc_status == INSTAVEL` (ATENCAO isolado nao gera sugestao de venda no
+   boletim), mantendo `heat <= -32,42%` e `drawdown <= -15%` como gatilhos OR.
+4. **Correcao do helper compartilhado de venda integral (dust)**:
+   `backtest/run_backtest_variants_us.py::sell_ticker_fifo` passa a liquidar o
+   lote inteiro quando `value_to_sell` cobre o lote (epsilon-safe), eliminando
+   o caso 98/99 causado por piso de ponto flutuante.
+5. **Impacto historico documentado sem sobrescrita de vereditos anteriores**:
+   novo artefato append-only
+   `backtest/t_sell_all_ticker_fifo_dust_impact_us/results/impact_report_2026-07-23.json`
+   compara o estado anterior (`shared_sell_all_regression.json`) com o helper
+   corrigido.
+
+**Contrato de escopo**:
+
+- Nenhum arquivo blindado de §6.6 foi tocado.
+- `compute_cash` nao foi alterado nesta frente; a consistencia de DFC/Balancete
+  foi verificada por script read-only com resultado `CHECK_DFC_CASH_OK`.
+- Nao houve reescrita de eventos no ledger real; politica append-only de §6.6.1
+  permanece intacta.
+
+Ref: SALA D-142, USA D-159, USA D-154, USA D-150, R-018, R-020, R-035, R-036.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.

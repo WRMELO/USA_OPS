@@ -318,7 +318,7 @@ def _normalize_positions(positions_snapshot: list[dict[str, Any]]) -> list[dict[
         tk = str(pos.get("ticker", "")).upper().strip()
         if not tk:
             continue
-        qty = int(pos.get("qtd", pos.get("quantity", pos.get("qty", 0))) or 0)
+        qty = _safe_float(pos.get("qtd", pos.get("quantity", pos.get("qty", 0))), 0.0)
         if qty <= 0:
             continue
         cost = _safe_float(pos.get("preco_compra", pos.get("avg_cost", pos.get("average_price", 0.0))), 0.0)
@@ -327,7 +327,7 @@ def _normalize_positions(positions_snapshot: list[dict[str, Any]]) -> list[dict[
             tk,
             {
                 "ticker": tk,
-                "qty": 0,
+                "qty": 0.0,
                 "cost_value": 0.0,
                 "purchase_date": purchase_date,
             },
@@ -339,7 +339,7 @@ def _normalize_positions(positions_snapshot: list[dict[str, Any]]) -> list[dict[
 
     out = []
     for rec in by_ticker.values():
-        qty = int(rec["qty"])
+        qty = float(rec["qty"])
         avg_cost = rec["cost_value"] / qty if qty > 0 else 0.0
         out.append(
             {
@@ -435,7 +435,7 @@ def build_context(
     total_mkt = 0.0
     for pos in positions:
         tk = pos["ticker"]
-        qty = int(pos["qty"])
+        qty = float(pos["qty"])
         avg_cost = _safe_float(pos["avg_cost"])
         purchase_date = pos.get("purchase_date", "")
         df_tk = spc_window[spc_window["ticker"] == tk].sort_values("date")

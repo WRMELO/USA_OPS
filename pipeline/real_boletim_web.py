@@ -812,14 +812,18 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         ticker = str(row.get("ticker", "")).upper().strip()
         held_set.add(ticker)
         hold = holdings_map.get(ticker, {})
+        lot_qty = round(_safe_float(row.get("qtd")), 8)
+        preco_compra = _safe_float(row.get("preco_compra"))
+        close_d1 = _safe_float(hold.get("close_d1"), 0.0)
+        heat_pct = ((close_d1 / preco_compra) - 1.0) * 100.0 if preco_compra > 0 and close_d1 > 0 else 0.0
         positions_enriched.append(
             {
                 "ticker": ticker,
                 "data_compra": row.get("data_compra", ""),
-                "qtd": round(_safe_float(row.get("qtd")), 8),
-                "preco_compra": _safe_float(row.get("preco_compra")),
-                "close_d1": _safe_float(hold.get("close_d1"), 0.0),
-                "heat_pct": _safe_float(hold.get("heat_pct"), 0.0),
+                "qtd": lot_qty,
+                "preco_compra": preco_compra,
+                "close_d1": close_d1,
+                "heat_pct": round(heat_pct, 2),
             }
         )
     carteira_d1_valor = round(
@@ -831,14 +835,18 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
     for row in positions_projetado:
         ticker = str(row.get("ticker", "")).upper().strip()
         hold = holdings_map.get(ticker, {})
+        lot_qty = round(_safe_float(row.get("qtd")), 8)
+        preco_compra = _safe_float(row.get("preco_compra"))
+        close_d1 = _safe_float(hold.get("close_d1"), 0.0)
+        heat_pct = ((close_d1 / preco_compra) - 1.0) * 100.0 if preco_compra > 0 and close_d1 > 0 else 0.0
         positions_projetado_enriched.append(
             {
                 "ticker": ticker,
                 "data_compra": row.get("data_compra", ""),
-                "qtd": round(_safe_float(row.get("qtd")), 8),
-                "preco_compra": _safe_float(row.get("preco_compra")),
-                "close_d1": _safe_float(hold.get("close_d1"), 0.0),
-                "heat_pct": _safe_float(hold.get("heat_pct"), 0.0),
+                "qtd": lot_qty,
+                "preco_compra": preco_compra,
+                "close_d1": close_d1,
+                "heat_pct": round(heat_pct, 2),
             }
         )
     carteira_projetada_valor = round(
@@ -934,7 +942,7 @@ def _suggested_defensive_sells(view: dict[str, Any]) -> dict[str, Any]:
         reasons: list[str] = []
         if heat <= -32.42:
             reasons.append(f"heat {heat:.1f}%")
-        if spc and spc != "ESTAVEL":
+        if spc == "INSTAVEL":
             reasons.append(f"SPC {spc}")
         if drawdown <= -15.0:
             reasons.append(f"drawdown {drawdown:.1f}%")
@@ -1058,11 +1066,12 @@ def render_live_html(view: dict[str, Any]) -> str:
             book_row = operations_book.get(ticker, {})
             if not isinstance(book_row, dict):
                 book_row = {}
-            nao_realizado_raw = book_row.get("nao_realizado")
-            if nao_realizado_raw is None and qty > 0 and close_d1 > 0:
-                nao_realizado_raw = round(qty * (close_d1 - preco_compra), 2)
+            book_nao_realizado_raw = book_row.get("nao_realizado")
+            nao_realizado_raw = round(qty * (close_d1 - preco_compra), 2) if qty > 0 and close_d1 > 0 else None
 
-            if nao_realizado_raw is not None:
+            if book_nao_realizado_raw is not None:
+                held_result[ticker] = _safe_float(book_nao_realizado_raw, 0.0)
+            elif nao_realizado_raw is not None:
                 held_result[ticker] = _safe_float(nao_realizado_raw, 0.0)
             else:
                 held_result[ticker] = heat_pct

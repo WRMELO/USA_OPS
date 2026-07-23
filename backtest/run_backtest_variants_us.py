@@ -359,7 +359,10 @@ def sell_ticker_fifo(
         if lot_value <= 0:
             continue
         value_to_sell = min(lot_value, remaining_value)
-        shares_to_sell = int(value_to_sell // px)
+        if value_to_sell >= (lot_value - 1e-6):
+            shares_to_sell = lot.shares
+        else:
+            shares_to_sell = int(value_to_sell // px)
         if shares_to_sell <= 0:
             updated_lots.append(lot)
             continue

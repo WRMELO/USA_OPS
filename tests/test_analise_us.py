@@ -184,3 +184,51 @@ def test_build_context_dry_run_mode_when_no_real_ledger(tmp_path, monkeypatch):
 
     assert ctx["real_test"]["active"] is False
     assert abs(float(ctx["cash"]["cash_free"]) - 0.0) < 1e-9
+
+
+def test_normalize_positions_keeps_fractional_qty_and_weighted_cost():
+    analise = _load_analise_module()
+    out = analise._normalize_positions(
+        [
+            {"ticker": "HNGE", "qtd": 11.554936, "preco_compra": 86.54, "data_compra": "2026-07-17"},
+            {"ticker": "HNGE", "qtd": 2.0, "preco_compra": 81.21, "data_compra": "2026-07-22"},
+        ]
+    )
+    assert len(out) == 1
+    row = out[0]
+    assert row["ticker"] == "HNGE"
+    assert abs(float(row["qty"]) - 13.554936) < 1e-9
+    expected_avg = ((11.554936 * 86.54) + (2.0 * 81.21)) / 13.554936
+    assert abs(float(row["avg_cost"]) - round(expected_avg, 4)) < 1e-9
+    assert row["purchase_date"] == "2026-07-17"
+
+
+def test_build_context_real_test_keeps_fractional_qty_in_holdings(tmp_path, monkeypatch):
+    analise = _load_analise_module()
+    _write_fixture(tmp_path)
+    monkeypatch.setattr(analise, "ROOT", tmp_path)
+
+    ledger_path = tmp_path / "data" / "live_real_test" / "ledger_real.jsonl"
+    previous_path = analise._ledger_mod.LEDGER_PATH
+    try:
+        ledger_path.write_text("", encoding="utf-8")
+        analise._ledger_mod.LEDGER_PATH = ledger_path
+        aporte = analise._ledger_mod.create_event(analise._ledger_mod.EventType.APORTE, date(2026, 7, 16), 20008.72)
+        analise._ledger_mod.append_event(aporte)
+        buy = analise._ledger_mod.create_event(
+            analise._ledger_mod.EventType.BUY,
+            date(2026, 7, 16),
+            12.0,
+            ticker="AAA",
+            qtd=1.5,
+            price=8.0,
+            settle_date=date(2026, 7, 16),
+        )
+        analise._ledger_mod.append_event(buy)
+    finally:
+        analise._ledger_mod.LEDGER_PATH = previous_path
+
+    ctx = analise.build_context(date(2026, 7, 15))
+    assert ctx["real_test"]["active"] is True
+    row = next(item for item in ctx["holdings"] if item["ticker"] == "AAA")
+    assert abs(float(row["qty"]) - 1.5) < 1e-9

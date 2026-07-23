@@ -14,6 +14,7 @@
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
 | T-SDC-LIVEREAL-BOLETIM-CASH-DFC-LAYOUT-US-V1 | Correcao do LIVE-REAL US: projeção de rascunho no Balancete/DFC, confirmacao de liquidacao pendente, limiar defensivo `-32,42%` e reorganizacao do layout com encerramento no fim | DONE | SALA D-141 / USA D-158 |
+| T-SDC-LIVEREAL-FRACIONARIO-LOTE-DEFENSIVA-DUST-US-V1 | Pacote unico de dados LIVE-REAL US: fracionario ponta a ponta no contexto (`analise_us.py`), heat/nao-realizado por lote no boletim, gatilho SPC defensivo restrito a `INSTAVEL`, cheque read-only de DFC/Balancete e fechamento da trilha de dust compartilhado | DONE | SALA D-142 / USA D-159 |
 | T-REBALANCE-WEAKNESS-US | Backtest HOLDOUT US de rank-decay pre-rebalance (paridade RENDA_OPS D-082/D-083) | DONE | D-070, D-066; Fase B-Prep concluida (D-075); Opcao A aprovada (D-076) |
 | T-088-SPC-ENRICHED-ABLATION-US | Ablacao de 3 bracos SPC enriquecido (Baseline/B/B+C, phase sweep 10 fases) para desbloquear gate de entrada no motor US | DONE (SUPERSEDED) | D-076, D-075, D-070; veredito IMPLEMENTAR_BC suspenso por gap metodologico (D-077); substituido por T-088B |
 | T-088B-SPC-ENRICHED-ABLATION-US-FIXED | Rerun da ablacao T-088 com filtro min_market_cap >= 300M por d_prev (paridade com pipeline/09_decide.py) para gerar veredito valido sobre universo do motor produtivo | DONE (SUPERSEDED) | D-077; veredito suspenso por violacao de paridade (D-078); substituido por T-088C |
@@ -28,7 +29,7 @@
 | T-SDC-DEFENSIVE-HOLD-CASH-DRIFT-LADDER-US-V2 | Estudo read-only de venda defensiva com caixa parado ate o proximo rebalanceamento; V1 abortada pelo gate G6 original, V2 corrige apenas a janela de medicao do G6 | DONE | SALA D-137 / USA D-155; vereditos INCONCLUSIVO em todos os pares |
 | T-SDC-R001-R037-ENTRY-VETO-US-V1 | Estudo read-only de veto de entrada no rebalance por R-001 restrito a downside e R-037 severo (`ret_62>=1,00` e `persistencia<=2/10`), baseline `C4+R-060`, phase sweep e dois pares de tier independentes | DONE | SALA D-139 / USA D-156; vereditos: `R001_DOWNSIDE=INCONCLUSIVO`, `R037_SEVERE=FAVORECIDO_R037_SEVERE` |
 | T-SDC-R037-CONFIRM-R001-ENTRY-VETO-US-V1 | Estudo read-only de veto de entrada por confirmacao (interseccao) entre R-037 severo e R-001 any no mesmo d_prev, baseline `C4+R-060`, comparado com `Arm_R037_Severe` reproduzido como referencia | DONE | SALA D-140 / USA D-157; veredito: `R037_CONFIRM_R001ANY=INCONCLUSIVO` |
-| T-SELL-ALL-TICKER-FIFO-DUST-IMPACT-US | Avaliar e corrigir dust de venda integral no helper compartilhado `sell_ticker_fifo`/`sell_all_ticker` (regressao V2: vende 98/99 acoes) e medir impacto historico em estudos/backtests que o consumiram | BACKLOG | USA D-154; evidencia `backtest/t_defensive_reinvest_policy_us_v2/results/shared_sell_all_regression.json` |
+| T-SELL-ALL-TICKER-FIFO-DUST-IMPACT-US | Avaliar e corrigir dust de venda integral no helper compartilhado `sell_ticker_fifo`/`sell_all_ticker` (regressao V2: vende 98/99 acoes) e medir impacto historico em estudos/backtests que o consumiram | DONE | USA D-159; compara antes/depois em `backtest/t_sell_all_ticker_fifo_dust_impact_us/results/impact_report_2026-07-23.json` |
 
 ## Phase 0 — Fundação
 
