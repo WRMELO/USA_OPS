@@ -564,7 +564,14 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                     if caixa_real < 0:
                         self._respond_html("<h3>caixa_real deve ser maior ou igual a zero.</h3>", code=400)
                         return
-                real_boletim_web.close_day(exec_day, ROOT / "data" / "live_real_test", caixa_real=caixa_real)
+                close_result = real_boletim_web.close_day(
+                    exec_day, ROOT / "data" / "live_real_test", caixa_real=caixa_real
+                )
+                if close_result.get("error"):
+                    self._respond_html(
+                        f"<h3>{str(close_result.get('message', 'Encerramento bloqueado.'))}</h3>", code=409
+                    )
+                    return
                 self._redirect("/painel")
                 return
 

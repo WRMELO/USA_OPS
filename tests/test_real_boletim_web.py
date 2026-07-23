@@ -4,6 +4,7 @@ import json
 from datetime import date
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 import pipeline.ledger as ledger
@@ -14,6 +15,13 @@ def _count_lines(path: Path) -> int:
     if not path.exists():
         return 0
     return len(path.read_text(encoding="utf-8").splitlines())
+
+
+def _write_price_window(path: Path, rows: list[tuple[str, str, float]]) -> None:
+    frame = pd.DataFrame(
+        [{"date": day, "ticker": ticker, "close_operational": close} for day, ticker, close in rows]
+    )
+    frame.to_parquet(path, index=False)
 
 
 def test_add_operation_roundtrip_persists_only_draft(tmp_path, monkeypatch):
@@ -459,6 +467,61 @@ def test_load_live_view_projects_draft_into_balancete_dfc(tmp_path, monkeypatch)
     assert abs(float(view["operations_book_projetado"]["AAA"]["qtd_liquida"]) - 6.0) < 1e-6
 
 
+def test_load_live_view_marks_prices_from_ssot_and_flags_missing_tickers(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    monkeypatch.setattr(real_boletim_web, "prev_session", lambda _day: date(2026, 7, 22))
+    price_window = tmp_path / "opw.parquet"
+    _write_price_window(
+        price_window,
+        [
+            ("2026-07-21", "AAA", 93.5),
+            ("2026-07-22", "AAA", 95.0),
+        ],
+    )
+    monkeypatch.setattr(real_boletim_web, "DEFAULT_WINDOW_PATH", price_window)
+
+    exec_day = date(2026, 7, 23)
+    ledger_dir = tmp_path / "live_real"
+    ledger_dir.mkdir(parents=True, exist_ok=True)
+
+    prev = ledger.LEDGER_PATH
+    try:
+        ledger.LEDGER_PATH = ledger_dir / "ledger_real.jsonl"
+        ledger.append_event(ledger.create_event(ledger.EventType.APORTE, exec_day, 5000.0))
+        ledger.append_event(
+            ledger.create_event(
+                ledger.EventType.BUY,
+                exec_day,
+                900.0,
+                ticker="AAA",
+                qtd=10.0,
+                price=90.0,
+                settle_date=exec_day,
+            )
+        )
+        ledger.append_event(
+            ledger.create_event(
+                ledger.EventType.BUY,
+                exec_day,
+                400.0,
+                ticker="BBB",
+                qtd=5.0,
+                price=80.0,
+                settle_date=exec_day,
+            )
+        )
+    finally:
+        ledger.LEDGER_PATH = prev
+
+    view = real_boletim_web.load_live_view(exec_day, ledger_dir)
+    assert view["pricing_market_day"] == "2026-07-22"
+    assert view["missing_price_tickers"] == ["BBB"]
+    prices = {row["ticker"]: float(row["close_d1"]) for row in view["positions"]}
+    assert abs(prices["AAA"] - 95.0) < 1e-9
+    assert abs(prices["BBB"]) < 1e-9
+    assert abs(float(view["carteira_d1_valor"]) - 950.0) < 1e-9
+
+
 def test_render_live_html_has_new_layout_and_pending_liquidations_block():
     view = {
         "today": "2026-07-23",
@@ -505,6 +568,83 @@ def test_render_live_html_has_new_layout_and_pending_liquidations_block():
     assert "Sugestao corrente do motor" not in html
     assert html.index("Adicionar operacao") < html.index("Rascunho operacional (persistente)")
     assert html.index("Encerramento definitivo do dia") > html.index("Mapa de custos")
+
+
+def test_render_live_html_blocks_result_when_missing_price_exists():
+    view = {
+        "today": "2026-07-23",
+        "market_day": "2026-07-22",
+        "pricing_market_day": "2026-07-22",
+        "cash_free": 500.0,
+        "cash_accounting": 0.0,
+        "cash_free_projetado": 500.0,
+        "cash_accounting_projetado": 0.0,
+        "carteira_d1_valor": 0.0,
+        "carteira_projetada_valor": 0.0,
+        "caixa_real_informado": 450.0,
+        "friccao_balanco_real": 50.0,
+        "positions": [],
+        "positions_projetado": [],
+        "held_set": [],
+        "top_operational": [],
+        "target_weights": {},
+        "operations_book": {},
+        "operations_book_projetado": {},
+        "pending_settlements": [],
+        "forno": {},
+        "draft": {"operations": []},
+        "closed_boletim_exists": False,
+        "base1_series": [],
+        "corretagem_dia": 2.5,
+        "corretagem_total": 10.0,
+        "capital_em_uso": 1000.0,
+        "sparklines_tickers": [],
+        "missing_price_tickers": ["RLJ"],
+        "dfc_diario": {},
+    }
+    html = real_boletim_web.render_live_html(view)
+    assert "Bloqueio de precificacao SSOT" in html
+    assert "SSOT sem preco para: RLJ" in html
+    assert "BLOQUEADO" in html
+
+
+def test_render_live_html_shows_balanco_and_reconciled_results():
+    view = {
+        "today": "2026-07-23",
+        "market_day": "2026-07-22",
+        "pricing_market_day": "2026-07-22",
+        "cash_free": 100.0,
+        "cash_accounting": 0.0,
+        "cash_free_projetado": 100.0,
+        "cash_accounting_projetado": 0.0,
+        "carteira_d1_valor": 1000.0,
+        "carteira_projetada_valor": 1000.0,
+        "caixa_real_informado": 90.0,
+        "friccao_balanco_real": 10.0,
+        "positions": [],
+        "positions_projetado": [],
+        "held_set": [],
+        "top_operational": [],
+        "target_weights": {},
+        "operations_book": {},
+        "operations_book_projetado": {},
+        "pending_settlements": [],
+        "forno": {},
+        "draft": {"operations": []},
+        "closed_boletim_exists": False,
+        "base1_series": [],
+        "corretagem_dia": 0.0,
+        "corretagem_total": 0.0,
+        "capital_em_uso": 900.0,
+        "sparklines_tickers": [],
+        "missing_price_tickers": [],
+        "dfc_diario": {},
+    }
+    html = real_boletim_web.render_live_html(view)
+    assert "Resultado do Balanco (sem friccao)" in html
+    assert "Resultado reconciliado (apos friccao)" in html
+    assert 'id="bridgeResultadoBalancoMirror">+$ 200.00<' in html
+    assert 'id="bridgeResultado">+$ 190.00<' in html
 
 
 def test_render_live_html_orders_by_m3_rank():
@@ -699,6 +839,46 @@ def test_close_day_without_caixa_real_leaves_it_pending(tmp_path, monkeypatch):
     view = real_boletim_web.load_live_view(exec_day, ledger_dir)
     assert view["caixa_real_informado"] is None
     assert view["friccao_balanco_real"] is None
+
+
+def test_close_day_blocks_when_missing_price_exists(tmp_path, monkeypatch):
+    monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
+    monkeypatch.setattr(real_boletim_web, "prev_session", lambda _day: date(2026, 7, 17))
+    price_window = tmp_path / "opw.parquet"
+    _write_price_window(price_window, [])
+    monkeypatch.setattr(real_boletim_web, "DEFAULT_WINDOW_PATH", price_window)
+
+    exec_day = date(2026, 7, 18)
+    ledger_dir = tmp_path / "live_real"
+    ledger_dir.mkdir(parents=True, exist_ok=True)
+
+    prev = ledger.LEDGER_PATH
+    try:
+        ledger.LEDGER_PATH = ledger_dir / "ledger_real.jsonl"
+        ledger.append_event(ledger.create_event(ledger.EventType.APORTE, exec_day, 1000.0))
+        ledger.append_event(
+            ledger.create_event(
+                ledger.EventType.BUY,
+                exec_day,
+                500.0,
+                ticker="RLJ",
+                qtd=5.0,
+                price=100.0,
+                settle_date=exec_day,
+            )
+        )
+    finally:
+        ledger.LEDGER_PATH = prev
+
+    before_lines = _count_lines(ledger_dir / "ledger_real.jsonl")
+    out = real_boletim_web.close_day(exec_day, ledger_dir)
+    after_lines = _count_lines(ledger_dir / "ledger_real.jsonl")
+
+    assert out["error"] == "MISSING_PRICE_SSOT"
+    assert out["missing_price_tickers"] == ["RLJ"]
+    assert not (ledger_dir / f"{exec_day.isoformat()}.json").exists()
+    assert not (ledger_dir / f"friction_report_{exec_day.isoformat()}.json").exists()
+    assert before_lines == after_lines
 
 
 def test_load_live_view_exposes_base1_bridge_keys(tmp_path, monkeypatch):

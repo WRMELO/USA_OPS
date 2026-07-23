@@ -274,6 +274,124 @@ def test_compute_cash_honors_settlement_even_with_future_settle_date(tmp_path):
     assert abs(cash["cash_accounting"]) < 1e-9
 
 
+def test_compute_daily_cash_flow_bifurcated_same_day_settlement(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+    prev_day = date(2026, 7, 22)
+    exec_day = date(2026, 7, 23)
+
+    _append(
+        LedgerEvent(
+            id="AP0",
+            type=EventType.APORTE,
+            exec_date=prev_day,
+            created_at=datetime.now(tz=UTC),
+            amount=1248.89,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="S1",
+            type=EventType.SELL,
+            exec_date=exec_day,
+            created_at=datetime.now(tz=UTC),
+            ticker="PRCH",
+            qtd=73.645295,
+            price=12.08,
+            amount=889.6351636,
+            settle_date=exec_day,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="ST1",
+            type=EventType.SETTLEMENT,
+            exec_date=exec_day,
+            created_at=datetime.now(tz=UTC),
+            amount=889.6351636,
+            ref_id="S1",
+            settle_date=exec_day,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="S2",
+            type=EventType.SELL,
+            exec_date=exec_day,
+            created_at=datetime.now(tz=UTC),
+            ticker="SMWB",
+            qtd=142.101972,
+            price=6.24,
+            amount=886.71630528,
+            settle_date=exec_day,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="ST2",
+            type=EventType.SETTLEMENT,
+            exec_date=exec_day,
+            created_at=datetime.now(tz=UTC),
+            amount=886.71630528,
+            ref_id="S2",
+            settle_date=exec_day,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="B1",
+            type=EventType.BUY,
+            exec_date=exec_day,
+            created_at=datetime.now(tz=UTC),
+            ticker="RLJ",
+            qtd=89.43089431,
+            price=12.30,
+            amount=1100.0,
+            settle_date=date(2026, 7, 24),
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="F1",
+            type=EventType.FEE,
+            exec_date=exec_day,
+            created_at=datetime.now(tz=UTC),
+            ticker="PRCH",
+            amount=2.53,
+            ref_id="S1",
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="F2",
+            type=EventType.FEE,
+            exec_date=exec_day,
+            created_at=datetime.now(tz=UTC),
+            ticker="SMWB",
+            amount=2.55,
+            ref_id="S2",
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="F3",
+            type=EventType.FEE,
+            exec_date=exec_day,
+            created_at=datetime.now(tz=UTC),
+            ticker="RLJ",
+            amount=5.0,
+            ref_id="B1",
+        )
+    )
+
+    dfc = ledger.compute_daily_cash_flow(exec_day, prev_day)
+    assert abs(float(dfc["vendas_liquidadas_dia"]) - 1776.35146888) < 1e-9
+    assert abs(float(dfc["vendas_em_liquidacao_dia"]) - 0.0) < 1e-9
+    assert abs(float(dfc["compras_dia"]) - 1100.0) < 1e-9
+    assert abs(float(dfc["corretagem_dia"]) - 10.08) < 1e-9
+    assert abs(float(dfc["caixa_livre_final"]) - 1915.16146888) < 1e-9
+    assert abs(float(dfc["caixa_contabil_final"]) - 0.0) < 1e-9
+
+
 def test_duplicate_event_not_appended(tmp_path):
     ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
 

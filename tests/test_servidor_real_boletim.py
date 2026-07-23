@@ -187,3 +187,30 @@ def test_painel_liquidar_route_blocks_historic_exec_day(monkeypatch):
     assert isinstance(response, dict)
     assert response["code"] == 403
     assert "Somente o painel do dia atual pode confirmar liquidacao." in str(response["html"])
+
+
+def test_painel_encerrar_route_returns_409_when_close_day_is_blocked(monkeypatch):
+    servidor = _load_servidor_module()
+    handler_cls = _capture_handler_class(monkeypatch, servidor, override_day=date(2026, 7, 23))
+    monkeypatch.setattr(
+        servidor.real_boletim_web,
+        "close_day",
+        lambda exec_day, ledger_dir, caixa_real=None: {
+            "exec_day": exec_day.isoformat(),
+            "error": "MISSING_PRICE_SSOT",
+            "message": "Encerramento bloqueado: sem preco SSOT para RLJ.",
+        },
+    )
+    handler, calls = _make_handler_instance(
+        handler_cls,
+        path="/painel/encerrar",
+        form_body="exec_day=2026-07-23&confirmar=sim&caixa_real=915.16",
+    )
+
+    handler_cls.do_POST(handler)
+
+    response = calls.get("respond_html")
+    assert isinstance(response, dict)
+    assert response["code"] == 409
+    assert "Encerramento bloqueado" in str(response["html"])
+    assert "redirect" not in calls

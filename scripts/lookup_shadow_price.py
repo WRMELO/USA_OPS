@@ -72,6 +72,39 @@ def lookup_close(ticker: str, exec_date: date, window_path: Path) -> dict[str, A
     return result
 
 
+def resolve_marking_prices(
+    tickers: set[str], market_day: date, window_path: Path
+) -> tuple[dict[str, float], list[str]]:
+    normalized = {str(tk).upper().strip() for tk in tickers if str(tk).strip()}
+    if not normalized:
+        return {}, []
+    if not window_path.exists():
+        return {}, sorted(normalized)
+
+    try:
+        frame = pd.read_parquet(window_path, columns=["date", "ticker", "close_operational"])
+    except Exception:
+        return {}, sorted(normalized)
+
+    frame["date"] = pd.to_datetime(frame["date"], errors="coerce").dt.date
+    frame["ticker"] = frame["ticker"].astype(str).str.upper().str.strip()
+    scoped = frame[
+        (frame["ticker"].isin(normalized))
+        & (frame["date"] <= market_day)
+        & (~pd.isna(frame["close_operational"]))
+    ]
+    if scoped.empty:
+        return {}, sorted(normalized)
+
+    latest = scoped.sort_values(["ticker", "date"]).groupby("ticker", as_index=False).tail(1)
+    prices = {
+        str(row["ticker"]).upper().strip(): float(row["close_operational"])
+        for _, row in latest.iterrows()
+    }
+    missing = sorted(normalized - set(prices.keys()))
+    return prices, missing
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Sugere preco-sombra (close_operational do pregao anterior) para um ticker."

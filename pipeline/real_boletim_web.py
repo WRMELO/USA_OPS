@@ -12,8 +12,17 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 
 import pipeline.ledger as ledger_mod
-from pipeline.ledger import EventType, append_event, compute_cash, create_event, export_snapshot, is_duplicate
-from scripts.lookup_shadow_price import DEFAULT_WINDOW_PATH, lookup_close
+from lib.trading_calendar import prev_session
+from pipeline.ledger import (
+    EventType,
+    append_event,
+    compute_cash,
+    compute_daily_cash_flow,
+    create_event,
+    export_snapshot,
+    is_duplicate,
+)
+from scripts.lookup_shadow_price import DEFAULT_WINDOW_PATH, lookup_close, resolve_marking_prices
 
 
 DRAFT_DIR = ROOT / "data" / "live_real_test"
@@ -624,6 +633,24 @@ def close_day(exec_day: date, ledger_dir: Path, caixa_real: float | None = None)
     from scripts.live_real_cutover import build_boletim_payload
 
     resolved_ledger_dir = _resolve_ledger_dir(ledger_dir)
+    pre_view = load_live_view(exec_day, resolved_ledger_dir)
+    missing_price_tickers = (
+        pre_view.get("missing_price_tickers", [])
+        if isinstance(pre_view.get("missing_price_tickers"), list)
+        else []
+    )
+    if missing_price_tickers:
+        missing_list = ", ".join(str(tk).upper().strip() for tk in missing_price_tickers if str(tk).strip())
+        return {
+            "exec_day": exec_day.isoformat(),
+            "error": "MISSING_PRICE_SSOT",
+            "missing_price_tickers": missing_price_tickers,
+            "message": (
+                f"Encerramento bloqueado: sem preco SSOT para {missing_list}. "
+                "Atualize operational_window.parquet antes de encerrar o dia."
+            ),
+        }
+
     draft = load_draft(exec_day)
     operations = draft.get("operations", [])
     result = apply_draft_to_ledger(exec_day, resolved_ledger_dir, operations)
@@ -733,9 +760,11 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
     pending_settlements_rows: list[dict[str, Any]] = []
     informed: dict[str, Any] | None = None
     base1_series: list[dict[str, Any]] = []
+    dfc_diario: dict[str, float] = {}
     corretagem_total = 0.0
     corretagem_dia = 0.0
     capital_uso = 0.0
+    pricing_market_day = prev_session(today)
     try:
         ledger_mod.LEDGER_PATH = real_ledger_path
         cash = compute_cash(today)
@@ -758,6 +787,7 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         corretagem_dia = sum(float(ev.amount) for ev in events_today)
         corretagem_total = ledger_mod.total_fees(today)
         capital_uso = ledger_mod.capital_em_uso(today)
+        dfc_diario = compute_daily_cash_flow(today, pricing_market_day, extra_events=draft_events)
     finally:
         ledger_mod.LEDGER_PATH = previous_ledger_path
 
@@ -772,14 +802,20 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
     master = context.get("master", {}) if isinstance(context.get("master"), dict) else {}
     forno = context.get("forno", {}) if isinstance(context.get("forno"), dict) else {}
     holdings = context.get("holdings", []) if isinstance(context.get("holdings"), list) else []
-    holdings_map = {str(row.get("ticker", "")).upper().strip(): row for row in holdings}
     target_weights = master.get("target_weights", {}) if isinstance(master.get("target_weights"), dict) else {}
+    pricing_tickers = {
+        str(row.get("ticker", "")).upper().strip()
+        for row in [*positions, *positions_projetado]
+        if isinstance(row, dict) and str(row.get("ticker", "")).strip()
+    }
+    price_map, missing_price_tickers = resolve_marking_prices(
+        pricing_tickers, pricing_market_day, DEFAULT_WINDOW_PATH
+    )
     operations_book: dict[str, Any] = {}
     for ticker, row in operations_book_raw.items():
         if not isinstance(row, dict):
             continue
-        hold = holdings_map.get(ticker, {})
-        close_d1 = _safe_float(hold.get("close_d1"), 0.0)
+        close_d1 = _safe_float(price_map.get(ticker), 0.0)
         qtd_liquida = _safe_float(row.get("qtd_liquida"), 0.0)
         custo_medio = _safe_float(row.get("custo_medio"), 0.0)
         nao_realizado: float | None = None
@@ -794,8 +830,7 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
     for ticker, row in operations_book_projetado_raw.items():
         if not isinstance(row, dict):
             continue
-        hold = holdings_map.get(ticker, {})
-        close_d1 = _safe_float(hold.get("close_d1"), 0.0)
+        close_d1 = _safe_float(price_map.get(ticker), 0.0)
         qtd_liquida = _safe_float(row.get("qtd_liquida"), 0.0)
         custo_medio = _safe_float(row.get("custo_medio"), 0.0)
         nao_realizado: float | None = None
@@ -811,10 +846,9 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
     for row in positions:
         ticker = str(row.get("ticker", "")).upper().strip()
         held_set.add(ticker)
-        hold = holdings_map.get(ticker, {})
         lot_qty = round(_safe_float(row.get("qtd")), 8)
         preco_compra = _safe_float(row.get("preco_compra"))
-        close_d1 = _safe_float(hold.get("close_d1"), 0.0)
+        close_d1 = _safe_float(price_map.get(ticker), 0.0)
         heat_pct = ((close_d1 / preco_compra) - 1.0) * 100.0 if preco_compra > 0 and close_d1 > 0 else 0.0
         positions_enriched.append(
             {
@@ -834,10 +868,9 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
     positions_projetado_enriched: list[dict[str, Any]] = []
     for row in positions_projetado:
         ticker = str(row.get("ticker", "")).upper().strip()
-        hold = holdings_map.get(ticker, {})
         lot_qty = round(_safe_float(row.get("qtd")), 8)
         preco_compra = _safe_float(row.get("preco_compra"))
-        close_d1 = _safe_float(hold.get("close_d1"), 0.0)
+        close_d1 = _safe_float(price_map.get(ticker), 0.0)
         heat_pct = ((close_d1 / preco_compra) - 1.0) * 100.0 if preco_compra > 0 and close_d1 > 0 else 0.0
         positions_projetado_enriched.append(
             {
@@ -885,7 +918,8 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
     )
     return {
         "today": today.isoformat(),
-        "market_day": str(context.get("market_day", today.isoformat())),
+        "market_day": pricing_market_day.isoformat(),
+        "pricing_market_day": pricing_market_day.isoformat(),
         "cash_free": float(cash.get("cash_free", 0.0)),
         "cash_accounting": float(cash.get("cash_accounting", 0.0)),
         "cash_free_projetado": float(cash_projetado.get("cash_free", 0.0)),
@@ -897,11 +931,13 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         "positions_projetado": positions_projetado_enriched,
         "holdings": holdings,
         "held_set": sorted(held_set),
+        "missing_price_tickers": sorted(missing_price_tickers),
         "sparklines_tickers": sparkline_tickers,
         "top_operational": top_operational,
         "target_weights": target_weights,
         "operations_book": operations_book,
         "operations_book_projetado": operations_book_projetado,
+        "dfc_diario": dfc_diario,
         "base1_series": base1_series,
         "corretagem_dia": round(float(corretagem_dia), 4),
         "corretagem_total": round(float(corretagem_total), 4),
@@ -978,6 +1014,7 @@ def _suggested_defensive_sells(view: dict[str, Any]) -> dict[str, Any]:
 def render_live_html(view: dict[str, Any]) -> str:
     today = str(view.get("today", ""))
     market_day = str(view.get("market_day", today))
+    pricing_market_day_label = str(view.get("pricing_market_day", market_day))
     cash_free_raw = _safe_float(view.get("cash_free", 0.0), 0.0)
     cash_accounting_raw = _safe_float(view.get("cash_accounting", 0.0), 0.0)
     cash_free_projetado_raw = _safe_float(view.get("cash_free_projetado", cash_free_raw), cash_free_raw)
@@ -1005,7 +1042,25 @@ def render_live_html(view: dict[str, Any]) -> str:
     carteira_projetada_valor_raw = _safe_float(
         view.get("carteira_projetada_valor", carteira_d1_valor_raw), carteira_d1_valor_raw
     )
+    missing_price_tickers = (
+        view.get("missing_price_tickers", []) if isinstance(view.get("missing_price_tickers"), list) else []
+    )
+    pricing_blocked = bool(missing_price_tickers)
+    dfc_diario = view.get("dfc_diario", {}) if isinstance(view.get("dfc_diario"), dict) else {}
+    dfc_caixa_livre_anterior = _safe_float(dfc_diario.get("caixa_livre_anterior"), 0.0)
+    dfc_vendas_liquidadas_dia = _safe_float(dfc_diario.get("vendas_liquidadas_dia"), 0.0)
+    dfc_aportes_dia = _safe_float(dfc_diario.get("aportes_dia"), 0.0)
+    dfc_retiradas_dia = _safe_float(dfc_diario.get("retiradas_dia"), 0.0)
+    dfc_compras_dia = _safe_float(dfc_diario.get("compras_dia"), 0.0)
+    dfc_corretagem_dia = _safe_float(dfc_diario.get("corretagem_dia"), 0.0)
+    dfc_caixa_livre_final = _safe_float(dfc_diario.get("caixa_livre_final"), 0.0)
+    dfc_caixa_contabil_anterior = _safe_float(dfc_diario.get("caixa_contabil_anterior"), 0.0)
+    dfc_vendas_em_liquidacao_dia = _safe_float(dfc_diario.get("vendas_em_liquidacao_dia"), 0.0)
+    dfc_transferencias_liquidadas_dia = _safe_float(dfc_diario.get("transferencias_liquidadas_dia"), 0.0)
+    dfc_caixa_contabil_final = _safe_float(dfc_diario.get("caixa_contabil_final"), 0.0)
     total_ativo_raw = carteira_projetada_valor_raw + cash_free_projetado_raw + cash_accounting_projetado_raw
+    resultado_balanco_raw = total_ativo_raw - capital_em_uso_raw
+    rent_balanco_raw = (resultado_balanco_raw / capital_em_uso_raw * 100.0) if capital_em_uso_raw > 0 else 0.0
     total_bruto_raw = total_ativo_raw
     has_caixa_real = caixa_real_informado_raw is not None
     caixa_real_atual = _safe_float(caixa_real_informado_raw, 0.0) if has_caixa_real else 0.0
@@ -1034,7 +1089,25 @@ def render_live_html(view: dict[str, Any]) -> str:
 
     fric_total_fmt, fric_total_cls = _fmt_signed_usd(friccao_total_raw)
     resultado_fmt, resultado_cls = _fmt_signed_usd(resultado_raw)
+    resultado_balanco_fmt, resultado_balanco_cls = _fmt_signed_usd(resultado_balanco_raw)
+    if pricing_blocked:
+        resultado_fmt = "BLOQUEADO"
+        resultado_cls = "flat"
+        resultado_balanco_fmt = "BLOQUEADO"
+        resultado_balanco_cls = "flat"
     rent_fmt, rent_cls = _fmt_signed_pct(rent_raw)
+    rent_balanco_fmt, rent_balanco_cls = _fmt_signed_pct(rent_balanco_raw)
+
+    price_alert_html = ""
+    if pricing_blocked:
+        tickers = ", ".join(html.escape(str(tk).upper().strip()) for tk in missing_price_tickers)
+        price_alert_html = (
+            "<div class='price-alert'>"
+            "<div class='pk'>Bloqueio de precificacao SSOT</div>"
+            "<div class='pv'>SSOT sem preco para: "
+            f"{tickers}. Balancete, DFC e encerramento oficial do dia estao bloqueados.</div>"
+            "</div>"
+        )
 
     forno = view.get("forno", {}) if isinstance(view.get("forno"), dict) else {}
     is_rebalance = forno.get("is_rebalance_day")
@@ -1397,6 +1470,9 @@ def render_live_html(view: dict[str, Any]) -> str:
     .wf .row.res .v {{ font-weight:700; }}
     .wf .row.proj-note {{ border-bottom:none; padding-top:2px; }}
     .wf .row.proj-note .l, .wf .row.proj-note .v {{ color:var(--muted-2); font-size:11px; }}
+    .price-alert {{ background:rgba(224,102,79,.12); border:1px solid var(--red); border-radius:8px; padding:12px; margin-bottom:12px; }}
+    .price-alert .pk {{ color:var(--red); font-weight:700; font-family:"IBM Plex Mono",monospace; text-transform:uppercase; font-size:11px; letter-spacing:.08em; }}
+    .price-alert .pv {{ margin-top:6px; font-family:"IBM Plex Mono",monospace; font-size:13px; }}
     .sources {{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }}
     .src {{ background:var(--surface-2); border:1px solid var(--hair); border-radius:8px; padding:10px; }}
     .src.manual {{ border-color:var(--teal-dim); }}
@@ -1515,6 +1591,7 @@ def render_live_html(view: dict[str, Any]) -> str:
 
   <div class="sec-label"><span class="idx">07</span> Balancete simplificado <span class="tag governs">caixa + ativo + cota</span></div>
   <div class="card">
+    {price_alert_html}
     <p class="muted">Valores principais incluem o rascunho salvo (projecao). Quando houver diferenca, o valor fechado em ledger aparece na linha seguinte.</p>
     <div class="wf">
       <div class="row"><div class="l"><span class="op">&nbsp;</span>Carteira (Fech. D-1)</div><div class="v" id="bridgeCarteira">{_fmt_usd(carteira_projetada_valor_raw)}</div></div>
@@ -1526,15 +1603,19 @@ def render_live_html(view: dict[str, Any]) -> str:
       <div class="row sub"><div class="l">= Total do Ativo</div><div class="v" id="bridgeTotalBruto">{_fmt_usd(total_ativo_raw)}</div></div>
       {ref_total_ativo}
       <div class="row"><div class="l">Capital em uso</div><div class="v" id="bridgeCapital">{_fmt_usd(capital_em_uso_raw)}</div></div>
+      <div class="row"><div class="l">Resultado do Balanco (sem friccao)</div><div class="v {resultado_balanco_cls}" id="bridgeResultadoBalanco">{resultado_balanco_fmt}</div></div>
       <div class="row"><div class="l">Preco da cota (Base 1 x 100)</div><div class="v mono">{_fmt_usd(cota_preco_raw)}</div></div>
       <div class="row"><div class="l">Cotas estimadas</div><div class="v mono">{cotas_estimadas:,.4f}</div></div>
       <div class="row"><div class="l">Base 1 atual</div><div class="v mono">{base_now:.4f}</div></div>
+      <div class="row"><div class="l">Rentabilidade do Balanco</div><div class="v {rent_balanco_cls}">{rent_balanco_fmt}</div></div>
+      <div class="row"><div class="l">Precificacao SSOT (ultimo close <= market_day)</div><div class="v mono">{html.escape(pricing_market_day_label)}</div></div>
       <div class="row nav"><div class="l">NAV reconciliado (Total - Delta Balanco-Real)</div><div class="v" id="bridgeNav">{_fmt_usd(nav_raw)}</div></div>
     </div>
   </div>
 
   <div class="sec-label"><span class="idx">08</span> DFC simplificado + reconciliacao <span class="tag">balanco vs BTG</span></div>
   <div class="card">
+    {price_alert_html}
     <div class="sources">
       <div class="src">
         <div class="sk">Caixa Livre de Balanco</div>
@@ -1544,6 +1625,20 @@ def render_live_html(view: dict[str, Any]) -> str:
         <div class="sk">Caixa Livre Real BTG</div>
         <div class="sv">Observacional, informado pelo Owner no encerramento.</div>
       </div>
+    </div>
+    <h3 style="margin-top:12px">DFC do dia (bifurcado por liquidacao)</h3>
+    <div class="wf">
+      <div class="row"><div class="l">Caixa Livre anterior (D-1)</div><div class="v">{_fmt_usd(dfc_caixa_livre_anterior)}</div></div>
+      <div class="row"><div class="l">(+) Vendas liquidadas no dia (JA_NO_CAIXA)</div><div class="v">{_fmt_usd(dfc_vendas_liquidadas_dia)}</div></div>
+      <div class="row"><div class="l">(+) Aportes/Dividendos do dia</div><div class="v">{_fmt_usd(dfc_aportes_dia)}</div></div>
+      <div class="row"><div class="l">(-) Retiradas do dia</div><div class="v">{_fmt_usd(dfc_retiradas_dia)}</div></div>
+      <div class="row"><div class="l">(-) Compras do dia</div><div class="v">{_fmt_usd(dfc_compras_dia)}</div></div>
+      <div class="row"><div class="l">(-) Corretagem do dia</div><div class="v">{_fmt_usd(dfc_corretagem_dia)}</div></div>
+      <div class="row sub"><div class="l">= Caixa Livre (fechamento do dia)</div><div class="v">{_fmt_usd(dfc_caixa_livre_final)}</div></div>
+      <div class="row"><div class="l">Caixa Contabil anterior (D-1)</div><div class="v">{_fmt_usd(dfc_caixa_contabil_anterior)}</div></div>
+      <div class="row"><div class="l">(+) Vendas em liquidacao no dia (EM_LIQUIDACAO)</div><div class="v">{_fmt_usd(dfc_vendas_em_liquidacao_dia)}</div></div>
+      <div class="row"><div class="l">(-) Transferencias liquidadas no dia</div><div class="v">{_fmt_usd(dfc_transferencias_liquidadas_dia)}</div></div>
+      <div class="row sub"><div class="l">= Caixa Contabil (fechamento do dia)</div><div class="v">{_fmt_usd(dfc_caixa_contabil_final)}</div></div>
     </div>
     <div class="wf" style="margin-top:10px">
       <div class="row"><div class="l">Caixa Livre de Balanco</div><div class="v" id="reconCaixaBalanco">{_fmt_usd(cash_free_projetado_raw)}</div></div>
@@ -1557,7 +1652,8 @@ def render_live_html(view: dict[str, Any]) -> str:
       <div class="row"><div class="l">Corretagem acumulada</div><div class="v" id="bridgeCorretagem">{_fmt_usd(corretagem_total_raw)}</div></div>
       <div class="row fric"><div class="l">Friccao operacional (Livre - Real)</div><div class="v {fric_op_cls}" id="bridgeFriccaoOperacional">{fric_op_fmt}</div></div>
       <div class="row fric"><div class="l">Friccao total</div><div class="v {fric_total_cls}" id="bridgeFriccaoTotal">{fric_total_fmt}</div></div>
-      <div class="row res"><div class="l">Resultado acumulado</div><div class="v {resultado_cls}" id="bridgeResultado">{resultado_fmt}</div></div>
+      <div class="row res"><div class="l">Resultado do Balanco (sem friccao)</div><div class="v {resultado_balanco_cls}" id="bridgeResultadoBalancoMirror">{resultado_balanco_fmt}</div></div>
+      <div class="row res"><div class="l">Resultado reconciliado (apos friccao)</div><div class="v {resultado_cls}" id="bridgeResultado">{resultado_fmt}</div></div>
       <div class="row res"><div class="l">Rentabilidade acumulada</div><div class="v {rent_cls}" id="bridgeRent">{rent_fmt}</div></div>
     </div>
     <div class="recon" style="margin-top:12px">

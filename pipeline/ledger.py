@@ -443,6 +443,58 @@ def compute_cash(
     return {"cash_free": free, "cash_accounting": accounting}
 
 
+def compute_daily_cash_flow(
+    exec_day: date, prev_day: date, *, extra_events: list[LedgerEvent] | None = None
+) -> dict[str, float]:
+    cash_prev = compute_cash(prev_day, extra_events=extra_events)
+    cash_today = compute_cash(exec_day, extra_events=extra_events)
+    events = _effective_events(exec_day, extra_events=extra_events)
+    day_events = [ev for ev in events if ev.exec_date == exec_day]
+
+    settled_today_refs = {
+        ev.ref_id
+        for ev in day_events
+        if ev.type == EventType.SETTLEMENT and ev.ref_id
+    }
+    sells_today = [ev for ev in day_events if ev.type == EventType.SELL]
+    sell_ids_today = {ev.id for ev in sells_today}
+
+    aportes_dia = sum(
+        float(ev.amount) for ev in day_events if ev.type in {EventType.APORTE, EventType.DIVIDENDO}
+    )
+    retiradas_dia = sum(float(ev.amount) for ev in day_events if ev.type == EventType.RETIRADA)
+    compras_dia = sum(float(ev.amount) for ev in day_events if ev.type == EventType.BUY)
+    corretagem_dia = sum(float(ev.amount) for ev in day_events if ev.type == EventType.FEE)
+
+    vendas_liquidadas_dia = sum(
+        float(ev.amount) for ev in sells_today if ev.id in settled_today_refs
+    )
+    vendas_em_liquidacao_dia = sum(
+        float(ev.amount) for ev in sells_today if ev.id not in settled_today_refs
+    )
+
+    settlements_today = [ev for ev in day_events if ev.type == EventType.SETTLEMENT]
+    transferencias_liquidadas_dia = sum(
+        float(ev.amount)
+        for ev in settlements_today
+        if ev.ref_id and ev.ref_id not in sell_ids_today
+    )
+
+    return {
+        "caixa_livre_anterior": float(cash_prev.get("cash_free", 0.0)),
+        "vendas_liquidadas_dia": float(vendas_liquidadas_dia),
+        "aportes_dia": float(aportes_dia),
+        "retiradas_dia": float(retiradas_dia),
+        "compras_dia": float(compras_dia),
+        "corretagem_dia": float(corretagem_dia),
+        "caixa_livre_final": float(cash_today.get("cash_free", 0.0)),
+        "caixa_contabil_anterior": float(cash_prev.get("cash_accounting", 0.0)),
+        "vendas_em_liquidacao_dia": float(vendas_em_liquidacao_dia),
+        "transferencias_liquidadas_dia": float(transferencias_liquidadas_dia),
+        "caixa_contabil_final": float(cash_today.get("cash_accounting", 0.0)),
+    }
+
+
 def latest_informed_cash(as_of_date: date) -> dict[str, Any] | None:
     """Ultimo saldo de Caixa Livre Real informado pelo Owner.
 

@@ -802,6 +802,48 @@ dados sem tocar arquivos blindados de §6.6:
 
 Ref: SALA D-142, USA D-159, USA D-154, USA D-150, R-018, R-020, R-035, R-036.
 
+### 6.27 Marcacao SSOT direta + fail-loud de preco + dupla linha de resultado no LIVE-REAL (D-160)
+
+A partir de D-160, o `/painel` LIVE-REAL-TEST US passa a operar com contrato
+explicito de precificacao e bloqueio operacional:
+
+1. **Marcacao de carteira por SSOT direto**:
+   `pipeline/real_boletim_web.py::load_live_view(...)` deixa de depender de
+   `holdings.close_d1` do contexto do Analista para precificar posicoes do
+   ledger/projecao. A marcacao passa a ler diretamente
+   `data/ssot/operational_window.parquet`, usando o ultimo
+   `close_operational <= market_day` por ticker.
+2. **Fail-loud obrigatorio para preco ausente**:
+   se qualquer ticker com posicao (real ou projetada) ficar sem preco SSOT
+   valido, o sistema deve:
+   - preencher `missing_price_tickers` no `view`;
+   - exibir alerta explicito no HTML do `/painel`;
+   - bloquear os resultados financeiros de Balancete/DFC;
+   - bloquear `close_day` (encerramento oficial), sem gravar artefatos de
+     fechamento.
+3. **Dois resultados no fechamento**:
+   o painel passa a mostrar, simultaneamente:
+   - **Resultado do Balanco (sem friccao)** =
+     `Total do Ativo - Capital em uso`;
+   - **Resultado reconciliado (apos friccao)** =
+     `NAV reconciliado - Capital em uso`.
+4. **DFC diario bifurcado por liquidacao**:
+   novo helper `pipeline/ledger.py::compute_daily_cash_flow(...)` explicita:
+   - `JA_NO_CAIXA`: venda com settlement no mesmo dia entra no Caixa Livre;
+   - `EM_LIQUIDACAO`: venda sem settlement no dia entra no Caixa Contabil ate
+     transferencia/settlement.
+   Esse detalhamento e camada de apresentacao/diagnostico e **nao altera**
+   a semantica base de `compute_cash`.
+
+**Contrato de escopo**:
+
+- Nenhum arquivo blindado de §6.6 foi tocado.
+- Sem reescrita de eventos no ledger real (append-only preservado).
+- `close_day` permanece ponto oficial de fechamento, agora com pre-gate de
+  integridade de preco SSOT.
+
+Ref: SALA D-143, USA D-160, USA D-150, R-018, R-046, R-049.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.
