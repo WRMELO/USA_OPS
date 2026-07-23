@@ -1,0 +1,84 @@
+{
+  "task_id": "T-SDC-R037-CONFIRM-R001-ENTRY-VETO-US-V1",
+  "hypothesis": "Vetar entrada no Top-20 do Forno US apenas quando R-037 severo (ret_62>=1.00 E persistencia<=2/10) E R-001 any (violacao SPC simetrica: i/xbar fora de banda OU mr>mr_ucl OU r>r_ucl) ocorrem no MESMO d_prev (confirmacao/interseccao, nao uniao) preserva a protecao de cauda do R-037 severo isolado com veto menor e mais preciso, podendo atingir DOMINA_FORTE sob o MESMO criterio simetrico ja usado para o severo isolado em T-SDC-R001-R037-ENTRY-VETO-US-V1.",
+  "baseline_definition": "Baseline_R060 = C4 puro + veto R-060 (Flag_BandExp(d_prev) AND ret_62(d_prev)>=1.00) ja ativo no motor produtivo (D-131/D-149). Identico ao baseline de T-SDC-R001-R037-ENTRY-VETO-US-V1; R-060 nao e reavaliado nesta task.",
+  "arms": {
+    "Baseline_R060": "C4 + R-060 (estado vivo do motor), sem veto adicional.",
+    "Arm_R037_Severe": "Baseline_R060 + veto quando ret_62(d_prev)>=1.00 E persistencia(ticker,d_prev,lookback=10)<=2, onde persistencia = numero de vezes que o ticker esteve no Baseline_R060 selecionado nos 10 ciclos de rebalance anteriores (mesma fase do phase-sweep). Reproducao EXATA do Arm_R037_Severe de T-SDC-R001-R037-ENTRY-VETO-US-V1 (mesmo freeze, mesma formula, mesmo harness), incluida apenas como referencia descritiva; NAO participa de tier nesta task.",
+    "Arm_R037_Confirm_R001Any": "Baseline_R060 + veto quando [ret_62(d_prev)>=1.00 E persistencia<=2] (mesma populacao severa do Arm_R037_Severe) E o ticker tambem viola SPC simetrico (R-001 any: i_value fora [i_lcl,i_ucl] OU xbar fora [xbar_lcl,xbar_ucl] OU mr_value>mr_ucl OU r_value>r_ucl) no MESMO d_prev. Interseccao (confirmacao mutua), distinta da UNIAO ja testada em Arm_R001_Downside_R037_Severe de T-SDC-R001-R037-ENTRY-VETO-US-V1."
+  },
+  "tier_pairs": [
+    {
+      "baseline": "Baseline_R060",
+      "arm": "Arm_R037_Confirm_R001Any",
+      "label": "R037_CONFIRM_R001ANY",
+      "note": "Braco primario desta task, unico com tier."
+    }
+  ],
+  "decomposition_note": "Arm_R037_Severe e reproduzido apenas para comparacao descritiva (confirmar reuso correto do harness e medir quanto a confirmacao reduz veto vs severo isolado); NAO participa do tier R-048 desta task.",
+  "criterion_continuity_note": "O criterio de veredito (DOMINA_FORTE/FAVORECIDO/INCONCLUSIVO) e IDENTICO ao criterio simetrico usado em T-SDC-R001-R037-ENTRY-VETO-US-V1 para Arm_R037_Severe, deliberadamente, para que uma eventual promocao da confirmacao a DOMINA_FORTE seja atribuivel a confirmacao em si e nao a um afrouxamento de barra (decisao do Owner em sessao de 2026-07-23).",
+  "persistence_definition": {
+    "lookback_cycles": 10,
+    "severe_max_persistence": 2,
+    "source": "Identico a T-SDC-R001-R037-ENTRY-VETO-US-V1: contagem interna ao harness via reuso direto de _build_phase_baseline_history do modulo daquela task (presenca do ticker no Baseline_R060 selecionado nos 10 ciclos de rebalance anteriores, na mesma fase do phase-sweep)."
+  },
+  "indicator_definition": {
+    "source_table": "canonical_us.parquet (freeze research_dataset_us_v2)",
+    "formulas": {
+      "viol_any_t (R-001 any)": "i_value fora [i_lcl,i_ucl] OU xbar fora [xbar_lcl,xbar_ucl] OU mr_value>mr_ucl OU r_value>r_ucl",
+      "r060_gate_t": "Flag_BandExp(t) AND ret_62(t)>=1.00 (regra ja ativa no motor, D-131/D-149)",
+      "ret62_severe_t": "ret_62_t>=1.00 E persistencia<=2 (R-037 severo, identico a T-SDC-R001-R037-ENTRY-VETO-US-V1)",
+      "confirm_t (Arm_R037_Confirm_R001Any)": "ret62_severe_t E viol_any_t no mesmo d_prev (interseccao)"
+    }
+  },
+  "dataset": {
+    "path": "USA_OPS/backtest/research_dataset_us_v2/",
+    "freeze_asof": "2026-07-15",
+    "decision_ref_freeze": "D-110",
+    "required_hash_verification": true
+  },
+  "subwindows": {
+    "TRAIN": {
+      "start": "2021-01-01",
+      "end": "2022-12-30"
+    },
+    "HOLDOUT": {
+      "start": "2023-01-02",
+      "end": "2026-07-15"
+    },
+    "SW1": {
+      "start": "2023-01-02",
+      "end": "2024-06-30"
+    },
+    "SW2": {
+      "start": "2024-07-01",
+      "end": "2026-07-15"
+    }
+  },
+  "bootstrap": {
+    "method": "cluster por dia de rebalance",
+    "n_resamples": 2000,
+    "seed": 42,
+    "metrics": [
+      "delta_cvar5",
+      "delta_sharpe_cost_adj"
+    ]
+  },
+  "max_veto_rate": 0.35,
+  "materiality_threshold": "abs(delta_sharpe_cost_adj_holdout)>=0.30 OU abs(delta_cvar5_holdout)>=0.02",
+  "verdict_tiers": {
+    "DOMINA_FORTE": "IC95 do delta inteiramente do lado favoravel nas duas metricas no HOLDOUT completo e tambem em SW1 e SW2, com mean_veto_rate<=0.35 nas tres janelas. Unico tier que autoriza task futura de promocao ao motor (R-048).",
+    "FAVORECIDO_<ARM>": "Preponderancia de evidencia sem DOMINA_FORTE: massa bootstrap favoravel >=90% para as duas metricas no HOLDOUT, concordancia direcional em HOLDOUT/SW1/SW2, materialidade economica acima do limiar e mean_veto_rate_holdout<=0.35.",
+    "INCONCLUSIVO": "Ausencia de direcao clara, materialidade abaixo do limiar, violacao de teto de veto, ou qualquer outro caso fora dos tiers acima."
+  },
+  "sanity_gates": {
+    "G1_veto_rate_not_degenerate": "Para Arm_R037_Severe e Arm_R037_Confirm_R001Any, 0.0 < mean_veto_rate_holdout < 0.90.",
+    "G2_baseline_selection_sane": "Baseline_R060 deve selecionar em media >= 0.90*top_n tickers distintos por ciclo no HOLDOUT (verificacao ativa nesta task).",
+    "G3_severe_population_not_vacuous": "A populacao de tickers do HOLDOUT que estariam no Top-20 do Baseline_R060 e seriam vetados por Arm_R037_Severe deve ser nao-vazia.",
+    "G4_confirmation_not_vacuous_nor_identical": "Entre os tickers da populacao severa do HOLDOUT (definida em G3), a fracao que TAMBEM e vetada por Arm_R037_Confirm_R001Any deve estar estritamente entre 0% e 100%: >0% garante que a confirmacao efetivamente veta algo; <100% garante que a confirmacao e estritamente mais restritiva que o severo isolado."
+  },
+  "post_hoc_prohibition": "O criterio acima e fixo e imutavel. E proibido reinterpretar, redefinir metricas, gates ou escolher subperiodos apos ver os resultados. FAVORECIDO e INCONCLUSIVO sao resultados legitimos e completos para esta task, independentemente da expectativa do Owner.",
+  "governance_note": "Task read-only. Nenhum arquivo blindado de USA GOVERNANCE Sec.6.6 (09_decide.py, config/winner_us.json) e alterado. Promocao ao motor exige DOMINA_FORTE neste estudo E nova task formal (CTO->Architect->Executor->Auditor duplo->Curator) com nova tag de motor, seguindo o precedente D-130/D-131. T-SDC-R001-R037-ENTRY-VETO-US-V1 permanece intocado e vigente como registro historico independente.",
+  "registered_at": "2026-07-23",
+  "registered_before_execution": true
+}

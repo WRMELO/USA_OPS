@@ -1,0 +1,163 @@
+{
+  "task_id": "T-SDC-R037-CONFIRM-R001-ENTRY-VETO-US-V1",
+  "criteria_file": "backtest/t_r037_confirm_r001_entry_veto_us_v1/decision_criterion_r037_confirm_r001_entry_veto_us_v1.json",
+  "dataset_manifest": "backtest/research_dataset_us_v2/manifest.json",
+  "freeze_asof": "2026-07-15",
+  "tier_verdicts": {
+    "R037_CONFIRM_R001ANY": "INCONCLUSIVO"
+  },
+  "tier_details": {
+    "R037_CONFIRM_R001ANY": {
+      "label": "R037_CONFIRM_R001ANY",
+      "final_verdict": "INCONCLUSIVO",
+      "deltas": {
+        "HOLDOUT": {
+          "delta_cvar5": 0.0066931486313836774,
+          "delta_sharpe_cost_adj": 0.26203105447418595,
+          "mean_veto_rate_arm": 0.023605668756530827
+        },
+        "SW1": {
+          "delta_cvar5": 0.0,
+          "delta_sharpe_cost_adj": 0.19068212571855625,
+          "mean_veto_rate_arm": 0.012329302987197725
+        },
+        "SW2": {
+          "delta_cvar5": 0.007632856534386667,
+          "delta_sharpe_cost_adj": 0.3359275330529953,
+          "mean_veto_rate_arm": 0.032047058823529415
+        }
+      },
+      "bootstrap": {
+        "HOLDOUT": {
+          "subset": "HOLDOUT",
+          "n_dates": 875,
+          "n_pairs": 875,
+          "delta_cvar5": {
+            "delta_mean": 0.006552551311274583,
+            "ic95": [
+              0.0015745761945050404,
+              0.012141921454645066
+            ],
+            "mass_same_sign_pct": 99.55000000000001
+          },
+          "delta_sharpe_cost_adj": {
+            "delta_mean": 0.2478753671100843,
+            "ic95": [
+              -0.00487113212410217,
+              0.5147434110118055
+            ],
+            "mass_same_sign_pct": 97.35000000000001
+          }
+        },
+        "SW1": {
+          "subset": "SW1",
+          "n_dates": 374,
+          "n_pairs": 374,
+          "delta_cvar5": {
+            "delta_mean": -0.0001068033023474236,
+            "ic95": [
+              -0.0021712866412191903,
+              0.0011569624892698255
+            ],
+            "mass_same_sign_pct": 22.15
+          },
+          "delta_sharpe_cost_adj": {
+            "delta_mean": 0.15995539652245097,
+            "ic95": [
+              -0.0870260383631966,
+              0.4262493799671499
+            ],
+            "mass_same_sign_pct": 88.9
+          }
+        },
+        "SW2": {
+          "subset": "SW2",
+          "n_dates": 501,
+          "n_pairs": 501,
+          "delta_cvar5": {
+            "delta_mean": 0.008735568094839913,
+            "ic95": [
+              0.0012332802025272415,
+              0.017292573179220103
+            ],
+            "mass_same_sign_pct": 98.6
+          },
+          "delta_sharpe_cost_adj": {
+            "delta_mean": 0.32361475896902864,
+            "ic95": [
+              -0.016248515195758578,
+              0.6852301699736836
+            ],
+            "mass_same_sign_pct": 96.95
+          }
+        }
+      },
+      "checks": {
+        "domina_forte_conditions": {
+          "veto_holdout_ok": true,
+          "veto_sw1_ok": true,
+          "veto_sw2_ok": true
+        },
+        "favorecido_conditions": {
+          "holdout_mass_ok": true,
+          "direction_ok": false,
+          "materiality_ok": false,
+          "veto_holdout_ok": true
+        }
+      }
+    }
+  },
+  "arms": [
+    "Baseline_R060",
+    "Arm_R037_Severe",
+    "Arm_R037_Confirm_R001Any"
+  ],
+  "decomposition_arms_no_tier": [
+    "Arm_R037_Severe"
+  ],
+  "decomposition_summary": [
+    {
+      "split": "TRAIN",
+      "arm": "Arm_R037_Severe",
+      "delta_cvar5": -0.0009218374586245359,
+      "delta_sharpe_cost_adj": 0.07618250389265135,
+      "mean_veto_rate_arm": 0.01053225806451613,
+      "mean_veto_rate_baseline": 0.0
+    },
+    {
+      "split": "HOLDOUT",
+      "arm": "Arm_R037_Severe",
+      "delta_cvar5": 0.0208021678423381,
+      "delta_sharpe_cost_adj": 0.3133941255261232,
+      "mean_veto_rate_arm": 0.1135534221525601,
+      "mean_veto_rate_baseline": 0.0
+    },
+    {
+      "split": "SW1",
+      "arm": "Arm_R037_Severe",
+      "delta_cvar5": 0.0031524033660094153,
+      "delta_sharpe_cost_adj": 0.2700250749537099,
+      "mean_veto_rate_arm": 0.07545874822190611,
+      "mean_veto_rate_baseline": 0.0
+    },
+    {
+      "split": "SW2",
+      "arm": "Arm_R037_Severe",
+      "delta_cvar5": 0.02425603630978379,
+      "delta_sharpe_cost_adj": 0.3563998261799871,
+      "mean_veto_rate_arm": 0.1420313725490196,
+      "mean_veto_rate_baseline": 0.0
+    }
+  ],
+  "confirmation_diagnostics_holdout": {
+    "n_tickers_severo_unico": 153,
+    "n_tickers_confirmado_unico": 93,
+    "fracao_severo_confirmado": 0.6078431372549019
+  },
+  "thresholds": {
+    "max_veto_rate": 0.35,
+    "materiality_sharpe_abs_min": 0.3,
+    "materiality_cvar5_abs_min": 0.02,
+    "bootstrap_mass_min_pct": 90.0
+  }
+}
