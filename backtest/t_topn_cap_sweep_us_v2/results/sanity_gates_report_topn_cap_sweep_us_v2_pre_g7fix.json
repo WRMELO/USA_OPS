@@ -27,7 +27,7 @@
           "track": "COVARIADO",
           "top_n": 12,
           "max_run_cash_ratio_gt_50": 9,
-          "mean_cash_ratio": 0.30450034756359917,
+          "mean_cash_ratio": 0.3045003475635992,
           "hard_pass": true,
           "soft_pass": false
         },
@@ -83,7 +83,7 @@
           "track": "ISOLADO",
           "top_n": 15,
           "max_run_cash_ratio_gt_50": 9,
-          "mean_cash_ratio": 0.31773004059466936,
+          "mean_cash_ratio": 0.31773004059466947,
           "hard_pass": true,
           "soft_pass": false
         },
@@ -99,7 +99,7 @@
           "track": "ISOLADO",
           "top_n": 25,
           "max_run_cash_ratio_gt_50": 9,
-          "mean_cash_ratio": 0.27482405443172847,
+          "mean_cash_ratio": 0.2748240544317286,
           "hard_pass": true,
           "soft_pass": false
         },
@@ -306,106 +306,104 @@
       "gate": "G7",
       "status": "INFO",
       "hard_gate": false,
-      "note": "G7 corrigido para diagnosticar binding do cap em dias de rebalance.",
       "details": [
         {
           "track": "COVARIADO",
           "top_n": 10,
           "max_weight_cap": 0.12,
-          "max_concentration_any_day_pct": 25.51491248720168,
-          "max_concentration_rebalance_day_pct": 12.53831639176115,
-          "cap_binding_rebalance_days_pct": 96.21212121212122
+          "max_concentration": 0.25514912487201685,
+          "max_concentration_pct": 25.514912487201684,
+          "cap_effectively_binding": false
         },
         {
           "track": "COVARIADO",
           "top_n": 12,
           "max_weight_cap": 0.1,
-          "max_concentration_any_day_pct": 21.7601019051722,
-          "max_concentration_rebalance_day_pct": 10.92137654429272,
-          "cap_binding_rebalance_days_pct": 94.6969696969697
+          "max_concentration": 0.217601019051722,
+          "max_concentration_pct": 21.7601019051722,
+          "cap_effectively_binding": false
         },
         {
           "track": "COVARIADO",
           "top_n": 15,
           "max_weight_cap": 0.08,
-          "max_concentration_any_day_pct": 17.87970191494642,
-          "max_concentration_rebalance_day_pct": 8.36728282094238,
-          "cap_binding_rebalance_days_pct": 94.6969696969697
+          "max_concentration": 0.1787970191494642,
+          "max_concentration_pct": 17.87970191494642,
+          "cap_effectively_binding": false
         },
         {
           "track": "COVARIADO",
           "top_n": 20,
           "max_weight_cap": 0.06,
-          "max_concentration_any_day_pct": 13.909475854246539,
-          "max_concentration_rebalance_day_pct": 6.34204160434734,
-          "cap_binding_rebalance_days_pct": 93.93939393939394
+          "max_concentration": 0.1390947585424654,
+          "max_concentration_pct": 13.909475854246539,
+          "cap_effectively_binding": false
         },
         {
           "track": "COVARIADO",
           "top_n": 25,
           "max_weight_cap": 0.048,
-          "max_concentration_any_day_pct": 11.10028636249751,
-          "max_concentration_rebalance_day_pct": 5.60222718419313,
-          "cap_binding_rebalance_days_pct": 84.84848484848484
+          "max_concentration": 0.11100286362497516,
+          "max_concentration_pct": 11.100286362497517,
+          "cap_effectively_binding": false
         },
         {
           "track": "COVARIADO",
           "top_n": 30,
           "max_weight_cap": 0.04,
-          "max_concentration_any_day_pct": 9.4191517092309,
-          "max_concentration_rebalance_day_pct": 4.21549638578823,
-          "cap_binding_rebalance_days_pct": 74.24242424242425
+          "max_concentration": 0.09419151709230901,
+          "max_concentration_pct": 9.419151709230901,
+          "cap_effectively_binding": false
         },
         {
           "track": "ISOLADO",
           "top_n": 10,
           "max_weight_cap": 0.06,
-          "max_concentration_any_day_pct": 21.547514328729058,
-          "max_concentration_rebalance_day_pct": 10.002076777051611,
-          "cap_binding_rebalance_days_pct": 0.0
+          "max_concentration": 0.21547514328729064,
+          "max_concentration_pct": 21.547514328729065,
+          "cap_effectively_binding": false
         },
         {
           "track": "ISOLADO",
           "top_n": 12,
           "max_weight_cap": 0.06,
-          "max_concentration_any_day_pct": 18.43417918661377,
-          "max_concentration_rebalance_day_pct": 8.33524920687462,
-          "cap_binding_rebalance_days_pct": 0.0
+          "max_concentration": 0.1843417918661377,
+          "max_concentration_pct": 18.43417918661377,
+          "cap_effectively_binding": false
         },
         {
           "track": "ISOLADO",
           "top_n": 15,
           "max_weight_cap": 0.06,
-          "max_concentration_any_day_pct": 15.10465761361589,
-          "max_concentration_rebalance_day_pct": 7.009016953139,
-          "cap_binding_rebalance_days_pct": 0.0
+          "max_concentration": 0.1510465761361589,
+          "max_concentration_pct": 15.10465761361589,
+          "cap_effectively_binding": false
         },
         {
           "track": "ISOLADO",
           "top_n": 20,
           "max_weight_cap": 0.06,
-          "max_concentration_any_day_pct": 13.909475854246539,
-          "max_concentration_rebalance_day_pct": 6.34204160434734,
-          "cap_binding_rebalance_days_pct": 93.93939393939394
+          "max_concentration": 0.1390947585424654,
+          "max_concentration_pct": 13.909475854246539,
+          "cap_effectively_binding": false
         },
         {
           "track": "ISOLADO",
           "top_n": 25,
           "max_weight_cap": 0.06,
-          "max_concentration_any_day_pct": 11.09216389918725,
-          "max_concentration_rebalance_day_pct": 6.36125517307667,
-          "cap_binding_rebalance_days_pct": 93.18181818181817
+          "max_concentration": 0.11092163899187252,
+          "max_concentration_pct": 11.092163899187252,
+          "cap_effectively_binding": false
         },
         {
           "track": "ISOLADO",
           "top_n": 30,
           "max_weight_cap": 0.06,
-          "max_concentration_any_day_pct": 12.75364058894529,
-          "max_concentration_rebalance_day_pct": 6.39500637496318,
-          "cap_binding_rebalance_days_pct": 95.45454545454545
+          "max_concentration": 0.12753640588945295,
+          "max_concentration_pct": 12.753640588945295,
+          "cap_effectively_binding": false
         }
       ]
     }
-  ],
-  "hash_pass_note": "hash_pass fixado como True neste recomputo; dataset hash ja foi validado PASS na execucao original e os inputs do freeze nao mudaram."
+  ]
 }

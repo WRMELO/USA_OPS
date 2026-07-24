@@ -97,6 +97,31 @@ Backtests de motor que dependem de `backtest/run_backtest_variants_us.py` devem 
 
 Novo freeze ou troca de versão do dataset exige ciclo formal, novo manifesto e registro em `DECISION_LOG.md`.
 
+#### 6.2.2.a Addendum fullhistory v2 e politica Git LFS (D-162)
+
+Para o ciclo `T-SDC-USA-LFS-CAP-DIAGNOSTIC-LLM-MATRIX-V1`, os artefatos
+fullhistory do `research_dataset_us_v2` ficam documentados assim:
+
+- Versionados no git:
+  - `backtest/research_dataset_us_v2/scores_m3_us_fullhistory.parquet`
+    (via Git LFS)
+  - `backtest/research_dataset_us_v2/macro_us_fullhistory.parquet`
+  - `backtest/research_dataset_us_v2/macro_features_us_fullhistory.parquet`
+  - `manifest.json` e relatorios associados (`t011/t012/parity`).
+- Fora do git (mantidos regeneraveis):
+  - `backtest/research_dataset_us_v2/canonical_us.parquet`
+  - arquivos originais nao-fullhistory do v2 (`macro_us.parquet`,
+    `scores_m3_us.parquet`), conforme estado atual.
+
+Esta assimetria de versionamento no v2 fica registrada como ponto aberto de
+harmonizacao futura e nao e resolvida por esta task.
+
+Politica operacional: quando um artefato de pesquisa ja decidido como
+versionavel ultrapassar o limite de tamanho do provedor remoto, o versionamento
+deve ocorrer via Git LFS com entrada especifica em `.gitattributes`. Essa
+politica NAO autoriza trazer dados regeneraveis para o git (ex.: `data/ssot/`
+ou parquets operacionais vivos) apenas por serem grandes.
+
 ### 6.3 Ambiente
 
 - Python via `.venv/` local ao workspace.

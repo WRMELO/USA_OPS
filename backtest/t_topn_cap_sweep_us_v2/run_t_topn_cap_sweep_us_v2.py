@@ -469,24 +469,35 @@ def _compute_sanity(
     gate_items.append(g6)
 
     # G7: diagnostico de concentracao (nao abortante).
+    # Correcao v1: diagnostico de binding do cap deve focar dias de rebalance
+    # em vez de usar apenas o pico absoluto da janela inteira.
     g7_rows: list[dict[str, Any]] = []
     for (track, top_n), group in curves_df.groupby(["track", "top_n"], sort=True):
-        max_conc = float(pd.to_numeric(group["max_concentration"], errors="coerce").max())
+        max_conc_any_day = float(pd.to_numeric(group["max_concentration"], errors="coerce").max())
         cap = float(group["max_weight_cap"].iloc[0])
+        reb = group[group["is_rebalance_day"] == 1].copy()
+        if reb.empty:
+            max_conc_rebalance_day = float("nan")
+            cap_binding_rebalance_days_pct = float("nan")
+        else:
+            reb_max = pd.to_numeric(reb["max_concentration"], errors="coerce")
+            max_conc_rebalance_day = float(reb_max.max())
+            cap_binding_rebalance_days_pct = float((reb_max <= cap * 1.01).mean() * 100.0)
         g7_rows.append(
             {
                 "track": track,
                 "top_n": int(top_n),
                 "max_weight_cap": cap,
-                "max_concentration": max_conc,
-                "max_concentration_pct": float(max_conc * 100.0),
-                "cap_effectively_binding": bool(np.isfinite(max_conc) and max_conc <= cap * 1.01),
+                "max_concentration_any_day_pct": float(max_conc_any_day * 100.0),
+                "max_concentration_rebalance_day_pct": float(max_conc_rebalance_day * 100.0),
+                "cap_binding_rebalance_days_pct": cap_binding_rebalance_days_pct,
             }
         )
     g7 = {
         "gate": "G7",
         "status": "INFO",
         "hard_gate": False,
+        "note": "G7 corrigido para diagnosticar binding do cap em dias de rebalance.",
         "details": g7_rows,
     }
     gate_items.append(g7)
@@ -520,6 +531,22 @@ def _summary_rows(curves_df: pd.DataFrame) -> pd.DataFrame:
             avg_tickers_rebalance = float(_nanmean(reb["n_tickers"])) if not reb.empty else float("nan")
             max_conc = float(pd.to_numeric(sub["max_concentration"], errors="coerce").max())
             cap = float(sub["max_weight_cap"].iloc[0])
+            max_conc_reb = (
+                float(pd.to_numeric(reb["max_concentration"], errors="coerce").max())
+                if not reb.empty
+                else float("nan")
+            )
+            cap_binding_pct = (
+                float(
+                    (
+                        pd.to_numeric(reb["max_concentration"], errors="coerce")
+                        <= cap * 1.01
+                    ).mean()
+                    * 100.0
+                )
+                if not reb.empty
+                else float("nan")
+            )
             rows.append(
                 {
                     "track": track,
@@ -534,7 +561,8 @@ def _summary_rows(curves_df: pd.DataFrame) -> pd.DataFrame:
                     "cvar5": float(cvar5),
                     "avg_tickers_rebalance": avg_tickers_rebalance,
                     "max_concentration_pct": float(max_conc * 100.0),
-                    "cap_effectively_binding": bool(np.isfinite(max_conc) and max_conc <= cap * 1.01),
+                    "max_concentration_rebalance_day_pct": float(max_conc_reb * 100.0),
+                    "cap_binding_pct": cap_binding_pct,
                     "cash_idle_mean_pct": float(_nanmean(sub["cash_ratio"]) * 100.0),
                     "cost_total_cum": float(sub["cost_total_cum"].iloc[-1]),
                 }

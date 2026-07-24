@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-24
+
+- docs(curadoria): T-SDC-USA-LFS-CAP-DIAGNOSTIC-LLM-MATRIX-V1 — fecha a rastreabilidade do pacote que destravou o sweep US V2 via Git LFS, registrou o diagnostico de concentracao viva do Forno US, corrigiu o gate G7 do harness sem rerodar o backtest completo e atualizou a LLM da skill `interlocutor-tecnico` para Claude Opus 5 por sucessao de catalogo. Artefatos: `DECISION_LOG.md`, `GOVERNANCE.md`, `docs/diagnostico_concentracao_viva_us_v1.md`, `backtest/t_topn_cap_sweep_us_v2/run_t_topn_cap_sweep_us_v2.py`, `backtest/t_topn_cap_sweep_us_v2/analysis_g7_cap_binding_fix_v1.py`, `backtest/t_topn_cap_sweep_us_v2/results/sanity_gates_report_topn_cap_sweep_us_v2.json`, `backtest/t_topn_cap_sweep_us_v2/results/summary_topn_cap_sweep_us_v2.csv`, `../SALA_DE_CONTROLE/DECISION_LOG.md`, `../SALA_DE_CONTROLE/MATRIZ_LLM_POR_SKILL_v4.md`, `../.cursor/skills/interlocutor-tecnico/SKILL.md`. Decision: D-162.
+
 ## 2026-07-23
 
 - feat(web+ledger): T-SDC-LIVEREAL-BOLETIM-SSOT-PRICING-FAILLOUD-BALANCO-DFC-US-V1 — corrige a marcacao de carteira do `/painel` LIVE-REAL para leitura direta de `data/ssot/operational_window.parquet` (ultimo `close_operational <= market_day`), adiciona fail-loud de preco ausente (`missing_price_tickers`) com bloqueio de Balancete/DFC e de `close_day`, separa "Resultado do Balanco (sem friccao)" de "Resultado reconciliado (apos friccao)", e introduz DFC diario bifurcado por liquidacao (`JA_NO_CAIXA` vs `EM_LIQUIDACAO`) via `pipeline/ledger.py::compute_daily_cash_flow`. Inclui cobertura em `tests/test_ledger.py`, `tests/test_real_boletim_web.py` e `tests/test_servidor_real_boletim.py`, ajuste de rota `POST /painel/encerrar` para retorno HTTP 409 em bloqueio e formalizacao de contrato em `GOVERNANCE.md` §6.27. Decision: SALA D-143 / USA D-160.
