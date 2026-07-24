@@ -1,0 +1,3191 @@
+{
+  "task_id": "T-SDC-TOPN-CAP-SWEEP-US-V1",
+  "global_by_day": [
+    {
+      "date": "2024-10-08",
+      "pool_size": 1061,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1061
+    },
+    {
+      "date": "2024-10-09",
+      "pool_size": 1061,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1061
+    },
+    {
+      "date": "2024-10-10",
+      "pool_size": 1061,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1061
+    },
+    {
+      "date": "2024-10-11",
+      "pool_size": 1061,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1061
+    },
+    {
+      "date": "2024-10-14",
+      "pool_size": 1061,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1061
+    },
+    {
+      "date": "2024-10-15",
+      "pool_size": 1061,
+      "veto_count": 1,
+      "veto_rate": 0.000942507068803016,
+      "kept_size": 1060
+    },
+    {
+      "date": "2024-10-16",
+      "pool_size": 1062,
+      "veto_count": 1,
+      "veto_rate": 0.0009416195856873823,
+      "kept_size": 1061
+    },
+    {
+      "date": "2024-10-17",
+      "pool_size": 1063,
+      "veto_count": 1,
+      "veto_rate": 0.0009407337723424271,
+      "kept_size": 1062
+    },
+    {
+      "date": "2024-10-18",
+      "pool_size": 1063,
+      "veto_count": 1,
+      "veto_rate": 0.0009407337723424271,
+      "kept_size": 1062
+    },
+    {
+      "date": "2024-10-21",
+      "pool_size": 1063,
+      "veto_count": 1,
+      "veto_rate": 0.0009407337723424271,
+      "kept_size": 1062
+    },
+    {
+      "date": "2024-10-22",
+      "pool_size": 1064,
+      "veto_count": 1,
+      "veto_rate": 0.0009398496240601503,
+      "kept_size": 1063
+    },
+    {
+      "date": "2024-10-23",
+      "pool_size": 1064,
+      "veto_count": 1,
+      "veto_rate": 0.0009398496240601503,
+      "kept_size": 1063
+    },
+    {
+      "date": "2024-10-24",
+      "pool_size": 1064,
+      "veto_count": 2,
+      "veto_rate": 0.0018796992481203006,
+      "kept_size": 1062
+    },
+    {
+      "date": "2024-10-25",
+      "pool_size": 1064,
+      "veto_count": 2,
+      "veto_rate": 0.0018796992481203006,
+      "kept_size": 1062
+    },
+    {
+      "date": "2024-10-28",
+      "pool_size": 1064,
+      "veto_count": 3,
+      "veto_rate": 0.002819548872180451,
+      "kept_size": 1061
+    },
+    {
+      "date": "2024-10-29",
+      "pool_size": 1065,
+      "veto_count": 1,
+      "veto_rate": 0.0009389671361502347,
+      "kept_size": 1064
+    },
+    {
+      "date": "2024-10-30",
+      "pool_size": 1065,
+      "veto_count": 2,
+      "veto_rate": 0.0018779342723004694,
+      "kept_size": 1063
+    },
+    {
+      "date": "2024-10-31",
+      "pool_size": 1066,
+      "veto_count": 2,
+      "veto_rate": 0.001876172607879925,
+      "kept_size": 1064
+    },
+    {
+      "date": "2024-11-01",
+      "pool_size": 1066,
+      "veto_count": 2,
+      "veto_rate": 0.001876172607879925,
+      "kept_size": 1064
+    },
+    {
+      "date": "2024-11-04",
+      "pool_size": 1066,
+      "veto_count": 2,
+      "veto_rate": 0.001876172607879925,
+      "kept_size": 1064
+    },
+    {
+      "date": "2024-11-05",
+      "pool_size": 1066,
+      "veto_count": 1,
+      "veto_rate": 0.0009380863039399625,
+      "kept_size": 1065
+    },
+    {
+      "date": "2024-11-06",
+      "pool_size": 1066,
+      "veto_count": 1,
+      "veto_rate": 0.0009380863039399625,
+      "kept_size": 1065
+    },
+    {
+      "date": "2024-11-07",
+      "pool_size": 1066,
+      "veto_count": 1,
+      "veto_rate": 0.0009380863039399625,
+      "kept_size": 1065
+    },
+    {
+      "date": "2024-11-08",
+      "pool_size": 1066,
+      "veto_count": 1,
+      "veto_rate": 0.0009380863039399625,
+      "kept_size": 1065
+    },
+    {
+      "date": "2024-11-11",
+      "pool_size": 1066,
+      "veto_count": 1,
+      "veto_rate": 0.0009380863039399625,
+      "kept_size": 1065
+    },
+    {
+      "date": "2024-11-12",
+      "pool_size": 1066,
+      "veto_count": 1,
+      "veto_rate": 0.0009380863039399625,
+      "kept_size": 1065
+    },
+    {
+      "date": "2024-11-13",
+      "pool_size": 1067,
+      "veto_count": 1,
+      "veto_rate": 0.0009372071227741331,
+      "kept_size": 1066
+    },
+    {
+      "date": "2024-11-14",
+      "pool_size": 1067,
+      "veto_count": 1,
+      "veto_rate": 0.0009372071227741331,
+      "kept_size": 1066
+    },
+    {
+      "date": "2024-11-15",
+      "pool_size": 1067,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1067
+    },
+    {
+      "date": "2024-11-18",
+      "pool_size": 1067,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1067
+    },
+    {
+      "date": "2024-11-19",
+      "pool_size": 1067,
+      "veto_count": 1,
+      "veto_rate": 0.0009372071227741331,
+      "kept_size": 1066
+    },
+    {
+      "date": "2024-11-20",
+      "pool_size": 1067,
+      "veto_count": 1,
+      "veto_rate": 0.0009372071227741331,
+      "kept_size": 1066
+    },
+    {
+      "date": "2024-11-21",
+      "pool_size": 1067,
+      "veto_count": 1,
+      "veto_rate": 0.0009372071227741331,
+      "kept_size": 1066
+    },
+    {
+      "date": "2024-11-22",
+      "pool_size": 1067,
+      "veto_count": 1,
+      "veto_rate": 0.0009372071227741331,
+      "kept_size": 1066
+    },
+    {
+      "date": "2024-11-25",
+      "pool_size": 1067,
+      "veto_count": 2,
+      "veto_rate": 0.0018744142455482662,
+      "kept_size": 1065
+    },
+    {
+      "date": "2024-11-26",
+      "pool_size": 1067,
+      "veto_count": 1,
+      "veto_rate": 0.0009372071227741331,
+      "kept_size": 1066
+    },
+    {
+      "date": "2024-11-27",
+      "pool_size": 1067,
+      "veto_count": 1,
+      "veto_rate": 0.0009372071227741331,
+      "kept_size": 1066
+    },
+    {
+      "date": "2024-11-29",
+      "pool_size": 1067,
+      "veto_count": 3,
+      "veto_rate": 0.0028116213683223993,
+      "kept_size": 1064
+    },
+    {
+      "date": "2024-12-02",
+      "pool_size": 1067,
+      "veto_count": 2,
+      "veto_rate": 0.0018744142455482662,
+      "kept_size": 1065
+    },
+    {
+      "date": "2024-12-03",
+      "pool_size": 1067,
+      "veto_count": 6,
+      "veto_rate": 0.005623242736644799,
+      "kept_size": 1061
+    },
+    {
+      "date": "2024-12-04",
+      "pool_size": 1067,
+      "veto_count": 5,
+      "veto_rate": 0.004686035613870665,
+      "kept_size": 1062
+    },
+    {
+      "date": "2024-12-05",
+      "pool_size": 1067,
+      "veto_count": 5,
+      "veto_rate": 0.004686035613870665,
+      "kept_size": 1062
+    },
+    {
+      "date": "2024-12-06",
+      "pool_size": 1067,
+      "veto_count": 4,
+      "veto_rate": 0.0037488284910965324,
+      "kept_size": 1063
+    },
+    {
+      "date": "2024-12-09",
+      "pool_size": 1067,
+      "veto_count": 4,
+      "veto_rate": 0.0037488284910965324,
+      "kept_size": 1063
+    },
+    {
+      "date": "2024-12-10",
+      "pool_size": 1067,
+      "veto_count": 4,
+      "veto_rate": 0.0037488284910965324,
+      "kept_size": 1063
+    },
+    {
+      "date": "2024-12-11",
+      "pool_size": 1068,
+      "veto_count": 5,
+      "veto_rate": 0.0046816479400749065,
+      "kept_size": 1063
+    },
+    {
+      "date": "2024-12-12",
+      "pool_size": 1068,
+      "veto_count": 6,
+      "veto_rate": 0.0056179775280898875,
+      "kept_size": 1062
+    },
+    {
+      "date": "2024-12-13",
+      "pool_size": 1068,
+      "veto_count": 6,
+      "veto_rate": 0.0056179775280898875,
+      "kept_size": 1062
+    },
+    {
+      "date": "2024-12-16",
+      "pool_size": 1069,
+      "veto_count": 8,
+      "veto_rate": 0.007483629560336763,
+      "kept_size": 1061
+    },
+    {
+      "date": "2024-12-17",
+      "pool_size": 1069,
+      "veto_count": 5,
+      "veto_rate": 0.004677268475210477,
+      "kept_size": 1064
+    },
+    {
+      "date": "2024-12-18",
+      "pool_size": 1069,
+      "veto_count": 4,
+      "veto_rate": 0.0037418147801683817,
+      "kept_size": 1065
+    },
+    {
+      "date": "2024-12-19",
+      "pool_size": 1069,
+      "veto_count": 5,
+      "veto_rate": 0.004677268475210477,
+      "kept_size": 1064
+    },
+    {
+      "date": "2024-12-20",
+      "pool_size": 1069,
+      "veto_count": 6,
+      "veto_rate": 0.005612722170252572,
+      "kept_size": 1063
+    },
+    {
+      "date": "2024-12-23",
+      "pool_size": 1069,
+      "veto_count": 5,
+      "veto_rate": 0.004677268475210477,
+      "kept_size": 1064
+    },
+    {
+      "date": "2024-12-24",
+      "pool_size": 1069,
+      "veto_count": 7,
+      "veto_rate": 0.006548175865294668,
+      "kept_size": 1062
+    },
+    {
+      "date": "2024-12-26",
+      "pool_size": 1069,
+      "veto_count": 6,
+      "veto_rate": 0.005612722170252572,
+      "kept_size": 1063
+    },
+    {
+      "date": "2024-12-27",
+      "pool_size": 1069,
+      "veto_count": 6,
+      "veto_rate": 0.005612722170252572,
+      "kept_size": 1063
+    },
+    {
+      "date": "2024-12-30",
+      "pool_size": 1069,
+      "veto_count": 9,
+      "veto_rate": 0.00841908325537886,
+      "kept_size": 1060
+    },
+    {
+      "date": "2024-12-31",
+      "pool_size": 1070,
+      "veto_count": 6,
+      "veto_rate": 0.005607476635514018,
+      "kept_size": 1064
+    },
+    {
+      "date": "2025-01-02",
+      "pool_size": 1070,
+      "veto_count": 9,
+      "veto_rate": 0.008411214953271028,
+      "kept_size": 1061
+    },
+    {
+      "date": "2025-01-03",
+      "pool_size": 1070,
+      "veto_count": 9,
+      "veto_rate": 0.008411214953271028,
+      "kept_size": 1061
+    },
+    {
+      "date": "2025-01-06",
+      "pool_size": 1070,
+      "veto_count": 9,
+      "veto_rate": 0.008411214953271028,
+      "kept_size": 1061
+    },
+    {
+      "date": "2025-01-07",
+      "pool_size": 1071,
+      "veto_count": 10,
+      "veto_rate": 0.009337068160597572,
+      "kept_size": 1061
+    },
+    {
+      "date": "2025-01-08",
+      "pool_size": 1072,
+      "veto_count": 6,
+      "veto_rate": 0.005597014925373134,
+      "kept_size": 1066
+    },
+    {
+      "date": "2025-01-10",
+      "pool_size": 1072,
+      "veto_count": 7,
+      "veto_rate": 0.0065298507462686565,
+      "kept_size": 1065
+    },
+    {
+      "date": "2025-01-13",
+      "pool_size": 1073,
+      "veto_count": 4,
+      "veto_rate": 0.003727865796831314,
+      "kept_size": 1069
+    },
+    {
+      "date": "2025-01-14",
+      "pool_size": 1073,
+      "veto_count": 4,
+      "veto_rate": 0.003727865796831314,
+      "kept_size": 1069
+    },
+    {
+      "date": "2025-01-15",
+      "pool_size": 1074,
+      "veto_count": 7,
+      "veto_rate": 0.006517690875232775,
+      "kept_size": 1067
+    },
+    {
+      "date": "2025-01-16",
+      "pool_size": 1074,
+      "veto_count": 6,
+      "veto_rate": 0.00558659217877095,
+      "kept_size": 1068
+    },
+    {
+      "date": "2025-01-17",
+      "pool_size": 1074,
+      "veto_count": 8,
+      "veto_rate": 0.0074487895716946,
+      "kept_size": 1066
+    },
+    {
+      "date": "2025-01-21",
+      "pool_size": 1074,
+      "veto_count": 9,
+      "veto_rate": 0.008379888268156424,
+      "kept_size": 1065
+    },
+    {
+      "date": "2025-01-22",
+      "pool_size": 1075,
+      "veto_count": 8,
+      "veto_rate": 0.0074418604651162795,
+      "kept_size": 1067
+    },
+    {
+      "date": "2025-01-23",
+      "pool_size": 1075,
+      "veto_count": 7,
+      "veto_rate": 0.0065116279069767444,
+      "kept_size": 1068
+    },
+    {
+      "date": "2025-01-24",
+      "pool_size": 1075,
+      "veto_count": 8,
+      "veto_rate": 0.0074418604651162795,
+      "kept_size": 1067
+    },
+    {
+      "date": "2025-01-27",
+      "pool_size": 1075,
+      "veto_count": 8,
+      "veto_rate": 0.0074418604651162795,
+      "kept_size": 1067
+    },
+    {
+      "date": "2025-01-28",
+      "pool_size": 1075,
+      "veto_count": 9,
+      "veto_rate": 0.008372093023255815,
+      "kept_size": 1066
+    },
+    {
+      "date": "2025-01-29",
+      "pool_size": 1076,
+      "veto_count": 7,
+      "veto_rate": 0.006505576208178439,
+      "kept_size": 1069
+    },
+    {
+      "date": "2025-01-30",
+      "pool_size": 1076,
+      "veto_count": 7,
+      "veto_rate": 0.006505576208178439,
+      "kept_size": 1069
+    },
+    {
+      "date": "2025-01-31",
+      "pool_size": 1077,
+      "veto_count": 9,
+      "veto_rate": 0.008356545961002786,
+      "kept_size": 1068
+    },
+    {
+      "date": "2025-02-03",
+      "pool_size": 1077,
+      "veto_count": 7,
+      "veto_rate": 0.0064995357474466105,
+      "kept_size": 1070
+    },
+    {
+      "date": "2025-02-04",
+      "pool_size": 1078,
+      "veto_count": 5,
+      "veto_rate": 0.00463821892393321,
+      "kept_size": 1073
+    },
+    {
+      "date": "2025-02-05",
+      "pool_size": 1079,
+      "veto_count": 3,
+      "veto_rate": 0.0027803521779425394,
+      "kept_size": 1076
+    },
+    {
+      "date": "2025-02-06",
+      "pool_size": 1079,
+      "veto_count": 5,
+      "veto_rate": 0.004633920296570899,
+      "kept_size": 1074
+    },
+    {
+      "date": "2025-02-07",
+      "pool_size": 1079,
+      "veto_count": 7,
+      "veto_rate": 0.006487488415199258,
+      "kept_size": 1072
+    },
+    {
+      "date": "2025-02-10",
+      "pool_size": 1079,
+      "veto_count": 5,
+      "veto_rate": 0.004633920296570899,
+      "kept_size": 1074
+    },
+    {
+      "date": "2025-02-11",
+      "pool_size": 1079,
+      "veto_count": 4,
+      "veto_rate": 0.0037071362372567192,
+      "kept_size": 1075
+    },
+    {
+      "date": "2025-02-12",
+      "pool_size": 1079,
+      "veto_count": 4,
+      "veto_rate": 0.0037071362372567192,
+      "kept_size": 1075
+    },
+    {
+      "date": "2025-02-13",
+      "pool_size": 1079,
+      "veto_count": 4,
+      "veto_rate": 0.0037071362372567192,
+      "kept_size": 1075
+    },
+    {
+      "date": "2025-02-14",
+      "pool_size": 1079,
+      "veto_count": 3,
+      "veto_rate": 0.0027803521779425394,
+      "kept_size": 1076
+    },
+    {
+      "date": "2025-02-18",
+      "pool_size": 1079,
+      "veto_count": 2,
+      "veto_rate": 0.0018535681186283596,
+      "kept_size": 1077
+    },
+    {
+      "date": "2025-02-19",
+      "pool_size": 1078,
+      "veto_count": 2,
+      "veto_rate": 0.0018552875695732839,
+      "kept_size": 1076
+    },
+    {
+      "date": "2025-02-20",
+      "pool_size": 1078,
+      "veto_count": 1,
+      "veto_rate": 0.0009276437847866419,
+      "kept_size": 1077
+    },
+    {
+      "date": "2025-02-21",
+      "pool_size": 1078,
+      "veto_count": 1,
+      "veto_rate": 0.0009276437847866419,
+      "kept_size": 1077
+    },
+    {
+      "date": "2025-02-24",
+      "pool_size": 1078,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-02-25",
+      "pool_size": 1078,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-02-26",
+      "pool_size": 1078,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-02-27",
+      "pool_size": 1079,
+      "veto_count": 1,
+      "veto_rate": 0.0009267840593141798,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-02-28",
+      "pool_size": 1079,
+      "veto_count": 1,
+      "veto_rate": 0.0009267840593141798,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-03-03",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-03-04",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-03-05",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-03-06",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-03-07",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-03-10",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-03-11",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-03-12",
+      "pool_size": 1080,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-03-13",
+      "pool_size": 1080,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-03-14",
+      "pool_size": 1080,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-03-17",
+      "pool_size": 1080,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-03-18",
+      "pool_size": 1080,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-03-19",
+      "pool_size": 1080,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-03-20",
+      "pool_size": 1078,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-03-21",
+      "pool_size": 1078,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-03-24",
+      "pool_size": 1078,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-03-25",
+      "pool_size": 1078,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-03-26",
+      "pool_size": 1078,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-03-27",
+      "pool_size": 1078,
+      "veto_count": 1,
+      "veto_rate": 0.0009276437847866419,
+      "kept_size": 1077
+    },
+    {
+      "date": "2025-03-28",
+      "pool_size": 1078,
+      "veto_count": 1,
+      "veto_rate": 0.0009276437847866419,
+      "kept_size": 1077
+    },
+    {
+      "date": "2025-03-31",
+      "pool_size": 1078,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-04-01",
+      "pool_size": 1078,
+      "veto_count": 1,
+      "veto_rate": 0.0009276437847866419,
+      "kept_size": 1077
+    },
+    {
+      "date": "2025-04-02",
+      "pool_size": 1078,
+      "veto_count": 1,
+      "veto_rate": 0.0009276437847866419,
+      "kept_size": 1077
+    },
+    {
+      "date": "2025-04-03",
+      "pool_size": 1078,
+      "veto_count": 1,
+      "veto_rate": 0.0009276437847866419,
+      "kept_size": 1077
+    },
+    {
+      "date": "2025-04-04",
+      "pool_size": 1078,
+      "veto_count": 1,
+      "veto_rate": 0.0009276437847866419,
+      "kept_size": 1077
+    },
+    {
+      "date": "2025-04-07",
+      "pool_size": 1078,
+      "veto_count": 1,
+      "veto_rate": 0.0009276437847866419,
+      "kept_size": 1077
+    },
+    {
+      "date": "2025-04-08",
+      "pool_size": 1078,
+      "veto_count": 1,
+      "veto_rate": 0.0009276437847866419,
+      "kept_size": 1077
+    },
+    {
+      "date": "2025-04-09",
+      "pool_size": 1078,
+      "veto_count": 2,
+      "veto_rate": 0.0018552875695732839,
+      "kept_size": 1076
+    },
+    {
+      "date": "2025-04-10",
+      "pool_size": 1078,
+      "veto_count": 2,
+      "veto_rate": 0.0018552875695732839,
+      "kept_size": 1076
+    },
+    {
+      "date": "2025-04-11",
+      "pool_size": 1079,
+      "veto_count": 2,
+      "veto_rate": 0.0018535681186283596,
+      "kept_size": 1077
+    },
+    {
+      "date": "2025-04-14",
+      "pool_size": 1079,
+      "veto_count": 1,
+      "veto_rate": 0.0009267840593141798,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-04-15",
+      "pool_size": 1079,
+      "veto_count": 1,
+      "veto_rate": 0.0009267840593141798,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-04-16",
+      "pool_size": 1079,
+      "veto_count": 1,
+      "veto_rate": 0.0009267840593141798,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-04-17",
+      "pool_size": 1079,
+      "veto_count": 1,
+      "veto_rate": 0.0009267840593141798,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-04-21",
+      "pool_size": 1079,
+      "veto_count": 1,
+      "veto_rate": 0.0009267840593141798,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-04-22",
+      "pool_size": 1079,
+      "veto_count": 1,
+      "veto_rate": 0.0009267840593141798,
+      "kept_size": 1078
+    },
+    {
+      "date": "2025-04-23",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-04-24",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-04-25",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-04-28",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-04-29",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-04-30",
+      "pool_size": 1079,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-05-01",
+      "pool_size": 1080,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-05-02",
+      "pool_size": 1081,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1081
+    },
+    {
+      "date": "2025-05-05",
+      "pool_size": 1081,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1081
+    },
+    {
+      "date": "2025-05-06",
+      "pool_size": 1081,
+      "veto_count": 1,
+      "veto_rate": 0.0009250693802035153,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-05-07",
+      "pool_size": 1081,
+      "veto_count": 1,
+      "veto_rate": 0.0009250693802035153,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-05-08",
+      "pool_size": 1081,
+      "veto_count": 1,
+      "veto_rate": 0.0009250693802035153,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-05-09",
+      "pool_size": 1080,
+      "veto_count": 1,
+      "veto_rate": 0.000925925925925926,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-05-12",
+      "pool_size": 1080,
+      "veto_count": 1,
+      "veto_rate": 0.000925925925925926,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-05-13",
+      "pool_size": 1080,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-05-14",
+      "pool_size": 1081,
+      "veto_count": 1,
+      "veto_rate": 0.0009250693802035153,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-05-15",
+      "pool_size": 1081,
+      "veto_count": 1,
+      "veto_rate": 0.0009250693802035153,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-05-16",
+      "pool_size": 1080,
+      "veto_count": 1,
+      "veto_rate": 0.000925925925925926,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-05-19",
+      "pool_size": 1080,
+      "veto_count": 1,
+      "veto_rate": 0.000925925925925926,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-05-20",
+      "pool_size": 1080,
+      "veto_count": 1,
+      "veto_rate": 0.000925925925925926,
+      "kept_size": 1079
+    },
+    {
+      "date": "2025-05-21",
+      "pool_size": 1081,
+      "veto_count": 1,
+      "veto_rate": 0.0009250693802035153,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-05-22",
+      "pool_size": 1082,
+      "veto_count": 1,
+      "veto_rate": 0.0009242144177449168,
+      "kept_size": 1081
+    },
+    {
+      "date": "2025-05-23",
+      "pool_size": 1082,
+      "veto_count": 1,
+      "veto_rate": 0.0009242144177449168,
+      "kept_size": 1081
+    },
+    {
+      "date": "2025-05-27",
+      "pool_size": 1082,
+      "veto_count": 1,
+      "veto_rate": 0.0009242144177449168,
+      "kept_size": 1081
+    },
+    {
+      "date": "2025-05-28",
+      "pool_size": 1082,
+      "veto_count": 1,
+      "veto_rate": 0.0009242144177449168,
+      "kept_size": 1081
+    },
+    {
+      "date": "2025-05-29",
+      "pool_size": 1082,
+      "veto_count": 2,
+      "veto_rate": 0.0018484288354898336,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-05-30",
+      "pool_size": 1082,
+      "veto_count": 2,
+      "veto_rate": 0.0018484288354898336,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-06-02",
+      "pool_size": 1082,
+      "veto_count": 1,
+      "veto_rate": 0.0009242144177449168,
+      "kept_size": 1081
+    },
+    {
+      "date": "2025-06-03",
+      "pool_size": 1082,
+      "veto_count": 1,
+      "veto_rate": 0.0009242144177449168,
+      "kept_size": 1081
+    },
+    {
+      "date": "2025-06-04",
+      "pool_size": 1082,
+      "veto_count": 2,
+      "veto_rate": 0.0018484288354898336,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-06-05",
+      "pool_size": 1084,
+      "veto_count": 3,
+      "veto_rate": 0.0027675276752767526,
+      "kept_size": 1081
+    },
+    {
+      "date": "2025-06-06",
+      "pool_size": 1084,
+      "veto_count": 3,
+      "veto_rate": 0.0027675276752767526,
+      "kept_size": 1081
+    },
+    {
+      "date": "2025-06-09",
+      "pool_size": 1084,
+      "veto_count": 3,
+      "veto_rate": 0.0027675276752767526,
+      "kept_size": 1081
+    },
+    {
+      "date": "2025-06-10",
+      "pool_size": 1084,
+      "veto_count": 4,
+      "veto_rate": 0.0036900369003690036,
+      "kept_size": 1080
+    },
+    {
+      "date": "2025-06-11",
+      "pool_size": 1086,
+      "veto_count": 2,
+      "veto_rate": 0.001841620626151013,
+      "kept_size": 1084
+    },
+    {
+      "date": "2025-06-12",
+      "pool_size": 1086,
+      "veto_count": 1,
+      "veto_rate": 0.0009208103130755065,
+      "kept_size": 1085
+    },
+    {
+      "date": "2025-06-13",
+      "pool_size": 1087,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1087
+    },
+    {
+      "date": "2025-06-16",
+      "pool_size": 1087,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1087
+    },
+    {
+      "date": "2025-06-17",
+      "pool_size": 1088,
+      "veto_count": 2,
+      "veto_rate": 0.001838235294117647,
+      "kept_size": 1086
+    },
+    {
+      "date": "2025-06-18",
+      "pool_size": 1088,
+      "veto_count": 1,
+      "veto_rate": 0.0009191176470588235,
+      "kept_size": 1087
+    },
+    {
+      "date": "2025-06-20",
+      "pool_size": 1090,
+      "veto_count": 2,
+      "veto_rate": 0.001834862385321101,
+      "kept_size": 1088
+    },
+    {
+      "date": "2025-06-23",
+      "pool_size": 1090,
+      "veto_count": 2,
+      "veto_rate": 0.001834862385321101,
+      "kept_size": 1088
+    },
+    {
+      "date": "2025-06-24",
+      "pool_size": 1090,
+      "veto_count": 2,
+      "veto_rate": 0.001834862385321101,
+      "kept_size": 1088
+    },
+    {
+      "date": "2025-06-25",
+      "pool_size": 1090,
+      "veto_count": 3,
+      "veto_rate": 0.0027522935779816515,
+      "kept_size": 1087
+    },
+    {
+      "date": "2025-06-26",
+      "pool_size": 1091,
+      "veto_count": 4,
+      "veto_rate": 0.0036663611365719525,
+      "kept_size": 1087
+    },
+    {
+      "date": "2025-06-27",
+      "pool_size": 1091,
+      "veto_count": 4,
+      "veto_rate": 0.0036663611365719525,
+      "kept_size": 1087
+    },
+    {
+      "date": "2025-06-30",
+      "pool_size": 1091,
+      "veto_count": 4,
+      "veto_rate": 0.0036663611365719525,
+      "kept_size": 1087
+    },
+    {
+      "date": "2025-07-01",
+      "pool_size": 1091,
+      "veto_count": 2,
+      "veto_rate": 0.0018331805682859762,
+      "kept_size": 1089
+    },
+    {
+      "date": "2025-07-02",
+      "pool_size": 1092,
+      "veto_count": 2,
+      "veto_rate": 0.0018315018315018315,
+      "kept_size": 1090
+    },
+    {
+      "date": "2025-07-03",
+      "pool_size": 1092,
+      "veto_count": 2,
+      "veto_rate": 0.0018315018315018315,
+      "kept_size": 1090
+    },
+    {
+      "date": "2025-07-07",
+      "pool_size": 1092,
+      "veto_count": 4,
+      "veto_rate": 0.003663003663003663,
+      "kept_size": 1088
+    },
+    {
+      "date": "2025-07-08",
+      "pool_size": 1092,
+      "veto_count": 4,
+      "veto_rate": 0.003663003663003663,
+      "kept_size": 1088
+    },
+    {
+      "date": "2025-07-09",
+      "pool_size": 1092,
+      "veto_count": 6,
+      "veto_rate": 0.005494505494505495,
+      "kept_size": 1086
+    },
+    {
+      "date": "2025-07-10",
+      "pool_size": 1092,
+      "veto_count": 4,
+      "veto_rate": 0.003663003663003663,
+      "kept_size": 1088
+    },
+    {
+      "date": "2025-07-11",
+      "pool_size": 1093,
+      "veto_count": 4,
+      "veto_rate": 0.0036596523330283625,
+      "kept_size": 1089
+    },
+    {
+      "date": "2025-07-14",
+      "pool_size": 1093,
+      "veto_count": 4,
+      "veto_rate": 0.0036596523330283625,
+      "kept_size": 1089
+    },
+    {
+      "date": "2025-07-15",
+      "pool_size": 1094,
+      "veto_count": 5,
+      "veto_rate": 0.004570383912248629,
+      "kept_size": 1089
+    },
+    {
+      "date": "2025-07-16",
+      "pool_size": 1095,
+      "veto_count": 6,
+      "veto_rate": 0.005479452054794521,
+      "kept_size": 1089
+    },
+    {
+      "date": "2025-07-17",
+      "pool_size": 1095,
+      "veto_count": 5,
+      "veto_rate": 0.0045662100456621,
+      "kept_size": 1090
+    },
+    {
+      "date": "2025-07-18",
+      "pool_size": 1095,
+      "veto_count": 6,
+      "veto_rate": 0.005479452054794521,
+      "kept_size": 1089
+    },
+    {
+      "date": "2025-07-21",
+      "pool_size": 1095,
+      "veto_count": 6,
+      "veto_rate": 0.005479452054794521,
+      "kept_size": 1089
+    },
+    {
+      "date": "2025-07-22",
+      "pool_size": 1095,
+      "veto_count": 6,
+      "veto_rate": 0.005479452054794521,
+      "kept_size": 1089
+    },
+    {
+      "date": "2025-07-23",
+      "pool_size": 1095,
+      "veto_count": 6,
+      "veto_rate": 0.005479452054794521,
+      "kept_size": 1089
+    },
+    {
+      "date": "2025-07-24",
+      "pool_size": 1095,
+      "veto_count": 5,
+      "veto_rate": 0.0045662100456621,
+      "kept_size": 1090
+    },
+    {
+      "date": "2025-07-25",
+      "pool_size": 1095,
+      "veto_count": 6,
+      "veto_rate": 0.005479452054794521,
+      "kept_size": 1089
+    },
+    {
+      "date": "2025-07-28",
+      "pool_size": 1095,
+      "veto_count": 4,
+      "veto_rate": 0.0036529680365296802,
+      "kept_size": 1091
+    },
+    {
+      "date": "2025-07-29",
+      "pool_size": 1095,
+      "veto_count": 2,
+      "veto_rate": 0.0018264840182648401,
+      "kept_size": 1093
+    },
+    {
+      "date": "2025-07-30",
+      "pool_size": 1096,
+      "veto_count": 4,
+      "veto_rate": 0.0036496350364963502,
+      "kept_size": 1092
+    },
+    {
+      "date": "2025-07-31",
+      "pool_size": 1096,
+      "veto_count": 3,
+      "veto_rate": 0.002737226277372263,
+      "kept_size": 1093
+    },
+    {
+      "date": "2025-08-01",
+      "pool_size": 1096,
+      "veto_count": 3,
+      "veto_rate": 0.002737226277372263,
+      "kept_size": 1093
+    },
+    {
+      "date": "2025-08-04",
+      "pool_size": 1096,
+      "veto_count": 3,
+      "veto_rate": 0.002737226277372263,
+      "kept_size": 1093
+    },
+    {
+      "date": "2025-08-05",
+      "pool_size": 1096,
+      "veto_count": 2,
+      "veto_rate": 0.0018248175182481751,
+      "kept_size": 1094
+    },
+    {
+      "date": "2025-08-06",
+      "pool_size": 1096,
+      "veto_count": 3,
+      "veto_rate": 0.002737226277372263,
+      "kept_size": 1093
+    },
+    {
+      "date": "2025-08-07",
+      "pool_size": 1096,
+      "veto_count": 1,
+      "veto_rate": 0.0009124087591240876,
+      "kept_size": 1095
+    },
+    {
+      "date": "2025-08-08",
+      "pool_size": 1096,
+      "veto_count": 1,
+      "veto_rate": 0.0009124087591240876,
+      "kept_size": 1095
+    },
+    {
+      "date": "2025-08-11",
+      "pool_size": 1096,
+      "veto_count": 1,
+      "veto_rate": 0.0009124087591240876,
+      "kept_size": 1095
+    },
+    {
+      "date": "2025-08-12",
+      "pool_size": 1096,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1096
+    },
+    {
+      "date": "2025-08-13",
+      "pool_size": 1096,
+      "veto_count": 2,
+      "veto_rate": 0.0018248175182481751,
+      "kept_size": 1094
+    },
+    {
+      "date": "2025-08-14",
+      "pool_size": 1096,
+      "veto_count": 1,
+      "veto_rate": 0.0009124087591240876,
+      "kept_size": 1095
+    },
+    {
+      "date": "2025-08-15",
+      "pool_size": 1096,
+      "veto_count": 1,
+      "veto_rate": 0.0009124087591240876,
+      "kept_size": 1095
+    },
+    {
+      "date": "2025-08-18",
+      "pool_size": 1096,
+      "veto_count": 1,
+      "veto_rate": 0.0009124087591240876,
+      "kept_size": 1095
+    },
+    {
+      "date": "2025-08-19",
+      "pool_size": 1096,
+      "veto_count": 1,
+      "veto_rate": 0.0009124087591240876,
+      "kept_size": 1095
+    },
+    {
+      "date": "2025-08-20",
+      "pool_size": 1096,
+      "veto_count": 1,
+      "veto_rate": 0.0009124087591240876,
+      "kept_size": 1095
+    },
+    {
+      "date": "2025-08-21",
+      "pool_size": 1097,
+      "veto_count": 1,
+      "veto_rate": 0.0009115770282588879,
+      "kept_size": 1096
+    },
+    {
+      "date": "2025-08-22",
+      "pool_size": 1097,
+      "veto_count": 1,
+      "veto_rate": 0.0009115770282588879,
+      "kept_size": 1096
+    },
+    {
+      "date": "2025-08-25",
+      "pool_size": 1098,
+      "veto_count": 2,
+      "veto_rate": 0.0018214936247723133,
+      "kept_size": 1096
+    },
+    {
+      "date": "2025-08-26",
+      "pool_size": 1098,
+      "veto_count": 2,
+      "veto_rate": 0.0018214936247723133,
+      "kept_size": 1096
+    },
+    {
+      "date": "2025-08-27",
+      "pool_size": 1098,
+      "veto_count": 3,
+      "veto_rate": 0.00273224043715847,
+      "kept_size": 1095
+    },
+    {
+      "date": "2025-08-28",
+      "pool_size": 1098,
+      "veto_count": 2,
+      "veto_rate": 0.0018214936247723133,
+      "kept_size": 1096
+    },
+    {
+      "date": "2025-08-29",
+      "pool_size": 1098,
+      "veto_count": 2,
+      "veto_rate": 0.0018214936247723133,
+      "kept_size": 1096
+    },
+    {
+      "date": "2025-09-02",
+      "pool_size": 1099,
+      "veto_count": 2,
+      "veto_rate": 0.0018198362147406734,
+      "kept_size": 1097
+    },
+    {
+      "date": "2025-09-03",
+      "pool_size": 1099,
+      "veto_count": 1,
+      "veto_rate": 0.0009099181073703367,
+      "kept_size": 1098
+    },
+    {
+      "date": "2025-09-04",
+      "pool_size": 1099,
+      "veto_count": 2,
+      "veto_rate": 0.0018198362147406734,
+      "kept_size": 1097
+    },
+    {
+      "date": "2025-09-05",
+      "pool_size": 1099,
+      "veto_count": 1,
+      "veto_rate": 0.0009099181073703367,
+      "kept_size": 1098
+    },
+    {
+      "date": "2025-09-08",
+      "pool_size": 1099,
+      "veto_count": 1,
+      "veto_rate": 0.0009099181073703367,
+      "kept_size": 1098
+    },
+    {
+      "date": "2025-09-09",
+      "pool_size": 1099,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1099
+    },
+    {
+      "date": "2025-09-10",
+      "pool_size": 1099,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1099
+    },
+    {
+      "date": "2025-09-11",
+      "pool_size": 1099,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1099
+    },
+    {
+      "date": "2025-09-12",
+      "pool_size": 1100,
+      "veto_count": 1,
+      "veto_rate": 0.0009090909090909091,
+      "kept_size": 1099
+    },
+    {
+      "date": "2025-09-15",
+      "pool_size": 1100,
+      "veto_count": 2,
+      "veto_rate": 0.0018181818181818182,
+      "kept_size": 1098
+    },
+    {
+      "date": "2025-09-16",
+      "pool_size": 1101,
+      "veto_count": 2,
+      "veto_rate": 0.0018165304268846503,
+      "kept_size": 1099
+    },
+    {
+      "date": "2025-09-17",
+      "pool_size": 1102,
+      "veto_count": 1,
+      "veto_rate": 0.0009074410163339383,
+      "kept_size": 1101
+    },
+    {
+      "date": "2025-09-18",
+      "pool_size": 1103,
+      "veto_count": 2,
+      "veto_rate": 0.001813236627379873,
+      "kept_size": 1101
+    },
+    {
+      "date": "2025-09-19",
+      "pool_size": 1103,
+      "veto_count": 3,
+      "veto_rate": 0.0027198549410698096,
+      "kept_size": 1100
+    },
+    {
+      "date": "2025-09-22",
+      "pool_size": 1103,
+      "veto_count": 4,
+      "veto_rate": 0.003626473254759746,
+      "kept_size": 1099
+    },
+    {
+      "date": "2025-09-23",
+      "pool_size": 1104,
+      "veto_count": 2,
+      "veto_rate": 0.0018115942028985507,
+      "kept_size": 1102
+    },
+    {
+      "date": "2025-09-24",
+      "pool_size": 1104,
+      "veto_count": 1,
+      "veto_rate": 0.0009057971014492754,
+      "kept_size": 1103
+    },
+    {
+      "date": "2025-09-25",
+      "pool_size": 1104,
+      "veto_count": 2,
+      "veto_rate": 0.0018115942028985507,
+      "kept_size": 1102
+    },
+    {
+      "date": "2025-09-26",
+      "pool_size": 1104,
+      "veto_count": 3,
+      "veto_rate": 0.002717391304347826,
+      "kept_size": 1101
+    },
+    {
+      "date": "2025-09-29",
+      "pool_size": 1104,
+      "veto_count": 3,
+      "veto_rate": 0.002717391304347826,
+      "kept_size": 1101
+    },
+    {
+      "date": "2025-09-30",
+      "pool_size": 1104,
+      "veto_count": 1,
+      "veto_rate": 0.0009057971014492754,
+      "kept_size": 1103
+    },
+    {
+      "date": "2025-10-01",
+      "pool_size": 1104,
+      "veto_count": 2,
+      "veto_rate": 0.0018115942028985507,
+      "kept_size": 1102
+    },
+    {
+      "date": "2025-10-02",
+      "pool_size": 1104,
+      "veto_count": 5,
+      "veto_rate": 0.004528985507246377,
+      "kept_size": 1099
+    },
+    {
+      "date": "2025-10-03",
+      "pool_size": 1105,
+      "veto_count": 2,
+      "veto_rate": 0.0018099547511312218,
+      "kept_size": 1103
+    },
+    {
+      "date": "2025-10-06",
+      "pool_size": 1105,
+      "veto_count": 3,
+      "veto_rate": 0.0027149321266968325,
+      "kept_size": 1102
+    },
+    {
+      "date": "2025-10-07",
+      "pool_size": 1106,
+      "veto_count": 3,
+      "veto_rate": 0.0027124773960217,
+      "kept_size": 1103
+    },
+    {
+      "date": "2025-10-08",
+      "pool_size": 1106,
+      "veto_count": 4,
+      "veto_rate": 0.003616636528028933,
+      "kept_size": 1102
+    },
+    {
+      "date": "2025-10-09",
+      "pool_size": 1109,
+      "veto_count": 7,
+      "veto_rate": 0.0063119927862939585,
+      "kept_size": 1102
+    },
+    {
+      "date": "2025-10-10",
+      "pool_size": 1109,
+      "veto_count": 2,
+      "veto_rate": 0.0018034265103697023,
+      "kept_size": 1107
+    },
+    {
+      "date": "2025-10-13",
+      "pool_size": 1108,
+      "veto_count": 5,
+      "veto_rate": 0.004512635379061372,
+      "kept_size": 1103
+    },
+    {
+      "date": "2025-10-14",
+      "pool_size": 1109,
+      "veto_count": 3,
+      "veto_rate": 0.002705139765554554,
+      "kept_size": 1106
+    },
+    {
+      "date": "2025-10-15",
+      "pool_size": 1109,
+      "veto_count": 2,
+      "veto_rate": 0.0018034265103697023,
+      "kept_size": 1107
+    },
+    {
+      "date": "2025-10-16",
+      "pool_size": 1109,
+      "veto_count": 1,
+      "veto_rate": 0.0009017132551848512,
+      "kept_size": 1108
+    },
+    {
+      "date": "2025-10-17",
+      "pool_size": 1109,
+      "veto_count": 1,
+      "veto_rate": 0.0009017132551848512,
+      "kept_size": 1108
+    },
+    {
+      "date": "2025-10-20",
+      "pool_size": 1109,
+      "veto_count": 1,
+      "veto_rate": 0.0009017132551848512,
+      "kept_size": 1108
+    },
+    {
+      "date": "2025-10-21",
+      "pool_size": 1110,
+      "veto_count": 2,
+      "veto_rate": 0.0018018018018018018,
+      "kept_size": 1108
+    },
+    {
+      "date": "2025-10-22",
+      "pool_size": 1110,
+      "veto_count": 1,
+      "veto_rate": 0.0009009009009009009,
+      "kept_size": 1109
+    },
+    {
+      "date": "2025-10-23",
+      "pool_size": 1110,
+      "veto_count": 2,
+      "veto_rate": 0.0018018018018018018,
+      "kept_size": 1108
+    },
+    {
+      "date": "2025-10-24",
+      "pool_size": 1111,
+      "veto_count": 4,
+      "veto_rate": 0.0036003600360036,
+      "kept_size": 1107
+    },
+    {
+      "date": "2025-10-27",
+      "pool_size": 1111,
+      "veto_count": 4,
+      "veto_rate": 0.0036003600360036,
+      "kept_size": 1107
+    },
+    {
+      "date": "2025-10-28",
+      "pool_size": 1112,
+      "veto_count": 4,
+      "veto_rate": 0.0035971223021582736,
+      "kept_size": 1108
+    },
+    {
+      "date": "2025-10-29",
+      "pool_size": 1112,
+      "veto_count": 3,
+      "veto_rate": 0.002697841726618705,
+      "kept_size": 1109
+    },
+    {
+      "date": "2025-10-30",
+      "pool_size": 1112,
+      "veto_count": 2,
+      "veto_rate": 0.0017985611510791368,
+      "kept_size": 1110
+    },
+    {
+      "date": "2025-10-31",
+      "pool_size": 1112,
+      "veto_count": 2,
+      "veto_rate": 0.0017985611510791368,
+      "kept_size": 1110
+    },
+    {
+      "date": "2025-11-03",
+      "pool_size": 1112,
+      "veto_count": 1,
+      "veto_rate": 0.0008992805755395684,
+      "kept_size": 1111
+    },
+    {
+      "date": "2025-11-04",
+      "pool_size": 1112,
+      "veto_count": 1,
+      "veto_rate": 0.0008992805755395684,
+      "kept_size": 1111
+    },
+    {
+      "date": "2025-11-05",
+      "pool_size": 1112,
+      "veto_count": 1,
+      "veto_rate": 0.0008992805755395684,
+      "kept_size": 1111
+    },
+    {
+      "date": "2025-11-06",
+      "pool_size": 1114,
+      "veto_count": 1,
+      "veto_rate": 0.0008976660682226212,
+      "kept_size": 1113
+    },
+    {
+      "date": "2025-11-07",
+      "pool_size": 1114,
+      "veto_count": 4,
+      "veto_rate": 0.003590664272890485,
+      "kept_size": 1110
+    },
+    {
+      "date": "2025-11-10",
+      "pool_size": 1113,
+      "veto_count": 4,
+      "veto_rate": 0.0035938903863432167,
+      "kept_size": 1109
+    },
+    {
+      "date": "2025-11-11",
+      "pool_size": 1113,
+      "veto_count": 4,
+      "veto_rate": 0.0035938903863432167,
+      "kept_size": 1109
+    },
+    {
+      "date": "2025-11-12",
+      "pool_size": 1113,
+      "veto_count": 4,
+      "veto_rate": 0.0035938903863432167,
+      "kept_size": 1109
+    },
+    {
+      "date": "2025-11-13",
+      "pool_size": 1113,
+      "veto_count": 2,
+      "veto_rate": 0.0017969451931716084,
+      "kept_size": 1111
+    },
+    {
+      "date": "2025-11-14",
+      "pool_size": 1113,
+      "veto_count": 2,
+      "veto_rate": 0.0017969451931716084,
+      "kept_size": 1111
+    },
+    {
+      "date": "2025-11-17",
+      "pool_size": 1113,
+      "veto_count": 3,
+      "veto_rate": 0.0026954177897574125,
+      "kept_size": 1110
+    },
+    {
+      "date": "2025-11-18",
+      "pool_size": 1113,
+      "veto_count": 3,
+      "veto_rate": 0.0026954177897574125,
+      "kept_size": 1110
+    },
+    {
+      "date": "2025-11-19",
+      "pool_size": 1113,
+      "veto_count": 2,
+      "veto_rate": 0.0017969451931716084,
+      "kept_size": 1111
+    },
+    {
+      "date": "2025-11-20",
+      "pool_size": 1113,
+      "veto_count": 3,
+      "veto_rate": 0.0026954177897574125,
+      "kept_size": 1110
+    },
+    {
+      "date": "2025-11-21",
+      "pool_size": 1113,
+      "veto_count": 3,
+      "veto_rate": 0.0026954177897574125,
+      "kept_size": 1110
+    },
+    {
+      "date": "2025-11-24",
+      "pool_size": 1113,
+      "veto_count": 3,
+      "veto_rate": 0.0026954177897574125,
+      "kept_size": 1110
+    },
+    {
+      "date": "2025-11-25",
+      "pool_size": 1114,
+      "veto_count": 3,
+      "veto_rate": 0.0026929982046678637,
+      "kept_size": 1111
+    },
+    {
+      "date": "2025-11-26",
+      "pool_size": 1114,
+      "veto_count": 5,
+      "veto_rate": 0.004488330341113106,
+      "kept_size": 1109
+    },
+    {
+      "date": "2025-11-28",
+      "pool_size": 1114,
+      "veto_count": 5,
+      "veto_rate": 0.004488330341113106,
+      "kept_size": 1109
+    },
+    {
+      "date": "2025-12-01",
+      "pool_size": 1114,
+      "veto_count": 5,
+      "veto_rate": 0.004488330341113106,
+      "kept_size": 1109
+    },
+    {
+      "date": "2025-12-02",
+      "pool_size": 1114,
+      "veto_count": 5,
+      "veto_rate": 0.004488330341113106,
+      "kept_size": 1109
+    },
+    {
+      "date": "2025-12-03",
+      "pool_size": 1114,
+      "veto_count": 3,
+      "veto_rate": 0.0026929982046678637,
+      "kept_size": 1111
+    },
+    {
+      "date": "2025-12-04",
+      "pool_size": 1114,
+      "veto_count": 4,
+      "veto_rate": 0.003590664272890485,
+      "kept_size": 1110
+    },
+    {
+      "date": "2025-12-05",
+      "pool_size": 1114,
+      "veto_count": 4,
+      "veto_rate": 0.003590664272890485,
+      "kept_size": 1110
+    },
+    {
+      "date": "2025-12-08",
+      "pool_size": 1114,
+      "veto_count": 5,
+      "veto_rate": 0.004488330341113106,
+      "kept_size": 1109
+    },
+    {
+      "date": "2025-12-09",
+      "pool_size": 1114,
+      "veto_count": 4,
+      "veto_rate": 0.003590664272890485,
+      "kept_size": 1110
+    },
+    {
+      "date": "2025-12-10",
+      "pool_size": 1114,
+      "veto_count": 3,
+      "veto_rate": 0.0026929982046678637,
+      "kept_size": 1111
+    },
+    {
+      "date": "2025-12-11",
+      "pool_size": 1114,
+      "veto_count": 2,
+      "veto_rate": 0.0017953321364452424,
+      "kept_size": 1112
+    },
+    {
+      "date": "2025-12-12",
+      "pool_size": 1114,
+      "veto_count": 2,
+      "veto_rate": 0.0017953321364452424,
+      "kept_size": 1112
+    },
+    {
+      "date": "2025-12-15",
+      "pool_size": 1115,
+      "veto_count": 2,
+      "veto_rate": 0.0017937219730941704,
+      "kept_size": 1113
+    },
+    {
+      "date": "2025-12-16",
+      "pool_size": 1115,
+      "veto_count": 2,
+      "veto_rate": 0.0017937219730941704,
+      "kept_size": 1113
+    },
+    {
+      "date": "2025-12-17",
+      "pool_size": 1115,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1115
+    },
+    {
+      "date": "2025-12-18",
+      "pool_size": 1115,
+      "veto_count": 1,
+      "veto_rate": 0.0008968609865470852,
+      "kept_size": 1114
+    },
+    {
+      "date": "2025-12-19",
+      "pool_size": 1115,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1115
+    },
+    {
+      "date": "2025-12-22",
+      "pool_size": 1115,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1115
+    },
+    {
+      "date": "2025-12-23",
+      "pool_size": 1115,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1115
+    },
+    {
+      "date": "2025-12-24",
+      "pool_size": 1116,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1116
+    },
+    {
+      "date": "2025-12-26",
+      "pool_size": 1116,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1116
+    },
+    {
+      "date": "2025-12-29",
+      "pool_size": 1116,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1116
+    },
+    {
+      "date": "2025-12-30",
+      "pool_size": 1116,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1116
+    },
+    {
+      "date": "2025-12-31",
+      "pool_size": 1116,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1116
+    },
+    {
+      "date": "2026-01-02",
+      "pool_size": 1116,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1116
+    },
+    {
+      "date": "2026-01-05",
+      "pool_size": 1116,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1116
+    },
+    {
+      "date": "2026-01-06",
+      "pool_size": 1115,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1115
+    },
+    {
+      "date": "2026-01-07",
+      "pool_size": 1115,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1115
+    },
+    {
+      "date": "2026-01-08",
+      "pool_size": 1115,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1115
+    },
+    {
+      "date": "2026-01-09",
+      "pool_size": 1115,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1115
+    },
+    {
+      "date": "2026-01-12",
+      "pool_size": 1115,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1115
+    },
+    {
+      "date": "2026-01-13",
+      "pool_size": 1115,
+      "veto_count": 1,
+      "veto_rate": 0.0008968609865470852,
+      "kept_size": 1114
+    },
+    {
+      "date": "2026-01-14",
+      "pool_size": 1115,
+      "veto_count": 2,
+      "veto_rate": 0.0017937219730941704,
+      "kept_size": 1113
+    },
+    {
+      "date": "2026-01-15",
+      "pool_size": 1115,
+      "veto_count": 3,
+      "veto_rate": 0.0026905829596412557,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-01-16",
+      "pool_size": 1116,
+      "veto_count": 2,
+      "veto_rate": 0.0017921146953405018,
+      "kept_size": 1114
+    },
+    {
+      "date": "2026-01-20",
+      "pool_size": 1116,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1116
+    },
+    {
+      "date": "2026-01-21",
+      "pool_size": 1115,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1115
+    },
+    {
+      "date": "2026-01-22",
+      "pool_size": 1115,
+      "veto_count": 2,
+      "veto_rate": 0.0017937219730941704,
+      "kept_size": 1113
+    },
+    {
+      "date": "2026-01-23",
+      "pool_size": 1115,
+      "veto_count": 2,
+      "veto_rate": 0.0017937219730941704,
+      "kept_size": 1113
+    },
+    {
+      "date": "2026-01-26",
+      "pool_size": 1115,
+      "veto_count": 1,
+      "veto_rate": 0.0008968609865470852,
+      "kept_size": 1114
+    },
+    {
+      "date": "2026-01-27",
+      "pool_size": 1115,
+      "veto_count": 2,
+      "veto_rate": 0.0017937219730941704,
+      "kept_size": 1113
+    },
+    {
+      "date": "2026-01-28",
+      "pool_size": 1115,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1115
+    },
+    {
+      "date": "2026-01-29",
+      "pool_size": 1115,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1115
+    },
+    {
+      "date": "2026-01-30",
+      "pool_size": 1114,
+      "veto_count": 1,
+      "veto_rate": 0.0008976660682226212,
+      "kept_size": 1113
+    },
+    {
+      "date": "2026-02-02",
+      "pool_size": 1114,
+      "veto_count": 1,
+      "veto_rate": 0.0008976660682226212,
+      "kept_size": 1113
+    },
+    {
+      "date": "2026-02-03",
+      "pool_size": 1114,
+      "veto_count": 2,
+      "veto_rate": 0.0017953321364452424,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-02-04",
+      "pool_size": 1114,
+      "veto_count": 2,
+      "veto_rate": 0.0017953321364452424,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-02-05",
+      "pool_size": 1114,
+      "veto_count": 3,
+      "veto_rate": 0.0026929982046678637,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-02-06",
+      "pool_size": 1114,
+      "veto_count": 2,
+      "veto_rate": 0.0017953321364452424,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-02-09",
+      "pool_size": 1114,
+      "veto_count": 3,
+      "veto_rate": 0.0026929982046678637,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-02-10",
+      "pool_size": 1114,
+      "veto_count": 2,
+      "veto_rate": 0.0017953321364452424,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-02-11",
+      "pool_size": 1114,
+      "veto_count": 2,
+      "veto_rate": 0.0017953321364452424,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-02-12",
+      "pool_size": 1114,
+      "veto_count": 2,
+      "veto_rate": 0.0017953321364452424,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-02-13",
+      "pool_size": 1114,
+      "veto_count": 2,
+      "veto_rate": 0.0017953321364452424,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-02-17",
+      "pool_size": 1114,
+      "veto_count": 3,
+      "veto_rate": 0.0026929982046678637,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-02-18",
+      "pool_size": 1113,
+      "veto_count": 2,
+      "veto_rate": 0.0017969451931716084,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-02-19",
+      "pool_size": 1113,
+      "veto_count": 2,
+      "veto_rate": 0.0017969451931716084,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-02-20",
+      "pool_size": 1113,
+      "veto_count": 2,
+      "veto_rate": 0.0017969451931716084,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-02-23",
+      "pool_size": 1113,
+      "veto_count": 2,
+      "veto_rate": 0.0017969451931716084,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-02-24",
+      "pool_size": 1113,
+      "veto_count": 3,
+      "veto_rate": 0.0026954177897574125,
+      "kept_size": 1110
+    },
+    {
+      "date": "2026-02-25",
+      "pool_size": 1113,
+      "veto_count": 2,
+      "veto_rate": 0.0017969451931716084,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-02-26",
+      "pool_size": 1113,
+      "veto_count": 2,
+      "veto_rate": 0.0017969451931716084,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-02-27",
+      "pool_size": 1112,
+      "veto_count": 3,
+      "veto_rate": 0.002697841726618705,
+      "kept_size": 1109
+    },
+    {
+      "date": "2026-03-02",
+      "pool_size": 1112,
+      "veto_count": 2,
+      "veto_rate": 0.0017985611510791368,
+      "kept_size": 1110
+    },
+    {
+      "date": "2026-03-03",
+      "pool_size": 1112,
+      "veto_count": 2,
+      "veto_rate": 0.0017985611510791368,
+      "kept_size": 1110
+    },
+    {
+      "date": "2026-03-04",
+      "pool_size": 1112,
+      "veto_count": 2,
+      "veto_rate": 0.0017985611510791368,
+      "kept_size": 1110
+    },
+    {
+      "date": "2026-03-05",
+      "pool_size": 1112,
+      "veto_count": 2,
+      "veto_rate": 0.0017985611510791368,
+      "kept_size": 1110
+    },
+    {
+      "date": "2026-03-06",
+      "pool_size": 1112,
+      "veto_count": 1,
+      "veto_rate": 0.0008992805755395684,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-03-09",
+      "pool_size": 1112,
+      "veto_count": 1,
+      "veto_rate": 0.0008992805755395684,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-03-10",
+      "pool_size": 1112,
+      "veto_count": 1,
+      "veto_rate": 0.0008992805755395684,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-03-11",
+      "pool_size": 1112,
+      "veto_count": 1,
+      "veto_rate": 0.0008992805755395684,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-03-12",
+      "pool_size": 1112,
+      "veto_count": 1,
+      "veto_rate": 0.0008992805755395684,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-03-13",
+      "pool_size": 1112,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-03-16",
+      "pool_size": 1112,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-03-17",
+      "pool_size": 1112,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-03-18",
+      "pool_size": 1112,
+      "veto_count": 1,
+      "veto_rate": 0.0008992805755395684,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-03-19",
+      "pool_size": 1113,
+      "veto_count": 2,
+      "veto_rate": 0.0017969451931716084,
+      "kept_size": 1111
+    },
+    {
+      "date": "2026-03-20",
+      "pool_size": 1113,
+      "veto_count": 1,
+      "veto_rate": 0.0008984725965858042,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-03-23",
+      "pool_size": 1113,
+      "veto_count": 1,
+      "veto_rate": 0.0008984725965858042,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-03-24",
+      "pool_size": 1113,
+      "veto_count": 1,
+      "veto_rate": 0.0008984725965858042,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-03-25",
+      "pool_size": 1113,
+      "veto_count": 1,
+      "veto_rate": 0.0008984725965858042,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-03-26",
+      "pool_size": 1113,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1113
+    },
+    {
+      "date": "2026-03-27",
+      "pool_size": 1113,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1113
+    },
+    {
+      "date": "2026-03-30",
+      "pool_size": 1113,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1113
+    },
+    {
+      "date": "2026-03-31",
+      "pool_size": 1114,
+      "veto_count": 1,
+      "veto_rate": 0.0008976660682226212,
+      "kept_size": 1113
+    },
+    {
+      "date": "2026-04-01",
+      "pool_size": 1114,
+      "veto_count": 1,
+      "veto_rate": 0.0008976660682226212,
+      "kept_size": 1113
+    },
+    {
+      "date": "2026-04-02",
+      "pool_size": 1114,
+      "veto_count": 1,
+      "veto_rate": 0.0008976660682226212,
+      "kept_size": 1113
+    },
+    {
+      "date": "2026-04-06",
+      "pool_size": 1113,
+      "veto_count": 1,
+      "veto_rate": 0.0008984725965858042,
+      "kept_size": 1112
+    },
+    {
+      "date": "2026-04-07",
+      "pool_size": 1108,
+      "veto_count": 1,
+      "veto_rate": 0.0009025270758122744,
+      "kept_size": 1107
+    },
+    {
+      "date": "2026-04-08",
+      "pool_size": 1109,
+      "veto_count": 1,
+      "veto_rate": 0.0009017132551848512,
+      "kept_size": 1108
+    },
+    {
+      "date": "2026-04-09",
+      "pool_size": 1109,
+      "veto_count": 1,
+      "veto_rate": 0.0009017132551848512,
+      "kept_size": 1108
+    },
+    {
+      "date": "2026-04-10",
+      "pool_size": 1109,
+      "veto_count": 1,
+      "veto_rate": 0.0009017132551848512,
+      "kept_size": 1108
+    },
+    {
+      "date": "2026-04-13",
+      "pool_size": 1109,
+      "veto_count": 1,
+      "veto_rate": 0.0009017132551848512,
+      "kept_size": 1108
+    },
+    {
+      "date": "2026-04-14",
+      "pool_size": 1109,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1109
+    },
+    {
+      "date": "2026-04-15",
+      "pool_size": 1109,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1109
+    },
+    {
+      "date": "2026-04-16",
+      "pool_size": 1109,
+      "veto_count": 1,
+      "veto_rate": 0.0009017132551848512,
+      "kept_size": 1108
+    },
+    {
+      "date": "2026-04-17",
+      "pool_size": 1110,
+      "veto_count": 1,
+      "veto_rate": 0.0009009009009009009,
+      "kept_size": 1109
+    },
+    {
+      "date": "2026-04-20",
+      "pool_size": 1109,
+      "veto_count": 1,
+      "veto_rate": 0.0009017132551848512,
+      "kept_size": 1108
+    },
+    {
+      "date": "2026-04-21",
+      "pool_size": 1109,
+      "veto_count": 1,
+      "veto_rate": 0.0009017132551848512,
+      "kept_size": 1108
+    },
+    {
+      "date": "2026-04-22",
+      "pool_size": 1110,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1110
+    },
+    {
+      "date": "2026-04-23",
+      "pool_size": 1110,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1110
+    },
+    {
+      "date": "2026-04-24",
+      "pool_size": 1110,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1110
+    },
+    {
+      "date": "2026-04-27",
+      "pool_size": 1109,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1109
+    },
+    {
+      "date": "2026-04-28",
+      "pool_size": 1109,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1109
+    },
+    {
+      "date": "2026-04-29",
+      "pool_size": 1109,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1109
+    },
+    {
+      "date": "2026-04-30",
+      "pool_size": 1108,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1108
+    },
+    {
+      "date": "2026-05-01",
+      "pool_size": 1107,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1107
+    },
+    {
+      "date": "2026-05-04",
+      "pool_size": 1106,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1106
+    },
+    {
+      "date": "2026-05-05",
+      "pool_size": 1106,
+      "veto_count": 1,
+      "veto_rate": 0.0009041591320072332,
+      "kept_size": 1105
+    },
+    {
+      "date": "2026-05-06",
+      "pool_size": 1106,
+      "veto_count": 1,
+      "veto_rate": 0.0009041591320072332,
+      "kept_size": 1105
+    },
+    {
+      "date": "2026-05-07",
+      "pool_size": 1106,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1106
+    },
+    {
+      "date": "2026-05-08",
+      "pool_size": 1106,
+      "veto_count": 0,
+      "veto_rate": 0.0,
+      "kept_size": 1106
+    },
+    {
+      "date": "2026-05-11",
+      "pool_size": 1106,
+      "veto_count": 1,
+      "veto_rate": 0.0009041591320072332,
+      "kept_size": 1105
+    },
+    {
+      "date": "2026-05-12",
+      "pool_size": 1105,
+      "veto_count": 1,
+      "veto_rate": 0.0009049773755656109,
+      "kept_size": 1104
+    },
+    {
+      "date": "2026-05-13",
+      "pool_size": 1104,
+      "veto_count": 1,
+      "veto_rate": 0.0009057971014492754,
+      "kept_size": 1103
+    },
+    {
+      "date": "2026-05-14",
+      "pool_size": 1103,
+      "veto_count": 1,
+      "veto_rate": 0.0009066183136899365,
+      "kept_size": 1102
+    },
+    {
+      "date": "2026-05-15",
+      "pool_size": 1102,
+      "veto_count": 2,
+      "veto_rate": 0.0018148820326678765,
+      "kept_size": 1100
+    },
+    {
+      "date": "2026-05-18",
+      "pool_size": 1101,
+      "veto_count": 1,
+      "veto_rate": 0.0009082652134423251,
+      "kept_size": 1100
+    },
+    {
+      "date": "2026-05-19",
+      "pool_size": 1100,
+      "veto_count": 1,
+      "veto_rate": 0.0009090909090909091,
+      "kept_size": 1099
+    },
+    {
+      "date": "2026-05-20",
+      "pool_size": 1100,
+      "veto_count": 2,
+      "veto_rate": 0.0018181818181818182,
+      "kept_size": 1098
+    },
+    {
+      "date": "2026-05-21",
+      "pool_size": 1100,
+      "veto_count": 2,
+      "veto_rate": 0.0018181818181818182,
+      "kept_size": 1098
+    },
+    {
+      "date": "2026-05-22",
+      "pool_size": 1100,
+      "veto_count": 2,
+      "veto_rate": 0.0018181818181818182,
+      "kept_size": 1098
+    },
+    {
+      "date": "2026-05-26",
+      "pool_size": 1100,
+      "veto_count": 3,
+      "veto_rate": 0.0027272727272727275,
+      "kept_size": 1097
+    },
+    {
+      "date": "2026-05-27",
+      "pool_size": 1099,
+      "veto_count": 2,
+      "veto_rate": 0.0018198362147406734,
+      "kept_size": 1097
+    },
+    {
+      "date": "2026-05-28",
+      "pool_size": 1099,
+      "veto_count": 3,
+      "veto_rate": 0.00272975432211101,
+      "kept_size": 1096
+    },
+    {
+      "date": "2026-05-29",
+      "pool_size": 1099,
+      "veto_count": 2,
+      "veto_rate": 0.0018198362147406734,
+      "kept_size": 1097
+    },
+    {
+      "date": "2026-06-01",
+      "pool_size": 1096,
+      "veto_count": 1,
+      "veto_rate": 0.0009124087591240876,
+      "kept_size": 1095
+    },
+    {
+      "date": "2026-06-02",
+      "pool_size": 1094,
+      "veto_count": 1,
+      "veto_rate": 0.0009140767824497258,
+      "kept_size": 1093
+    },
+    {
+      "date": "2026-06-03",
+      "pool_size": 1093,
+      "veto_count": 2,
+      "veto_rate": 0.0018298261665141812,
+      "kept_size": 1091
+    },
+    {
+      "date": "2026-06-04",
+      "pool_size": 1092,
+      "veto_count": 2,
+      "veto_rate": 0.0018315018315018315,
+      "kept_size": 1090
+    },
+    {
+      "date": "2026-06-05",
+      "pool_size": 1092,
+      "veto_count": 1,
+      "veto_rate": 0.0009157509157509158,
+      "kept_size": 1091
+    },
+    {
+      "date": "2026-06-08",
+      "pool_size": 1092,
+      "veto_count": 3,
+      "veto_rate": 0.0027472527472527475,
+      "kept_size": 1089
+    },
+    {
+      "date": "2026-06-09",
+      "pool_size": 1092,
+      "veto_count": 2,
+      "veto_rate": 0.0018315018315018315,
+      "kept_size": 1090
+    },
+    {
+      "date": "2026-06-10",
+      "pool_size": 1092,
+      "veto_count": 2,
+      "veto_rate": 0.0018315018315018315,
+      "kept_size": 1090
+    },
+    {
+      "date": "2026-06-11",
+      "pool_size": 1091,
+      "veto_count": 4,
+      "veto_rate": 0.0036663611365719525,
+      "kept_size": 1087
+    },
+    {
+      "date": "2026-06-12",
+      "pool_size": 1091,
+      "veto_count": 4,
+      "veto_rate": 0.0036663611365719525,
+      "kept_size": 1087
+    },
+    {
+      "date": "2026-06-15",
+      "pool_size": 1091,
+      "veto_count": 4,
+      "veto_rate": 0.0036663611365719525,
+      "kept_size": 1087
+    },
+    {
+      "date": "2026-06-16",
+      "pool_size": 1089,
+      "veto_count": 4,
+      "veto_rate": 0.0036730945821854912,
+      "kept_size": 1085
+    },
+    {
+      "date": "2026-06-17",
+      "pool_size": 1089,
+      "veto_count": 4,
+      "veto_rate": 0.0036730945821854912,
+      "kept_size": 1085
+    },
+    {
+      "date": "2026-06-18",
+      "pool_size": 1089,
+      "veto_count": 2,
+      "veto_rate": 0.0018365472910927456,
+      "kept_size": 1087
+    },
+    {
+      "date": "2026-06-22",
+      "pool_size": 1088,
+      "veto_count": 3,
+      "veto_rate": 0.0027573529411764708,
+      "kept_size": 1085
+    },
+    {
+      "date": "2026-06-23",
+      "pool_size": 1087,
+      "veto_count": 4,
+      "veto_rate": 0.0036798528058877645,
+      "kept_size": 1083
+    },
+    {
+      "date": "2026-06-24",
+      "pool_size": 1086,
+      "veto_count": 4,
+      "veto_rate": 0.003683241252302026,
+      "kept_size": 1082
+    },
+    {
+      "date": "2026-06-25",
+      "pool_size": 1086,
+      "veto_count": 4,
+      "veto_rate": 0.003683241252302026,
+      "kept_size": 1082
+    },
+    {
+      "date": "2026-06-26",
+      "pool_size": 1085,
+      "veto_count": 4,
+      "veto_rate": 0.003686635944700461,
+      "kept_size": 1081
+    },
+    {
+      "date": "2026-06-29",
+      "pool_size": 1084,
+      "veto_count": 5,
+      "veto_rate": 0.004612546125461255,
+      "kept_size": 1079
+    },
+    {
+      "date": "2026-06-30",
+      "pool_size": 1084,
+      "veto_count": 5,
+      "veto_rate": 0.004612546125461255,
+      "kept_size": 1079
+    },
+    {
+      "date": "2026-07-01",
+      "pool_size": 1082,
+      "veto_count": 4,
+      "veto_rate": 0.0036968576709796672,
+      "kept_size": 1078
+    },
+    {
+      "date": "2026-07-02",
+      "pool_size": 1082,
+      "veto_count": 3,
+      "veto_rate": 0.0027726432532347504,
+      "kept_size": 1079
+    },
+    {
+      "date": "2026-07-06",
+      "pool_size": 1082,
+      "veto_count": 3,
+      "veto_rate": 0.0027726432532347504,
+      "kept_size": 1079
+    },
+    {
+      "date": "2026-07-07",
+      "pool_size": 1082,
+      "veto_count": 3,
+      "veto_rate": 0.0027726432532347504,
+      "kept_size": 1079
+    },
+    {
+      "date": "2026-07-08",
+      "pool_size": 1087,
+      "veto_count": 2,
+      "veto_rate": 0.0018399264029438822,
+      "kept_size": 1085
+    },
+    {
+      "date": "2026-07-09",
+      "pool_size": 1087,
+      "veto_count": 2,
+      "veto_rate": 0.0018399264029438822,
+      "kept_size": 1085
+    },
+    {
+      "date": "2026-07-10",
+      "pool_size": 1086,
+      "veto_count": 3,
+      "veto_rate": 0.0027624309392265192,
+      "kept_size": 1083
+    },
+    {
+      "date": "2026-07-13",
+      "pool_size": 1086,
+      "veto_count": 3,
+      "veto_rate": 0.0027624309392265192,
+      "kept_size": 1083
+    },
+    {
+      "date": "2026-07-14",
+      "pool_size": 1085,
+      "veto_count": 3,
+      "veto_rate": 0.0027649769585253456,
+      "kept_size": 1082
+    },
+    {
+      "date": "2026-07-15",
+      "pool_size": 1084,
+      "veto_count": 1,
+      "veto_rate": 0.0009225092250922509,
+      "kept_size": 1083
+    }
+  ],
+  "by_track_topn": [
+    {
+      "track": "ISOLADO",
+      "top_n": 10,
+      "max_weight_cap": 0.06,
+      "mean_veto_rate_daily": 0.0020334576895792707,
+      "g6_pass": true
+    },
+    {
+      "track": "ISOLADO",
+      "top_n": 12,
+      "max_weight_cap": 0.06,
+      "mean_veto_rate_daily": 0.0020334576895792707,
+      "g6_pass": true
+    },
+    {
+      "track": "ISOLADO",
+      "top_n": 15,
+      "max_weight_cap": 0.06,
+      "mean_veto_rate_daily": 0.0020334576895792707,
+      "g6_pass": true
+    },
+    {
+      "track": "ISOLADO",
+      "top_n": 20,
+      "max_weight_cap": 0.06,
+      "mean_veto_rate_daily": 0.0020334576895792707,
+      "g6_pass": true
+    },
+    {
+      "track": "ISOLADO",
+      "top_n": 25,
+      "max_weight_cap": 0.06,
+      "mean_veto_rate_daily": 0.0020334576895792707,
+      "g6_pass": true
+    },
+    {
+      "track": "ISOLADO",
+      "top_n": 30,
+      "max_weight_cap": 0.06,
+      "mean_veto_rate_daily": 0.0020334576895792707,
+      "g6_pass": true
+    },
+    {
+      "track": "COVARIADO",
+      "top_n": 10,
+      "max_weight_cap": 0.12,
+      "mean_veto_rate_daily": 0.0020334576895792707,
+      "g6_pass": true
+    },
+    {
+      "track": "COVARIADO",
+      "top_n": 12,
+      "max_weight_cap": 0.1,
+      "mean_veto_rate_daily": 0.0020334576895792707,
+      "g6_pass": true
+    },
+    {
+      "track": "COVARIADO",
+      "top_n": 15,
+      "max_weight_cap": 0.08,
+      "mean_veto_rate_daily": 0.0020334576895792707,
+      "g6_pass": true
+    },
+    {
+      "track": "COVARIADO",
+      "top_n": 20,
+      "max_weight_cap": 0.06,
+      "mean_veto_rate_daily": 0.0020334576895792707,
+      "g6_pass": true
+    },
+    {
+      "track": "COVARIADO",
+      "top_n": 25,
+      "max_weight_cap": 0.048,
+      "mean_veto_rate_daily": 0.0020334576895792707,
+      "g6_pass": true
+    },
+    {
+      "track": "COVARIADO",
+      "top_n": 30,
+      "max_weight_cap": 0.04,
+      "mean_veto_rate_daily": 0.0020334576895792707,
+      "g6_pass": true
+    }
+  ],
+  "g6_details": {
+    "mean_veto_rate": 0.0020334576895792707,
+    "n_days_pool_positive": 442,
+    "min_veto_rate": 0.0,
+    "max_veto_rate": 0.009337068160597572
+  }
+}

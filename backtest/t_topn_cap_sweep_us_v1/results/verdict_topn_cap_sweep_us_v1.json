@@ -1,0 +1,344 @@
+{
+  "task_id": "T-SDC-TOPN-CAP-SWEEP-US-V1",
+  "baseline_top_n": 20,
+  "tracks": {
+    "ISOLADO": {
+      "pairs": {
+        "ISOLADO_N20_vs_N10": {
+          "track": "ISOLADO",
+          "baseline_top_n": 20,
+          "candidate_top_n": 10,
+          "final_verdict": "INCONCLUSIVO",
+          "favored_side": "NONE",
+          "deltas_by_split": {
+            "HOLDOUT": {
+              "delta_sharpe_cost_adj": -0.31456086974843944,
+              "delta_cvar5": -0.01534254066180403
+            },
+            "SW1": {
+              "delta_sharpe_cost_adj": -0.6170625579532982,
+              "delta_cvar5": -0.023419474855465812
+            },
+            "SW2": {
+              "delta_sharpe_cost_adj": 0.21854781613447205,
+              "delta_cvar5": -0.00629489679097639
+            }
+          },
+          "holdout_materiality_ok": true,
+          "holdout_mass_ok": false,
+          "direction_ok_holdout_sw1_sw2": false,
+          "ic_sides": {
+            "HOLDOUT_sharpe": "MIX",
+            "HOLDOUT_cvar5": "NEG",
+            "SW1_sharpe": "MIX",
+            "SW1_cvar5": "NEG",
+            "SW2_sharpe": "MIX",
+            "SW2_cvar5": "MIX"
+          }
+        },
+        "ISOLADO_N20_vs_N12": {
+          "track": "ISOLADO",
+          "baseline_top_n": 20,
+          "candidate_top_n": 12,
+          "final_verdict": "INCONCLUSIVO",
+          "favored_side": "NONE",
+          "deltas_by_split": {
+            "HOLDOUT": {
+              "delta_sharpe_cost_adj": -0.14983330823217433,
+              "delta_cvar5": -0.0097281780887521
+            },
+            "SW1": {
+              "delta_sharpe_cost_adj": -0.5616492401318478,
+              "delta_cvar5": -0.015890388428859613
+            },
+            "SW2": {
+              "delta_sharpe_cost_adj": 0.5351600432712684,
+              "delta_cvar5": -0.003112845097282768
+            }
+          },
+          "holdout_materiality_ok": false,
+          "holdout_mass_ok": false,
+          "direction_ok_holdout_sw1_sw2": false,
+          "ic_sides": {
+            "HOLDOUT_sharpe": "MIX",
+            "HOLDOUT_cvar5": "NEG",
+            "SW1_sharpe": "MIX",
+            "SW1_cvar5": "NEG",
+            "SW2_sharpe": "MIX",
+            "SW2_cvar5": "MIX"
+          }
+        },
+        "ISOLADO_N20_vs_N15": {
+          "track": "ISOLADO",
+          "baseline_top_n": 20,
+          "candidate_top_n": 15,
+          "final_verdict": "INCONCLUSIVO",
+          "favored_side": "NONE",
+          "deltas_by_split": {
+            "HOLDOUT": {
+              "delta_sharpe_cost_adj": 0.027038816143197808,
+              "delta_cvar5": -0.00446178529529289
+            },
+            "SW1": {
+              "delta_sharpe_cost_adj": -0.12401294953029973,
+              "delta_cvar5": -0.007397640305449725
+            },
+            "SW2": {
+              "delta_sharpe_cost_adj": 0.27595448849168913,
+              "delta_cvar5": -0.00046230340755319677
+            }
+          },
+          "holdout_materiality_ok": false,
+          "holdout_mass_ok": false,
+          "direction_ok_holdout_sw1_sw2": false,
+          "ic_sides": {
+            "HOLDOUT_sharpe": "MIX",
+            "HOLDOUT_cvar5": "NEG",
+            "SW1_sharpe": "MIX",
+            "SW1_cvar5": "NEG",
+            "SW2_sharpe": "MIX",
+            "SW2_cvar5": "MIX"
+          }
+        },
+        "ISOLADO_N20_vs_N25": {
+          "track": "ISOLADO",
+          "baseline_top_n": 20,
+          "candidate_top_n": 25,
+          "final_verdict": "INCONCLUSIVO",
+          "favored_side": "NONE",
+          "deltas_by_split": {
+            "HOLDOUT": {
+              "delta_sharpe_cost_adj": -0.0652001349747422,
+              "delta_cvar5": 0.0016365629276966914
+            },
+            "SW1": {
+              "delta_sharpe_cost_adj": -0.17663753739876786,
+              "delta_cvar5": 0.0002002086974791581
+            },
+            "SW2": {
+              "delta_sharpe_cost_adj": 0.09504966962898154,
+              "delta_cvar5": 0.002496367625578297
+            }
+          },
+          "holdout_materiality_ok": false,
+          "holdout_mass_ok": false,
+          "direction_ok_holdout_sw1_sw2": false,
+          "ic_sides": {
+            "HOLDOUT_sharpe": "MIX",
+            "HOLDOUT_cvar5": "MIX",
+            "SW1_sharpe": "MIX",
+            "SW1_cvar5": "MIX",
+            "SW2_sharpe": "MIX",
+            "SW2_cvar5": "MIX"
+          }
+        },
+        "ISOLADO_N20_vs_N30": {
+          "track": "ISOLADO",
+          "baseline_top_n": 20,
+          "candidate_top_n": 30,
+          "final_verdict": "INCONCLUSIVO",
+          "favored_side": "NONE",
+          "deltas_by_split": {
+            "HOLDOUT": {
+              "delta_sharpe_cost_adj": 0.06473940449884341,
+              "delta_cvar5": 0.0015970410750379138
+            },
+            "SW1": {
+              "delta_sharpe_cost_adj": 0.11975373813712809,
+              "delta_cvar5": 0.000825248836183172
+            },
+            "SW2": {
+              "delta_sharpe_cost_adj": -0.011102828376996277,
+              "delta_cvar5": 0.0017339437591512921
+            }
+          },
+          "holdout_materiality_ok": false,
+          "holdout_mass_ok": false,
+          "direction_ok_holdout_sw1_sw2": false,
+          "ic_sides": {
+            "HOLDOUT_sharpe": "MIX",
+            "HOLDOUT_cvar5": "MIX",
+            "SW1_sharpe": "MIX",
+            "SW1_cvar5": "MIX",
+            "SW2_sharpe": "MIX",
+            "SW2_cvar5": "MIX"
+          }
+        }
+      },
+      "recommended_top_n": 20
+    },
+    "COVARIADO": {
+      "pairs": {
+        "COVARIADO_N20_vs_N10": {
+          "track": "COVARIADO",
+          "baseline_top_n": 20,
+          "candidate_top_n": 10,
+          "final_verdict": "INCONCLUSIVO",
+          "favored_side": "NONE",
+          "deltas_by_split": {
+            "HOLDOUT": {
+              "delta_sharpe_cost_adj": -0.23623986126498675,
+              "delta_cvar5": -0.017421745514738463
+            },
+            "SW1": {
+              "delta_sharpe_cost_adj": -0.5905738723787362,
+              "delta_cvar5": -0.02532190247743448
+            },
+            "SW2": {
+              "delta_sharpe_cost_adj": 0.37326061895557916,
+              "delta_cvar5": -0.00831961288186455
+            }
+          },
+          "holdout_materiality_ok": false,
+          "holdout_mass_ok": false,
+          "direction_ok_holdout_sw1_sw2": false,
+          "ic_sides": {
+            "HOLDOUT_sharpe": "MIX",
+            "HOLDOUT_cvar5": "NEG",
+            "SW1_sharpe": "MIX",
+            "SW1_cvar5": "NEG",
+            "SW2_sharpe": "MIX",
+            "SW2_cvar5": "NEG"
+          }
+        },
+        "COVARIADO_N20_vs_N12": {
+          "track": "COVARIADO",
+          "baseline_top_n": 20,
+          "candidate_top_n": 12,
+          "final_verdict": "INCONCLUSIVO",
+          "favored_side": "NONE",
+          "deltas_by_split": {
+            "HOLDOUT": {
+              "delta_sharpe_cost_adj": 0.0650350231006025,
+              "delta_cvar5": -0.012537369302982632
+            },
+            "SW1": {
+              "delta_sharpe_cost_adj": -0.11137968117255714,
+              "delta_cvar5": -0.016699272259512128
+            },
+            "SW2": {
+              "delta_sharpe_cost_adj": 0.36126244289851916,
+              "delta_cvar5": -0.0062582929282025065
+            }
+          },
+          "holdout_materiality_ok": false,
+          "holdout_mass_ok": false,
+          "direction_ok_holdout_sw1_sw2": false,
+          "ic_sides": {
+            "HOLDOUT_sharpe": "MIX",
+            "HOLDOUT_cvar5": "NEG",
+            "SW1_sharpe": "MIX",
+            "SW1_cvar5": "NEG",
+            "SW2_sharpe": "MIX",
+            "SW2_cvar5": "NEG"
+          }
+        },
+        "COVARIADO_N20_vs_N15": {
+          "track": "COVARIADO",
+          "baseline_top_n": 20,
+          "candidate_top_n": 15,
+          "final_verdict": "INCONCLUSIVO",
+          "favored_side": "NONE",
+          "deltas_by_split": {
+            "HOLDOUT": {
+              "delta_sharpe_cost_adj": 0.04170634020715158,
+              "delta_cvar5": -0.005996091208986497
+            },
+            "SW1": {
+              "delta_sharpe_cost_adj": -0.10481334232978146,
+              "delta_cvar5": -0.009491059040942197
+            },
+            "SW2": {
+              "delta_sharpe_cost_adj": 0.2800209259610569,
+              "delta_cvar5": -0.0025267976447133633
+            }
+          },
+          "holdout_materiality_ok": false,
+          "holdout_mass_ok": false,
+          "direction_ok_holdout_sw1_sw2": false,
+          "ic_sides": {
+            "HOLDOUT_sharpe": "MIX",
+            "HOLDOUT_cvar5": "NEG",
+            "SW1_sharpe": "MIX",
+            "SW1_cvar5": "NEG",
+            "SW2_sharpe": "MIX",
+            "SW2_cvar5": "MIX"
+          }
+        },
+        "COVARIADO_N20_vs_N25": {
+          "track": "COVARIADO",
+          "baseline_top_n": 20,
+          "candidate_top_n": 25,
+          "final_verdict": "INCONCLUSIVO",
+          "favored_side": "NONE",
+          "deltas_by_split": {
+            "HOLDOUT": {
+              "delta_sharpe_cost_adj": -0.050156388853619616,
+              "delta_cvar5": 0.0021825527803028474
+            },
+            "SW1": {
+              "delta_sharpe_cost_adj": -0.13966194310477276,
+              "delta_cvar5": 0.00036922802083778905
+            },
+            "SW2": {
+              "delta_sharpe_cost_adj": 0.08218396563932884,
+              "delta_cvar5": 0.003435578798221775
+            }
+          },
+          "holdout_materiality_ok": false,
+          "holdout_mass_ok": false,
+          "direction_ok_holdout_sw1_sw2": false,
+          "ic_sides": {
+            "HOLDOUT_sharpe": "MIX",
+            "HOLDOUT_cvar5": "MIX",
+            "SW1_sharpe": "MIX",
+            "SW1_cvar5": "MIX",
+            "SW2_sharpe": "MIX",
+            "SW2_cvar5": "MIX"
+          }
+        },
+        "COVARIADO_N20_vs_N30": {
+          "track": "COVARIADO",
+          "baseline_top_n": 20,
+          "candidate_top_n": 30,
+          "final_verdict": "INCONCLUSIVO",
+          "favored_side": "NONE",
+          "deltas_by_split": {
+            "HOLDOUT": {
+              "delta_sharpe_cost_adj": 0.0250381582285939,
+              "delta_cvar5": 0.0016180429476282399
+            },
+            "SW1": {
+              "delta_sharpe_cost_adj": 0.1453938121028786,
+              "delta_cvar5": 0.001194836352663417
+            },
+            "SW2": {
+              "delta_sharpe_cost_adj": -0.14412426378856402,
+              "delta_cvar5": 0.0016915602382064632
+            }
+          },
+          "holdout_materiality_ok": false,
+          "holdout_mass_ok": false,
+          "direction_ok_holdout_sw1_sw2": false,
+          "ic_sides": {
+            "HOLDOUT_sharpe": "MIX",
+            "HOLDOUT_cvar5": "MIX",
+            "SW1_sharpe": "MIX",
+            "SW1_cvar5": "MIX",
+            "SW2_sharpe": "MIX",
+            "SW2_cvar5": "MIX"
+          }
+        }
+      },
+      "recommended_top_n": 20
+    }
+  },
+  "criteria_file": "backtest/t_topn_cap_sweep_us_v1/decision_criterion_topn_cap_sweep_us_v1.json",
+  "dataset_manifest": "backtest/research_dataset_us_v2/manifest.json",
+  "freeze_asof": "2026-07-15",
+  "sanity_gates": "PASS",
+  "recommended_n_summary": {
+    "ISOLADO": 20,
+    "COVARIADO": 20
+  }
+}

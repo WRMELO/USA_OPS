@@ -1,0 +1,114 @@
+{
+  "task_id": "T-SDC-TOPN-CAP-SWEEP-US-V1",
+  "decision_ref": "PENDING-DECISION-LOG",
+  "hypothesis": "Existe configuracao de top_n diferente de 20 com evidencias de risco-retorno superiores ao baseline do winner no Forno US, e a conclusao deve separar explicitamente o efeito de N isolado do efeito de N co-variado com cap.",
+  "tracks": {
+    "ISOLADO": {
+      "description": "Varia top_n com max_weight_cap fixo em 0.06 (diagnostico de confundimento N x cap).",
+      "max_weight_cap_rule": "0.06 fixo",
+      "max_weight_cap_by_top_n": {
+        "10": 0.06,
+        "12": 0.06,
+        "15": 0.06,
+        "20": 0.06,
+        "25": 0.06,
+        "30": 0.06
+      }
+    },
+    "COVARIADO": {
+      "description": "Varia top_n e co-varia max_weight_cap para manter coerencia relativa com o winner.",
+      "max_weight_cap_rule": "round(1.2/top_n, 4)",
+      "max_weight_cap_by_top_n": {
+        "10": 0.12,
+        "12": 0.1,
+        "15": 0.08,
+        "20": 0.06,
+        "25": 0.048,
+        "30": 0.04
+      }
+    }
+  },
+  "top_n_grid": [10, 12, 15, 20, 25, 30],
+  "baseline_top_n": 20,
+  "fixed_params": {
+    "variant": "C4",
+    "rebalance_cadence": 10,
+    "buffer_k": 10,
+    "k_damp": 0.0,
+    "min_market_cap": 300000000.0,
+    "friction_one_way_bps": 2.5,
+    "settlement_days": 1,
+    "base_capital": 100000.0
+  },
+  "baseline_contract": {
+    "name": "C4+R-060",
+    "description": "Aplicar veto BandExp ∩ ret_62>=1.00 por pre-filtragem do pool de scores antes da selecao top_n.",
+    "rule_ref": "R-060"
+  },
+  "dataset": {
+    "path": "backtest/research_dataset_us_v2/",
+    "freeze_asof": "2026-07-15",
+    "decision_ref_freeze": "SALA D-110",
+    "required_hash_verification": true
+  },
+  "dataset_coverage_ceiling": {
+    "macro_date_min": "2024-07-11",
+    "scores_date_min": "2024-10-08",
+    "effective_simulation_start": "2024-10-08",
+    "source": "backtest/research_dataset_us_v2/manifest.json",
+    "note": "Pregoes entre macro_date_min e scores_date_min ficam com 0 tickers e 100% caixa por ausencia de sinal M3, nao por falha do motor."
+  },
+  "correction_of_prior_registration": {
+    "original_registered_at": "2026-07-24T10:42:00-03:00",
+    "reason": "A rodada inicial abortou em G2 e G4 nas 12 configuracoes antes de qualquer metrica/bootstrap/veredito. Causa-raiz: cobertura efetiva do dataset v2 menor do que a janela assumida (scores M3 so a partir de 2024-10-08) e calibracao original de G4 sem base empirica para o comportamento defensivo estrutural do C4. Esta correcao ocorre antes de qualquer metrica valida, portanto nao configura pos-hoc em R-048.",
+    "evidence_files": [
+      "backtest/t_topn_cap_sweep_us_v1/results/sanity_gates_report_topn_cap_sweep_us_v1.json",
+      "backtest/results/t018_ablation_summary.json",
+      "backtest/research_dataset_us_v2/manifest.json"
+    ]
+  },
+  "subwindows": {
+    "TRAIN": {
+      "start": null,
+      "end": null,
+      "note": "Indisponivel para inferencia nesta task; scores M3 do dataset v2 iniciam em 2024-10-08."
+    },
+    "HOLDOUT": {
+      "start": "2024-10-08",
+      "end": "2026-07-15",
+      "note": "Mantido como rotulo de compatibilidade; equivale a SW1+SW2 nesta task."
+    },
+    "SW1": {
+      "start": "2024-10-08",
+      "end": "2025-08-26"
+    },
+    "SW2": {
+      "start": "2025-08-27",
+      "end": "2026-07-15"
+    }
+  },
+  "bootstrap": {
+    "method": "cluster por dia",
+    "n_resamples": 2000,
+    "seed": 42,
+    "metrics": ["delta_cvar5", "delta_sharpe_cost_adj"]
+  },
+  "materiality_threshold": "abs(delta_sharpe_cost_adj_holdout)>=0.30 OU abs(delta_cvar5_holdout)>=0.02",
+  "verdict_tiers": {
+    "DOMINA_FORTE": "IC95 do delta inteiramente favoravel em HOLDOUT, SW1 e SW2 nas duas metricas. E o unico tier com forca para sustentar promocao para fluxo de mudanca de motor, em task separada.",
+    "FAVORECIDO_LADO": "Sem DOMINA_FORTE: massa bootstrap favoravel >=90% no HOLDOUT nas duas metricas, concordancia direcional em HOLDOUT/SW1/SW2 e materialidade acima do limiar pre-registrado.",
+    "INCONCLUSIVO": "Qualquer caso fora das condicoes anteriores."
+  },
+  "sanity_gates": {
+    "G1": "Calendario de rebalance sem ancora LIVE (proibido herdar rebalance_anchor_date do circuito operacional).",
+    "G2": "Caixa ocioso por configuracao: hard=max_run(cash_ratio>0.50 apos 30 primeiros pregoes)<=15; soft=media cash_ratio<=0.20 (apenas diagnostico).",
+    "G3": "Equity finito e >0 em 100% das linhas em todas as configuracoes.",
+    "G4": "Razao mean_tickers_rebalance/top_n por configuracao satisfaz hard: 0.60<=razao<=1.05; soft (nao abortante): razao>=0.75. Recalibrado com evidencia empirica de t018_ablation_summary.json (razao historica 0.81-0.92 para C4/cap=0.06) e do proprio dataset pos-correcao (razao 0.735-0.789 nas 12 configuracoes).",
+    "G5": "Hashes de canonical_us.parquet, macro_us.parquet e scores_m3_us.parquet conferem com manifest.json.",
+    "G6": "Taxa media diaria de veto R-060 sobre pool elegivel e >0 e <=0.30.",
+    "G7": "Diagnostico de concentracao: registrar max_concentration_pct e cap_effectively_binding; nao abortante."
+  },
+  "post_hoc_prohibition": true,
+  "registered_at": "2026-07-24T11:12:00-03:00",
+  "registered_before_execution": true
+}

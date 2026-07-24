@@ -1,0 +1,409 @@
+{
+  "task_id": "T-SDC-TOPN-CAP-SWEEP-US-V1",
+  "overall_status": "PASS",
+  "hard_gate_fail": false,
+  "gates": [
+    {
+      "gate": "G1",
+      "status": "PASS",
+      "hard_gate": true,
+      "note": "Calendario de rebalance gerado internamente por run_variant sem leitura de ancora LIVE."
+    },
+    {
+      "gate": "G2",
+      "status": "PASS",
+      "hard_gate": true,
+      "failures": [],
+      "details": [
+        {
+          "track": "COVARIADO",
+          "top_n": 10,
+          "max_run_cash_ratio_gt_50": 9,
+          "mean_cash_ratio": 0.31114600357799016,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 12,
+          "max_run_cash_ratio_gt_50": 9,
+          "mean_cash_ratio": 0.30468954295385053,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 15,
+          "max_run_cash_ratio_gt_50": 9,
+          "mean_cash_ratio": 0.30181645664633155,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 20,
+          "max_run_cash_ratio_gt_50": 9,
+          "mean_cash_ratio": 0.29128683683815154,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 25,
+          "max_run_cash_ratio_gt_50": 9,
+          "mean_cash_ratio": 0.2883831824988311,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 30,
+          "max_run_cash_ratio_gt_50": 9,
+          "mean_cash_ratio": 0.27992085184958254,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 10,
+          "max_run_cash_ratio_gt_50": 9,
+          "mean_cash_ratio": 0.366943871440207,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 12,
+          "max_run_cash_ratio_gt_50": 9,
+          "mean_cash_ratio": 0.3476911489053737,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 15,
+          "max_run_cash_ratio_gt_50": 9,
+          "mean_cash_ratio": 0.32131850544415924,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 20,
+          "max_run_cash_ratio_gt_50": 9,
+          "mean_cash_ratio": 0.29128683683815154,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 25,
+          "max_run_cash_ratio_gt_50": 9,
+          "mean_cash_ratio": 0.28241036450654244,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 30,
+          "max_run_cash_ratio_gt_50": 9,
+          "mean_cash_ratio": 0.27446159957449706,
+          "hard_pass": true,
+          "soft_pass": false
+        }
+      ]
+    },
+    {
+      "gate": "G3",
+      "status": "PASS",
+      "hard_gate": true,
+      "failures": [],
+      "details": [
+        {
+          "track": "COVARIADO",
+          "top_n": 10,
+          "n_bad_equity_rows": 0
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 12,
+          "n_bad_equity_rows": 0
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 15,
+          "n_bad_equity_rows": 0
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 20,
+          "n_bad_equity_rows": 0
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 25,
+          "n_bad_equity_rows": 0
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 30,
+          "n_bad_equity_rows": 0
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 10,
+          "n_bad_equity_rows": 0
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 12,
+          "n_bad_equity_rows": 0
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 15,
+          "n_bad_equity_rows": 0
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 20,
+          "n_bad_equity_rows": 0
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 25,
+          "n_bad_equity_rows": 0
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 30,
+          "n_bad_equity_rows": 0
+        }
+      ]
+    },
+    {
+      "gate": "G4",
+      "status": "PASS",
+      "hard_gate": true,
+      "failures": [],
+      "details": [
+        {
+          "track": "COVARIADO",
+          "top_n": 10,
+          "mean_tickers_rebalance": 7.886363636363637,
+          "ratio_to_top_n": 0.7886363636363637,
+          "hard_pass": true,
+          "soft_pass": true
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 12,
+          "mean_tickers_rebalance": 9.113636363636363,
+          "ratio_to_top_n": 0.7594696969696969,
+          "hard_pass": true,
+          "soft_pass": true
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 15,
+          "mean_tickers_rebalance": 11.431818181818182,
+          "ratio_to_top_n": 0.7621212121212121,
+          "hard_pass": true,
+          "soft_pass": true
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 20,
+          "mean_tickers_rebalance": 15.340909090909092,
+          "ratio_to_top_n": 0.7670454545454546,
+          "hard_pass": true,
+          "soft_pass": true
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 25,
+          "mean_tickers_rebalance": 18.613636363636363,
+          "ratio_to_top_n": 0.7445454545454545,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 30,
+          "mean_tickers_rebalance": 22.704545454545453,
+          "ratio_to_top_n": 0.7568181818181817,
+          "hard_pass": true,
+          "soft_pass": true
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 10,
+          "mean_tickers_rebalance": 7.659090909090909,
+          "ratio_to_top_n": 0.7659090909090909,
+          "hard_pass": true,
+          "soft_pass": true
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 12,
+          "mean_tickers_rebalance": 9.022727272727273,
+          "ratio_to_top_n": 0.7518939393939394,
+          "hard_pass": true,
+          "soft_pass": true
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 15,
+          "mean_tickers_rebalance": 11.295454545454545,
+          "ratio_to_top_n": 0.753030303030303,
+          "hard_pass": true,
+          "soft_pass": true
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 20,
+          "mean_tickers_rebalance": 15.340909090909092,
+          "ratio_to_top_n": 0.7670454545454546,
+          "hard_pass": true,
+          "soft_pass": true
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 25,
+          "mean_tickers_rebalance": 18.386363636363637,
+          "ratio_to_top_n": 0.7354545454545455,
+          "hard_pass": true,
+          "soft_pass": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 30,
+          "mean_tickers_rebalance": 22.113636363636363,
+          "ratio_to_top_n": 0.7371212121212121,
+          "hard_pass": true,
+          "soft_pass": false
+        }
+      ]
+    },
+    {
+      "gate": "G5",
+      "status": "PASS",
+      "hard_gate": true,
+      "note": "Hashes conferidos com manifest.json antes da simulacao."
+    },
+    {
+      "gate": "G6",
+      "status": "PASS",
+      "hard_gate": true,
+      "details": {
+        "mean_veto_rate": 0.0020334576895792707,
+        "n_days_pool_positive": 442,
+        "min_veto_rate": 0.0,
+        "max_veto_rate": 0.009337068160597572
+      }
+    },
+    {
+      "gate": "G7",
+      "status": "INFO",
+      "hard_gate": false,
+      "details": [
+        {
+          "track": "COVARIADO",
+          "top_n": 10,
+          "max_weight_cap": 0.12,
+          "max_concentration": 0.6111912793495491,
+          "max_concentration_pct": 61.11912793495491,
+          "cap_effectively_binding": false
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 12,
+          "max_weight_cap": 0.1,
+          "max_concentration": 0.5617703637832255,
+          "max_concentration_pct": 56.177036378322555,
+          "cap_effectively_binding": false
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 15,
+          "max_weight_cap": 0.08,
+          "max_concentration": 0.5065190194896481,
+          "max_concentration_pct": 50.651901948964806,
+          "cap_effectively_binding": false
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 20,
+          "max_weight_cap": 0.06,
+          "max_concentration": 0.42883037153853126,
+          "max_concentration_pct": 42.883037153853124,
+          "cap_effectively_binding": false
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 25,
+          "max_weight_cap": 0.048,
+          "max_concentration": 0.3783044209965926,
+          "max_concentration_pct": 37.83044209965926,
+          "cap_effectively_binding": false
+        },
+        {
+          "track": "COVARIADO",
+          "top_n": 30,
+          "max_weight_cap": 0.04,
+          "max_concentration": 0.3358035131859004,
+          "max_concentration_pct": 33.58035131859004,
+          "cap_effectively_binding": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 10,
+          "max_weight_cap": 0.06,
+          "max_concentration": 0.6113343963553597,
+          "max_concentration_pct": 61.13343963553597,
+          "cap_effectively_binding": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 12,
+          "max_weight_cap": 0.06,
+          "max_concentration": 0.5612216572366555,
+          "max_concentration_pct": 56.12216572366555,
+          "cap_effectively_binding": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 15,
+          "max_weight_cap": 0.06,
+          "max_concentration": 0.5065222995333118,
+          "max_concentration_pct": 50.65222995333119,
+          "cap_effectively_binding": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 20,
+          "max_weight_cap": 0.06,
+          "max_concentration": 0.42883037153853126,
+          "max_concentration_pct": 42.883037153853124,
+          "cap_effectively_binding": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 25,
+          "max_weight_cap": 0.06,
+          "max_concentration": 0.37856061755688963,
+          "max_concentration_pct": 37.85606175568896,
+          "cap_effectively_binding": false
+        },
+        {
+          "track": "ISOLADO",
+          "top_n": 30,
+          "max_weight_cap": 0.06,
+          "max_concentration": 0.3365197366632737,
+          "max_concentration_pct": 33.65197366632737,
+          "cap_effectively_binding": false
+        }
+      ]
+    }
+  ]
+}
