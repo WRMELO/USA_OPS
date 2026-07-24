@@ -85,5 +85,59 @@
   "notes": [
     "Dataset congelado para reprodutibilidade de backtests US.",
     "Fonte original: SSOT vivo no momento do freeze; insumos historicos do selamento de marco nao sao recuperaveis por git."
-  ]
+  ],
+  "fullhistory_addendum": {
+    "dataset_version_addendum": "v2-fullhistory-addendum-1",
+    "created_at_utc": "2026-07-24T15:42:37.254667+00:00",
+    "source_canonical_sha256": "d108c949576f4d7a8b7e718e355719fddf25826e5f606b54693a51e1ac706bd9",
+    "generation_commands": {
+      "scores_fullhistory": "./.venv/bin/python scripts/t012_compute_scores_m3_us.py --workspace /home/wilson/USA_OPS --canonical-path backtest/research_dataset_us_v2/canonical_us.parquet --out-path backtest/research_dataset_us_v2/scores_m3_us_fullhistory.parquet --report-path backtest/research_dataset_us_v2/t012_scores_fullhistory_report.json",
+      "macro_fullhistory": "./.venv/bin/python scripts/t011_ingest_macro_us_v2.py --workspace /home/wilson/USA_OPS --in-trading-calendar backtest/research_dataset_us_v2/canonical_us.parquet --out-macro-ssot backtest/research_dataset_us_v2/macro_us_fullhistory.parquet --out-macro-features backtest/research_dataset_us_v2/macro_features_us_fullhistory.parquet --out-report backtest/research_dataset_us_v2/t011_macro_fullhistory_report.json"
+    },
+    "files": {
+      "scores_m3_us_fullhistory.parquet": {
+        "sha256": "a2db73fada4dc0b5788a3b6c59c082c9d6ccc69667caa548351ecebf2115f1d8",
+        "size_bytes": 125893120,
+        "n_rows": 2079149,
+        "date_min": "2021-04-05",
+        "date_max": "2026-07-15",
+        "n_tickers": 1962
+      },
+      "macro_us_fullhistory.parquet": {
+        "sha256": "13d59393fe3f23e07093755e8f6dae592658311b6c95d0658029083bec2a9467",
+        "size_bytes": 43534,
+        "n_rows": 1388,
+        "date_min": "2021-01-04",
+        "date_max": "2026-07-15"
+      },
+      "macro_features_us_fullhistory.parquet": {
+        "sha256": "1d6b2192a859b3bb70f63266694426f236c877f9d12d7e8ccf2a8f215965d23e",
+        "size_bytes": 141428,
+        "n_rows": 1388,
+        "date_min": "2021-01-04",
+        "date_max": "2026-07-15"
+      },
+      "t012_scores_fullhistory_report.json": {
+        "sha256": "f092c4502b5ada8b645527a8395c969c91187f4e54a2d20ab1448bb993667f3f",
+        "size_bytes": 9722
+      },
+      "t011_macro_fullhistory_report.json": {
+        "sha256": "41596128084d5872185be5a7f1a33d55b60c89db55b8548d581be090a36cb258",
+        "size_bytes": 5939
+      },
+      "parity_fullhistory_report.json": {
+        "sha256": "7d8bb6fbf0f8ebada71c19139019ea0b9c2a2b99ea5aab0c6083f7ac632d9dcc",
+        "size_bytes": 974
+      }
+    },
+    "parity_check_summary": {
+      "scores_overlap_days": 442,
+      "spearman_mean": 0.9999900440653077,
+      "spearman_min": 0.9997461957577395,
+      "top20_intersection_mean": 19.638009049773757,
+      "macro_overlap_days": 504,
+      "fed_funds_identical_pct": 100.0,
+      "overall_pass": true
+    }
+  }
 }

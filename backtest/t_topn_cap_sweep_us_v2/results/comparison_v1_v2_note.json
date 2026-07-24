@@ -1,0 +1,30 @@
+{
+  "v1_days": 442,
+  "v2_days": 1326,
+  "days_ratio_v2_over_v1": 3.0,
+  "v1_recommended": {
+    "ISOLADO": 20,
+    "COVARIADO": 20
+  },
+  "v2_recommended": {
+    "ISOLADO": 20,
+    "COVARIADO": 20
+  },
+  "v1_verdict_counts": {
+    "ISOLADO": {
+      "INCONCLUSIVO": 5
+    },
+    "COVARIADO": {
+      "INCONCLUSIVO": 5
+    }
+  },
+  "v2_verdict_counts": {
+    "ISOLADO": {
+      "INCONCLUSIVO": 5
+    },
+    "COVARIADO": {
+      "FAVORECIDO_N20": 1,
+      "INCONCLUSIVO": 4
+    }
+  }
+}

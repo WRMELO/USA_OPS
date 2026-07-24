@@ -1,0 +1,35 @@
+{
+  "score_overlap": {
+    "n_dates_overlap": 442,
+    "date_min_overlap": "2024-10-08",
+    "date_max_overlap": "2026-07-15",
+    "spearman_mean": 0.9999900440653077,
+    "spearman_min": 0.9997461957577395,
+    "top20_intersection_mean": 19.638009049773757,
+    "thresholds": {
+      "spearman_mean_min": 0.999,
+      "top20_intersection_mean_min": 18.0
+    },
+    "pass": true
+  },
+  "macro_overlap": {
+    "n_dates_overlap": 504,
+    "date_min_overlap": "2024-07-11",
+    "date_max_overlap": "2026-07-15",
+    "fed_funds_identical_pct": 100.0,
+    "max_abs_diff": 0.0,
+    "thresholds": {
+      "fed_funds_identical_pct": 100.0
+    },
+    "pass": true
+  },
+  "coverage": {
+    "scores_fullhistory_date_min": "2021-04-05",
+    "scores_fullhistory_date_max": "2026-07-15",
+    "scores_fullhistory_rows": 2079149,
+    "macro_fullhistory_date_min": "2021-01-04",
+    "macro_fullhistory_date_max": "2026-07-15",
+    "macro_fullhistory_rows": 1388
+  },
+  "overall_pass": true
+}

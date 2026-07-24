@@ -1,0 +1,175 @@
+{
+  "task_id": "T-011v2",
+  "decision_ref": "D-007",
+  "generated_at": "2026-07-24T15:41:46.264468+00:00",
+  "inputs": {
+    "trading_calendar_path": "/home/wilson/USA_OPS/backtest/research_dataset_us_v2/canonical_us.parquet",
+    "fred_series": [
+      "vix_close",
+      "usd_index_broad",
+      "ust_10y_yield",
+      "ust_2y_yield",
+      "fed_funds_rate",
+      "hy_oas",
+      "ig_oas"
+    ],
+    "sha256_inputs": {
+      "trading_calendar_source": "d108c949576f4d7a8b7e718e355719fddf25826e5f606b54693a51e1ac706bd9"
+    }
+  },
+  "counts": {
+    "calendar_dates": 1388,
+    "outer_merged_dates": 3126,
+    "macro_rows": 1388,
+    "features_rows": 1388,
+    "features_cols_count": 23
+  },
+  "missing": {
+    "before_ffill": {
+      "vix_close": 944,
+      "usd_index_broad": 995,
+      "ust_10y_yield": 988,
+      "ust_2y_yield": 988,
+      "fed_funds_rate": 1,
+      "hy_oas": 2339,
+      "ig_oas": 2340
+    },
+    "after_ffill": {
+      "vix_close": 1,
+      "usd_index_broad": 1,
+      "ust_10y_yield": 1,
+      "ust_2y_yield": 1,
+      "fed_funds_rate": 0,
+      "hy_oas": 2031,
+      "ig_oas": 2031
+    }
+  },
+  "coverage": {
+    "calendar_date_min": "2021-01-04",
+    "calendar_date_max": "2026-07-15",
+    "features_date_max": "2026-07-15"
+  },
+  "gates": {
+    "macro_last_row_no_nulls": true,
+    "features_shift1_first_row_all_nulls": true,
+    "features_date_max_gte_calendar_date_max_minus_1d": true
+  },
+  "stagnation_warnings": [],
+  "outputs": {
+    "macro_us_path": "/home/wilson/USA_OPS/backtest/research_dataset_us_v2/macro_us_fullhistory.parquet",
+    "macro_features_path": "/home/wilson/USA_OPS/backtest/research_dataset_us_v2/macro_features_us_fullhistory.parquet",
+    "macro_us_sha256": "13d59393fe3f23e07093755e8f6dae592658311b6c95d0658029083bec2a9467",
+    "macro_features_sha256": "1d6b2192a859b3bb70f63266694426f236c877f9d12d7e8ccf2a8f215965d23e"
+  },
+  "sample": {
+    "macro_head": [
+      {
+        "date": "2021-01-04 00:00:00",
+        "vix_close": 26.97,
+        "usd_index_broad": 111.2075,
+        "ust_10y_yield": 0.93,
+        "ust_2y_yield": 0.11,
+        "fed_funds_rate": 0.09,
+        "hy_oas": NaN,
+        "ig_oas": NaN
+      },
+      {
+        "date": "2021-01-05 00:00:00",
+        "vix_close": 25.34,
+        "usd_index_broad": 110.9574,
+        "ust_10y_yield": 0.96,
+        "ust_2y_yield": 0.13,
+        "fed_funds_rate": 0.09,
+        "hy_oas": NaN,
+        "ig_oas": NaN
+      },
+      {
+        "date": "2021-01-06 00:00:00",
+        "vix_close": 25.07,
+        "usd_index_broad": 110.8502,
+        "ust_10y_yield": 1.04,
+        "ust_2y_yield": 0.14,
+        "fed_funds_rate": 0.09,
+        "hy_oas": NaN,
+        "ig_oas": NaN
+      }
+    ],
+    "features_head": [
+      {
+        "date": "2021-01-04 00:00:00",
+        "feature_vix_close_level": NaN,
+        "feature_vix_close_diff_1d": NaN,
+        "feature_vix_close_pct_1d": NaN,
+        "feature_usd_index_broad_level": NaN,
+        "feature_usd_index_broad_diff_1d": NaN,
+        "feature_usd_index_broad_pct_1d": NaN,
+        "feature_ust_10y_yield_level": NaN,
+        "feature_ust_10y_yield_diff_1d": NaN,
+        "feature_ust_10y_yield_pct_1d": NaN,
+        "feature_ust_2y_yield_level": NaN,
+        "feature_ust_2y_yield_diff_1d": NaN,
+        "feature_ust_2y_yield_pct_1d": NaN,
+        "feature_fed_funds_rate_level": NaN,
+        "feature_fed_funds_rate_diff_1d": NaN,
+        "feature_fed_funds_rate_pct_1d": NaN,
+        "feature_hy_oas_level": NaN,
+        "feature_hy_oas_diff_1d": NaN,
+        "feature_hy_oas_pct_1d": NaN,
+        "feature_ig_oas_level": NaN,
+        "feature_ig_oas_diff_1d": NaN,
+        "feature_ig_oas_pct_1d": NaN,
+        "feature_timestamp_cutoff": "2021-01-03 23:59:59+00:00"
+      },
+      {
+        "date": "2021-01-05 00:00:00",
+        "feature_vix_close_level": 26.97,
+        "feature_vix_close_diff_1d": NaN,
+        "feature_vix_close_pct_1d": NaN,
+        "feature_usd_index_broad_level": 111.2075,
+        "feature_usd_index_broad_diff_1d": NaN,
+        "feature_usd_index_broad_pct_1d": NaN,
+        "feature_ust_10y_yield_level": 0.93,
+        "feature_ust_10y_yield_diff_1d": NaN,
+        "feature_ust_10y_yield_pct_1d": NaN,
+        "feature_ust_2y_yield_level": 0.11,
+        "feature_ust_2y_yield_diff_1d": NaN,
+        "feature_ust_2y_yield_pct_1d": NaN,
+        "feature_fed_funds_rate_level": 0.09,
+        "feature_fed_funds_rate_diff_1d": NaN,
+        "feature_fed_funds_rate_pct_1d": NaN,
+        "feature_hy_oas_level": NaN,
+        "feature_hy_oas_diff_1d": NaN,
+        "feature_hy_oas_pct_1d": NaN,
+        "feature_ig_oas_level": NaN,
+        "feature_ig_oas_diff_1d": NaN,
+        "feature_ig_oas_pct_1d": NaN,
+        "feature_timestamp_cutoff": "2021-01-04 23:59:59+00:00"
+      },
+      {
+        "date": "2021-01-06 00:00:00",
+        "feature_vix_close_level": 25.34,
+        "feature_vix_close_diff_1d": -1.629999999999999,
+        "feature_vix_close_pct_1d": -0.060437523173896834,
+        "feature_usd_index_broad_level": 110.9574,
+        "feature_usd_index_broad_diff_1d": -0.2500999999999891,
+        "feature_usd_index_broad_pct_1d": -0.002248949036710579,
+        "feature_ust_10y_yield_level": 0.96,
+        "feature_ust_10y_yield_diff_1d": 0.029999999999999916,
+        "feature_ust_10y_yield_pct_1d": 0.032258064516129004,
+        "feature_ust_2y_yield_level": 0.13,
+        "feature_ust_2y_yield_diff_1d": 0.020000000000000004,
+        "feature_ust_2y_yield_pct_1d": 0.18181818181818188,
+        "feature_fed_funds_rate_level": 0.09,
+        "feature_fed_funds_rate_diff_1d": 0.0,
+        "feature_fed_funds_rate_pct_1d": 0.0,
+        "feature_hy_oas_level": NaN,
+        "feature_hy_oas_diff_1d": NaN,
+        "feature_hy_oas_pct_1d": NaN,
+        "feature_ig_oas_level": NaN,
+        "feature_ig_oas_diff_1d": NaN,
+        "feature_ig_oas_pct_1d": NaN,
+        "feature_timestamp_cutoff": "2021-01-05 23:59:59+00:00"
+      }
+    ]
+  }
+}
