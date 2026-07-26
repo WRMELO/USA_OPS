@@ -25,6 +25,7 @@ from pipeline.ledger import (
 )
 from lib.trading_calendar import sessions_in_range
 PROJECT_START = date(2026, 3, 19)
+_UNLIMITED_CASH_PROBE = 10**12
 
 
 class Lot:
@@ -43,6 +44,29 @@ def _read_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _pending_rebalance_buy_path() -> Path:
+    return ROOT / "data" / "daily" / "pending_rebalance_buy.json"
+
+
+def _load_pending_rebalance_buy_plan() -> dict[str, Any] | None:
+    payload = _read_json(_pending_rebalance_buy_path())
+    if isinstance(payload, dict) and payload:
+        return payload
+    return None
+
+
+def _save_pending_rebalance_buy_plan(plan: dict[str, Any]) -> None:
+    path = _pending_rebalance_buy_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _clear_pending_rebalance_buy_plan() -> None:
+    path = _pending_rebalance_buy_path()
+    if path.exists():
+        path.unlink()
 
 
 def _safe_float(v: Any, default: float = 0.0) -> float:
@@ -1115,20 +1139,45 @@ def compute_dryrun_autosave_operations(exec_day: date) -> dict[str, Any]:
         )
 
     operations: list[dict[str, Any]] = []
+    pending_sales_raw = ctx.get("pending_sales", [])
+    cash_transfers: list[dict[str, Any]] = []
+    if isinstance(pending_sales_raw, list):
+        for row in pending_sales_raw:
+            if not isinstance(row, dict):
+                continue
+            pending_value = _safe_float(row.get("pendente", 0.0), 0.0)
+            if pending_value <= 0.50:
+                continue
+            ref_id = str(row.get("ref", row.get("sell_id", ""))).strip()
+            if not ref_id:
+                continue
+            cash_transfers.append({"value": round(pending_value, 2), "note": ref_id})
+
+    cash_free_today = _safe_float(ctx.get("cash_free", ctx.get("cash_free_prev", 0.0)), 0.0) + sum(
+        _safe_float(item.get("value", 0.0), 0.0) for item in cash_transfers
+    )
+    holdings_base = {
+        str(tk).upper().strip(): _safe_int(qty, 0)
+        for tk, qty in ctx.get("holdings_qty", {}).items()
+        if str(tk).strip()
+    }
+    pending_plan = _load_pending_rebalance_buy_plan()
+
     if bool(decision.get("is_rebalance_day", False)):
-        holdings_after_sell = {
-            str(tk).upper().strip(): _safe_int(qty, 0)
-            for tk, qty in ctx.get("holdings_qty", {}).items()
-            if str(tk).strip()
-        }
+        if pending_plan:
+            source_day = str(pending_plan.get("source_decision_exec_day", "")).strip() or "desconhecido"
+            raise RuntimeError(
+                "Autosave: plano de compra pendente de "
+                f"{source_day} ainda nao concluido; novo rebalance em {exec_day.isoformat()} bloqueado (R-018)."
+            )
+
+        holdings_after_sell = dict(holdings_base)
         rebalance_sells = _build_rebalance_sell_suggestions(
             decision=decision,
             holdings_qty=holdings_after_sell,
             prices_d1=prices_all,
             total_ativo=total_ativo,
         )
-
-        sells_value = 0.0
         for s in rebalance_sells:
             tk = str(s.get("ticker", "")).upper().strip()
             qty_sell = _safe_int(s.get("qty_sell", 0), 0)
@@ -1141,33 +1190,107 @@ def compute_dryrun_autosave_operations(exec_day: date) -> dict[str, Any]:
                 continue
             holdings_after_sell[tk] = qty_before - qty_exec
             operations.append({"type": "VENDA", "ticker": tk, "qtd": qty_exec, "preco": px})
-            sells_value += qty_exec * px
 
-        cash_available = (
-            _safe_float(ctx.get("cash_free", ctx.get("cash_free_prev", 0.0)), 0.0)
-            + _safe_float(ctx.get("cash_acc", ctx.get("cash_accounting_prev", 0.0)), 0.0)
-            + sells_value
-        )
-        rebalance_buys = _build_rebalance_buy_suggestions(
-            decision=decision,
-            holdings_qty=holdings_after_sell,
-            prices_d1=prices_all,
-            total_ativo=total_ativo,
-            cash_available=cash_available,
-        )
-        for b in rebalance_buys:
-            tk = str(b.get("ticker", "")).upper().strip()
-            qty_buy = _safe_int(b.get("qty_buy", 0), 0)
-            px = _safe_float(b.get("close_d1", prices_all.get(tk, 0.0)), 0.0)
-            if not tk or qty_buy <= 0 or px <= 0:
-                continue
-            operations.append({"type": "COMPRA", "ticker": tk, "qtd": qty_buy, "preco": px})
+        selected_tickers = [str(tk).upper().strip() for tk in decision.get("selected_tickers", []) if str(tk).strip()]
+        target_weights_raw = decision.get("target_weights", {})
+        target_weights = {}
+        if isinstance(target_weights_raw, dict):
+            target_weights = {
+                str(k).upper().strip(): _safe_float(v, 0.0)
+                for k, v in target_weights_raw.items()
+                if str(k).strip()
+            }
+        ranking_rows = decision.get("operational_ranking", [])
+        ranking_norm: list[dict[str, Any]] = []
+        if isinstance(ranking_rows, list):
+            for row in ranking_rows:
+                if not isinstance(row, dict):
+                    continue
+                tk = str(row.get("ticker", "")).upper().strip()
+                if not tk:
+                    continue
+                row_copy = dict(row)
+                row_copy["ticker"] = tk
+                ranking_norm.append(row_copy)
+
+        plan = {
+            "source_decision_exec_day": exec_day.isoformat(),
+            "source_market_day": d1.isoformat(),
+            "selected_tickers": selected_tickers,
+            "target_weights": target_weights,
+            "operational_ranking": ranking_norm,
+            "total_ativo_ref": _safe_float(total_ativo, 0.0),
+            "created_at": datetime.now(tz=UTC).isoformat(),
+        }
+        _save_pending_rebalance_buy_plan(plan)
+        pending_plan = plan
+
+    if pending_plan:
+        source_exec_day = str(pending_plan.get("source_decision_exec_day", "")).strip()
+        source_exec_date: date | None = None
+        if source_exec_day:
+            try:
+                source_exec_date = date.fromisoformat(source_exec_day)
+            except ValueError:
+                source_exec_date = None
+
+        if source_exec_date is not None and source_exec_date < exec_day and cash_free_today > 0:
+            plan_selected = [str(tk).upper().strip() for tk in pending_plan.get("selected_tickers", []) if str(tk).strip()]
+            plan_target_weights_raw = pending_plan.get("target_weights", {})
+            plan_target_weights: dict[str, float] = {}
+            if isinstance(plan_target_weights_raw, dict):
+                plan_target_weights = {
+                    str(k).upper().strip(): _safe_float(v, 0.0)
+                    for k, v in plan_target_weights_raw.items()
+                    if str(k).strip()
+                }
+            plan_ranking = pending_plan.get("operational_ranking", [])
+            if not isinstance(plan_ranking, list):
+                plan_ranking = []
+            if plan_selected and plan_target_weights:
+                plan_tickers = list(dict.fromkeys(plan_selected))
+                prices_plan = get_latest_prices(plan_tickers, as_of_day=d1)
+                prices_buy = {**ctx.get("prices_d1", {}), **prices_plan}
+                total_ativo_ref = _safe_float(pending_plan.get("total_ativo_ref", total_ativo), total_ativo)
+                fake_decision = {
+                    "is_rebalance_day": True,
+                    "selected_tickers": plan_selected,
+                    "target_weights": plan_target_weights,
+                    "operational_ranking": plan_ranking,
+                }
+                holdings_for_buy = dict(holdings_base)
+                rebalance_buys = _build_rebalance_buy_suggestions(
+                    decision=fake_decision,
+                    holdings_qty=holdings_for_buy,
+                    prices_d1=prices_buy,
+                    total_ativo=total_ativo_ref,
+                    cash_available=cash_free_today,
+                )
+                for b in rebalance_buys:
+                    tk = str(b.get("ticker", "")).upper().strip()
+                    qty_buy = _safe_int(b.get("qty_buy", 0), 0)
+                    px = _safe_float(b.get("close_d1", prices_buy.get(tk, 0.0)), 0.0)
+                    if not tk or qty_buy <= 0 or px <= 0:
+                        continue
+                    operations.append({"type": "COMPRA", "ticker": tk, "qtd": qty_buy, "preco": px})
+                    holdings_for_buy[tk] = _safe_int(holdings_for_buy.get(tk, 0), 0) + qty_buy
+
+                remaining_probe = _build_rebalance_buy_suggestions(
+                    decision=fake_decision,
+                    holdings_qty=holdings_for_buy,
+                    prices_d1=prices_buy,
+                    total_ativo=total_ativo_ref,
+                    cash_available=_UNLIMITED_CASH_PROBE,
+                )
+                if not remaining_probe:
+                    _clear_pending_rebalance_buy_plan()
 
     return {
         "exec_day": exec_day.isoformat(),
         "market_day": d1.isoformat(),
         "trade_day": trade_day.isoformat(),
         "operations": operations,
+        "cash_transfers": cash_transfers,
     }
 
 

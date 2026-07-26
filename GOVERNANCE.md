@@ -324,6 +324,75 @@ concluida em D-138 e esta detalhada em §6.12.
 
 Ref: SALA D-112, SALA D-114, USA D-137, USA D-138, R-049, R-050.
 
+### 6.11.1 Correcao estrutural do autosave dry-run US (D-163)
+
+A partir de D-163, o contrato do autosave dry-run US e corrigido para refletir
+explicitamente a sequencia operacional sem look-ahead (rebalance 14/07,
+venda 15/07, liquidacao+compra 16/07) e para evitar retencao estrutural de
+caixa contabil:
+
+- `pipeline/painel_diario.py` passa a gerar `cash_transfers` diariamente a
+  partir de `pending_sales`/`pending_settlements`, transferindo para
+  `cash_free` toda liquidacao elegivel no dia (T+1) sem acao manual.
+- Compra de rebalance deixa de ocorrer no mesmo `exec_day` da venda. O plano de
+  compra e congelado em `data/daily/pending_rebalance_buy.json` no dia do
+  rebalance e executado apenas em dias seguintes (`source_decision_exec_day <
+  exec_day`) com base no mesmo `selected_tickers`/`target_weights` persistido.
+- O calculo de caixa para compra no autosave remove o uso de `sells_value`
+  intraday; o fluxo passa a usar somente caixa realmente livre no dia
+  (`cash_free` + transferencias efetivadas).
+- E adicionada guarda de sobreposicao: se houver novo rebalance com plano de
+  compra pendente, o autosave aborta com erro explicito em vez de sobrescrever
+  estado.
+- `pipeline/servidor.py::apply_boletim_operations` adota pre-check prospectivo
+  com `compute_cash(..., extra_events=...)` e rejeita atomicamente qualquer lote
+  que projetaria `cash_free < -0.01`; nenhum evento e persistido nesse caso.
+- `pipeline/dryrun_autosave.py` deixa de enviar `cash_transfers: []` fixo e
+  passa a propagar `cash_transfers` calculados pelo painel, mantendo catch-up
+  idempotente por `market_day`.
+
+Escopo da remediacao historica associada:
+
+- reconstruir append-only de `market_day=2026-07-15` em diante no dry-run US;
+- registrar trilha `source=\"remediation\"` em `data/daily/autosave_log.jsonl`;
+- regenerar artefatos derivados (`data/real/*.json`, `data/cycles/*`,
+  `data/daily/painel_*.html`) sem reescrever eventos antigos.
+
+Ref: SALA D-166, USA D-163, SALA D-112, USA D-137, R-018, R-020, R-022, R-049,
+R-050.
+
+### 6.11.2 Incidente de escrita indevida por auditor e politica do plano diferido (D-164)
+
+Em 2026-07-26, durante verificacao de auditoria local, um teste exploratorio
+acionou caminho de escrita de producao (`apply_boletim_operations`) e gerou
+evento fantasma no SSOT dry-run US:
+
+- `SETTLEMENT` de `US$ 2.500,68`, `ref_id=null`, `reason="some-sell-id"`,
+  `exec_date=2026-07-16` (`id=a3aff53f-9bc1-450f-9e93-f63930dab98f`);
+- por causa de `T-LEDGER-AUTOCOMMIT-V1` (SALA D-037 / USA D-085), o append foi
+  auto-commitado e publicado no remoto antes de revisao humana.
+
+Remediacao obrigatoria (append-only):
+
+- nunca reescrever/remover a linha fantasma do ledger;
+- adicionar `EventType.CORRECTION` com `ref_id` apontando para o `id` do
+  evento fantasma, anulando-o na semantica de eventos efetivos;
+- regenerar somente os artefatos derivados contaminados do dia
+  (`data/real/2026-07-15.json` e
+  `data/cycles/2026-07-15/boletim_preenchido.json`) a partir do ledger
+  corrigido.
+
+Clarificacao de politica do plano de compra diferido (`pending_rebalance_buy`):
+
+- o plano congelado permanece aberto por tempo indeterminado, sem TTL, ate
+  completar organicamente com caixa livre subsequente;
+- enquanto existir plano pendente, a guarda de sobreposicao bloqueia novo
+  rebalance por desenho;
+- esse bloqueio e comportamento intencional vigente (nao bug), ate decisao
+  explicita do Owner em sentido contrario.
+
+Ref: USA D-164, SALA D-167, SALA D-037, USA D-085, R-018, R-020, R-049, R-050.
+
 ### 6.12 Refresh diario do contexto Analista-USA e rollover automatico do rascunho (F-18 frente 1 re-escopada, D-138)
 
 A partir de D-138, o ciclo diario US passa a fechar a lacuna operacional entre

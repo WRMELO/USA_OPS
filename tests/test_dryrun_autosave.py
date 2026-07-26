@@ -52,20 +52,22 @@ def test_autosave_pending_days_catchup_logs_and_skips_second_run(tmp_path, monke
                 "market_day": "2026-07-15",
                 "trade_day": "2026-07-16",
                 "operations": [{"type": "VENDA", "ticker": "OLD", "qtd": 10, "preco": 10.0}],
+                "cash_transfers": [{"value": 100.0, "note": "SELL-OLD"}],
             }
         return {
             "exec_day": "2026-07-17",
             "market_day": "2026-07-16",
             "trade_day": "2026-07-17",
             "operations": [],
+            "cash_transfers": [],
         }
 
     monkeypatch.setattr(dryrun_autosave.painel_diario, "compute_dryrun_autosave_operations", _fake_compute)
 
-    applied_market_days = []
+    applied_payloads = []
 
     def _fake_apply(payload):
-        applied_market_days.append(payload["market_day"])
+        applied_payloads.append(payload)
         out_real = real_dir / f"{payload['market_day']}.json"
         out_real.write_text(json.dumps(payload), encoding="utf-8")
         return {"ok": True, "paths": [f"data/real/{payload['market_day']}.json"]}
@@ -74,7 +76,9 @@ def test_autosave_pending_days_catchup_logs_and_skips_second_run(tmp_path, monke
 
     first = dryrun_autosave.autosave_pending_days(as_of=date(2026, 7, 17))
     assert [row["market_day"] for row in first] == ["2026-07-15", "2026-07-16"]
-    assert applied_market_days == ["2026-07-15", "2026-07-16"]
+    assert [x["market_day"] for x in applied_payloads] == ["2026-07-15", "2026-07-16"]
+    assert applied_payloads[0]["cash_transfers"] == [{"value": 100.0, "note": "SELL-OLD"}]
+    assert applied_payloads[1]["cash_transfers"] == []
 
     log_path = tmp_path / "data" / "daily" / "autosave_log.jsonl"
     assert log_path.exists()

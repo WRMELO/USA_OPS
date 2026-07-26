@@ -201,8 +201,43 @@ def apply_boletim_operations(payload: dict[str, Any]) -> dict[str, Any]:
     real_dir.mkdir(parents=True, exist_ok=True)
     cycle_dir.mkdir(parents=True, exist_ok=True)
 
-    # SSOT imutavel: primeiro grava eventos no ledger (D-045).
+    # SSOT imutavel: valida saldo projetado e so entao persiste eventos no ledger (D-045).
     ops = payload.get("operations", [])
+    cash_movements = payload.get("cash_movements", [])
+    cash_transfers = payload.get("cash_transfers", [])
+
+    def _event_fingerprint(ev: Any) -> tuple[Any, ...]:
+        if ev.type in {EventType.APORTE, EventType.RETIRADA, EventType.DIVIDENDO}:
+            return (ev.type.value, ev.exec_date.isoformat(), round(float(ev.amount), 2))
+        if ev.type == EventType.SETTLEMENT:
+            return (
+                ev.type.value,
+                ev.exec_date.isoformat(),
+                round(float(ev.amount), 2),
+                str(ev.ref_id or ""),
+                str(ev.reason or ""),
+            )
+        return (
+            ev.type.value,
+            ev.exec_date.isoformat(),
+            str(ev.ticker or ""),
+            round(float(ev.qtd or 0.0), 8),
+            round(float(ev.price or 0.0), 8),
+            round(float(ev.amount), 2),
+        )
+
+    events_to_append: list[Any] = []
+    seen_fingerprints: set[tuple[Any, ...]] = set()
+
+    def _queue_event_if_new(ev: Any) -> None:
+        if is_duplicate(ev):
+            return
+        fp = _event_fingerprint(ev)
+        if fp in seen_fingerprints:
+            return
+        seen_fingerprints.add(fp)
+        events_to_append.append(ev)
+
     for op in ops:
         typ = str(op.get("type", "")).upper().strip()
         tk = str(op.get("ticker", "")).upper().strip()
@@ -217,10 +252,8 @@ def apply_boletim_operations(payload: dict[str, Any]) -> dict[str, Any]:
             ev = create_event(EventType.SELL, exec_date=save_day, amount=amount, ticker=tk, qtd=qtd, price=preco)
         else:
             continue
-        if not is_duplicate(ev):
-            append_event(ev)
+        _queue_event_if_new(ev)
 
-    cash_movements = payload.get("cash_movements", [])
     for mv in cash_movements:
         typ = str(mv.get("type", "")).upper().strip()
         val = float(mv.get("value", mv.get("valor", 0.0)) or 0.0)
@@ -228,21 +261,14 @@ def apply_boletim_operations(payload: dict[str, Any]) -> dict[str, Any]:
         if val <= 0:
             continue
         if typ in {"APORTE", "DEPOSITO"}:
-            ev = create_event(EventType.APORTE, exec_date=save_day, amount=val, reason=desc)
-            if not is_duplicate(ev):
-                append_event(ev)
+            _queue_event_if_new(create_event(EventType.APORTE, exec_date=save_day, amount=val, reason=desc))
         elif typ in {"DIVIDENDO", "JCP", "BONIFICACAO", "BONUS", "SUBSCRICAO"}:
-            ev = create_event(EventType.DIVIDENDO, exec_date=save_day, amount=val, reason=desc)
-            if not is_duplicate(ev):
-                append_event(ev)
+            _queue_event_if_new(create_event(EventType.DIVIDENDO, exec_date=save_day, amount=val, reason=desc))
         elif typ in {"RETIRADA", "SAQUE"}:
-            ev = create_event(EventType.RETIRADA, exec_date=save_day, amount=val, reason=desc)
-            if not is_duplicate(ev):
-                append_event(ev)
+            _queue_event_if_new(create_event(EventType.RETIRADA, exec_date=save_day, amount=val, reason=desc))
 
     # Transferências usam ref_id quando possível.
     pend_by_ref = {p.get("ref"): p for p in pending_settlements(save_day)}
-    cash_transfers = payload.get("cash_transfers", [])
     for tr in cash_transfers:
         val = float(tr.get("value", tr.get("valor", 0.0)) or 0.0)
         note = str(tr.get("note", tr.get("ref", ""))).strip()
@@ -257,6 +283,17 @@ def apply_boletim_operations(payload: dict[str, Any]) -> dict[str, Any]:
             ref_id=ref_id,
             reason=note or "cash_transfer",
         )
+        _queue_event_if_new(ev)
+
+    projected_cash = compute_cash(save_day, extra_events=events_to_append)
+    projected_cash_free = float(projected_cash.get("cash_free", 0.0))
+    if projected_cash_free < -0.01:
+        raise ValueError(
+            f"Operacao rejeitada: cash_free projetado ficaria negativo ({projected_cash_free:.2f}) "
+            f"em {save_day.isoformat()}. Nenhum evento foi persistido."
+        )
+
+    for ev in events_to_append:
         if not is_duplicate(ev):
             append_event(ev)
 

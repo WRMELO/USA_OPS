@@ -88,7 +88,7 @@ def autosave_pending_days(as_of: date | None = None) -> list[dict[str, Any]]:
             "trade_day": str(computed.get("trade_day", exec_day.isoformat())),
             "operations": list(computed.get("operations", [])),
             "cash_movements": [],
-            "cash_transfers": [],
+            "cash_transfers": list(computed.get("cash_transfers", [])),
         }
         result = servidor.apply_boletim_operations(payload)
         _append_autosave_log(

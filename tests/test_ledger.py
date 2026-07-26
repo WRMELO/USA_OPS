@@ -230,6 +230,68 @@ def test_unmatched_settlement_reduces_accounting(tmp_path):
     assert ledger.pending_settlements(date(2026, 1, 4)) == []
 
 
+def test_correction_cancels_unmatched_settlement(tmp_path):
+    ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
+
+    _append(
+        LedgerEvent(
+            id="A2",
+            type=EventType.APORTE,
+            exec_date=date(2026, 1, 2),
+            created_at=datetime.now(tz=UTC),
+            amount=1000.0,
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="S3",
+            type=EventType.SELL,
+            exec_date=date(2026, 1, 3),
+            created_at=datetime.now(tz=UTC),
+            ticker="ABC",
+            qtd=5,
+            price=20.0,
+            amount=100.0,
+            settle_date=date(2026, 1, 4),
+        )
+    )
+    _append(
+        LedgerEvent(
+            id="T3",
+            type=EventType.SETTLEMENT,
+            exec_date=date(2026, 1, 4),
+            created_at=datetime.now(tz=UTC),
+            amount=100.0,
+            ref_id=None,
+            reason="phantom-settlement",
+            settle_date=date(2026, 1, 4),
+        )
+    )
+
+    cash_with_phantom = ledger.compute_cash(date(2026, 1, 4))
+    assert abs(cash_with_phantom["cash_free"] - 1100.0) < 1e-9
+    assert abs(cash_with_phantom["cash_accounting"]) < 1e-9
+
+    _append(
+        LedgerEvent(
+            id="C3",
+            type=EventType.CORRECTION,
+            exec_date=date(2026, 1, 4),
+            created_at=datetime.now(tz=UTC),
+            amount=100.0,
+            ref_id="T3",
+            reason="cancel phantom settlement",
+        )
+    )
+
+    cash_after_correction = ledger.compute_cash(date(2026, 1, 4))
+    assert abs(cash_after_correction["cash_free"] - 1000.0) < 1e-9
+    assert abs(cash_after_correction["cash_accounting"] - 100.0) < 1e-9
+    pending = ledger.pending_settlements(date(2026, 1, 4))
+    assert len(pending) == 1
+    assert pending[0]["sell_id"] == "S3"
+
+
 def test_compute_cash_honors_settlement_even_with_future_settle_date(tmp_path):
     ledger.LEDGER_PATH = tmp_path / "ledger.jsonl"
     day = date(2026, 1, 3)

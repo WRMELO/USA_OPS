@@ -97,11 +97,14 @@ def test_apply_boletim_operations_persists_payload_and_paths(tmp_path, monkeypat
     monkeypatch.setattr(servidor, "ROOT", tmp_path)
 
     appended_events = []
-    monkeypatch.setattr(servidor, "create_event", lambda event_type, **kwargs: {"type": event_type, **kwargs})
     monkeypatch.setattr(servidor, "is_duplicate", lambda _ev: False)
     monkeypatch.setattr(servidor, "append_event", lambda ev: appended_events.append(ev))
     monkeypatch.setattr(servidor, "pending_settlements", lambda _day: [])
-    monkeypatch.setattr(servidor, "compute_cash", lambda _day: {"cash_free": 125.5, "cash_accounting": 20.0})
+    monkeypatch.setattr(
+        servidor,
+        "compute_cash",
+        lambda _day, extra_events=None: {"cash_free": 125.5, "cash_accounting": 20.0},
+    )
     monkeypatch.setattr(servidor, "export_snapshot", lambda _day: [{"ticker": "MRVI", "qtd": 10}])
 
     payload = {
@@ -128,6 +131,72 @@ def test_apply_boletim_operations_persists_payload_and_paths(tmp_path, monkeypat
     assert saved["cash_accounting"] == 20.0
     assert len(saved["operations"]) == 1
     assert len(appended_events) == 2
+
+
+def test_apply_boletim_operations_rejects_negative_projected_cash(tmp_path, monkeypatch):
+    servidor = _load_servidor_module()
+    monkeypatch.setattr(servidor, "ROOT", tmp_path)
+
+    appended_events = []
+    monkeypatch.setattr(servidor, "is_duplicate", lambda _ev: False)
+    monkeypatch.setattr(servidor, "append_event", lambda ev: appended_events.append(ev))
+    monkeypatch.setattr(servidor, "pending_settlements", lambda _day: [])
+    monkeypatch.setattr(servidor, "export_snapshot", lambda _day: [])
+
+    def _fake_compute(_day, extra_events=None):
+        if extra_events is not None:
+            return {"cash_free": -10.0, "cash_accounting": 0.0}
+        return {"cash_free": 0.0, "cash_accounting": 0.0}
+
+    monkeypatch.setattr(servidor, "compute_cash", _fake_compute)
+
+    payload = {
+        "exec_day": "2026-07-16",
+        "market_day": "2026-07-15",
+        "trade_day": "2026-07-16",
+        "operations": [{"type": "COMPRA", "ticker": "MRVI", "qtd": 10, "preco": 7.0}],
+        "cash_movements": [],
+        "cash_transfers": [],
+    }
+
+    try:
+        servidor.apply_boletim_operations(payload)
+    except ValueError as exc:
+        assert "cash_free projetado ficaria negativo" in str(exc)
+    else:
+        raise AssertionError("Era esperado ValueError para cash_free projetado negativo.")
+
+    assert appended_events == []
+    assert not (tmp_path / "data" / "real" / "2026-07-15.json").exists()
+
+
+def test_apply_boletim_operations_allows_idempotent_duplicate_payload(tmp_path, monkeypatch):
+    servidor = _load_servidor_module()
+    monkeypatch.setattr(servidor, "ROOT", tmp_path)
+
+    appended_events = []
+    monkeypatch.setattr(servidor, "is_duplicate", lambda _ev: True)
+    monkeypatch.setattr(servidor, "append_event", lambda ev: appended_events.append(ev))
+    monkeypatch.setattr(servidor, "pending_settlements", lambda _day: [])
+    monkeypatch.setattr(
+        servidor,
+        "compute_cash",
+        lambda _day, extra_events=None: {"cash_free": 50.0, "cash_accounting": 10.0},
+    )
+    monkeypatch.setattr(servidor, "export_snapshot", lambda _day: [])
+
+    payload = {
+        "exec_day": "2026-07-16",
+        "market_day": "2026-07-15",
+        "trade_day": "2026-07-16",
+        "operations": [{"type": "COMPRA", "ticker": "MRVI", "qtd": 10, "preco": 7.0}],
+        "cash_movements": [],
+        "cash_transfers": [],
+    }
+    out = servidor.apply_boletim_operations(payload)
+    assert out["ok"] is True
+    assert appended_events == []
+    assert (tmp_path / "data" / "real" / "2026-07-15.json").exists()
 
 
 def test_painel_liquidar_route_success_redirects(monkeypatch):
