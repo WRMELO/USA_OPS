@@ -12,7 +12,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 
 import pipeline.ledger as ledger_mod
-from lib.trading_calendar import prev_session
+from lib.trading_calendar import next_session, prev_session
 from pipeline.ledger import (
     EventType,
     append_event,
@@ -28,8 +28,13 @@ from scripts.lookup_shadow_price import DEFAULT_WINDOW_PATH, lookup_close, resol
 DRAFT_DIR = ROOT / "data" / "live_real_test"
 REAL_LEDGER_NAME = "ledger_real.jsonl"
 SHADOW_LEDGER_NAME = "ledger_shadow.jsonl"
+RUIN_FLOOR_NAME = "ruin_floor_us.json"
+RUIN_FLOOR_PATH = DRAFT_DIR / RUIN_FLOOR_NAME
 LIQUIDACAO_JA_NO_CAIXA = "JA_NO_CAIXA"
 LIQUIDACAO_EM_LIQUIDACAO = "EM_LIQUIDACAO"
+BOOK_QTD_EPS = 1e-6
+DUST_CLOSED_USD_THRESHOLD = 1.0
+DRAWDOWN_INFO_THRESHOLD = -15.0
 
 
 def _now_iso() -> str:
@@ -92,6 +97,44 @@ def _fmt_signed_pct(value: float) -> tuple[str, str]:
         return "0.00%", "flat"
     sign = "+" if v > 0 else ""
     return f"{sign}{v:.2f}%", ("gpos" if v > 0 else "gneg")
+
+
+def _parse_iso_day(value: Any) -> date | None:
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except Exception:
+        return None
+
+
+def _shift_trading_sessions(anchor_day: date, sessions: int, *, forward: bool, exchange: str = "XNYS") -> date:
+    cursor = anchor_day
+    for _ in range(max(int(sessions), 0)):
+        cursor = next_session(cursor, exchange=exchange) if forward else prev_session(cursor, exchange=exchange)
+    return cursor
+
+
+def _next_two_rebalance_dates_after_close(
+    close_day: date | None, last_rebalance_day: date | None, rebalance_cadence: int
+) -> tuple[date | None, date | None]:
+    if close_day is None or last_rebalance_day is None:
+        return None, None
+
+    cadence = max(int(rebalance_cadence), 1)
+    first_rebalance = last_rebalance_day
+
+    guard = 0
+    while guard < 500:
+        previous_rebalance = _shift_trading_sessions(first_rebalance, cadence, forward=False)
+        if previous_rebalance > close_day:
+            first_rebalance = previous_rebalance
+            guard += 1
+            continue
+        break
+
+    if first_rebalance <= close_day:
+        first_rebalance = _shift_trading_sessions(first_rebalance, cadence, forward=True)
+    second_rebalance = _shift_trading_sessions(first_rebalance, cadence, forward=True)
+    return first_rebalance, second_rebalance
 
 
 def _sparkline_svg(values: list[float], *, width: int = 150, height: int = 30) -> str:
@@ -916,6 +959,8 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         if caixa_real_informado is not None
         else None
     )
+    ruin_floor = _ruin_floor_status(base1_series, RUIN_FLOOR_PATH)
+
     return {
         "today": today.isoformat(),
         "market_day": pricing_market_day.isoformat(),
@@ -949,6 +994,75 @@ def load_live_view(today: date, ledger_dir: Path) -> dict[str, Any]:
         "draft": draft,
         "closed_boletim_exists": closed_boletim_path.exists(),
         "context_available": bool(context),
+        "ruin_floor": ruin_floor,
+    }
+
+
+def _ruin_floor_status(base1_series: list[dict[str, Any]], artifact_path: Path) -> dict[str, Any]:
+    unavailable = {
+        "estado": "INDISPONIVEL",
+        "h": int(len(base1_series)),
+        "loss_atual_pct": None,
+        "pior_loss_pct": None,
+        "piso_p1_pct": None,
+        "p5_pct_h": None,
+        "margem_pp": None,
+        "touched_dates": [],
+    }
+    if not isinstance(base1_series, list) or not base1_series:
+        return unavailable
+    if not artifact_path.exists():
+        return unavailable
+    try:
+        payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except Exception:
+        return unavailable
+
+    floors = payload.get("floors", {}) if isinstance(payload.get("floors"), dict) else {}
+    p1 = floors.get("p1_pct")
+    p5 = floors.get("p5_pct")
+    if not isinstance(p1, list) or not p1:
+        return unavailable
+    if not isinstance(p5, list):
+        p5 = []
+
+    h = len(base1_series)
+    touched_dates: list[str] = []
+    pior_loss_pct = math.inf
+    loss_atual_pct = math.nan
+
+    for idx, row in enumerate(base1_series, start=1):
+        if not isinstance(row, dict):
+            return unavailable
+        base1 = _safe_float(row.get("base1"), math.nan)
+        if not math.isfinite(base1):
+            return unavailable
+        loss_pct = (base1 - 1.0) * 100.0
+        if loss_pct < pior_loss_pct:
+            pior_loss_pct = loss_pct
+        if idx == h:
+            loss_atual_pct = loss_pct
+
+        floor_idx = min(idx, len(p1)) - 1
+        piso_idx = _safe_float(p1[floor_idx], math.nan)
+        if math.isfinite(piso_idx) and loss_pct <= piso_idx:
+            touched_dates.append(str(row.get("date") or f"h{idx}"))
+
+    floor_idx_h = min(h, len(p1)) - 1
+    piso_p1_pct = _safe_float(p1[floor_idx_h], math.nan)
+    piso_p5_pct = _safe_float(p5[min(h, len(p5)) - 1], math.nan) if p5 else math.nan
+    if not math.isfinite(loss_atual_pct) or not math.isfinite(piso_p1_pct):
+        return unavailable
+
+    return {
+        "estado": "ALERTA" if touched_dates else "OK",
+        "h": int(h),
+        "loss_atual_pct": round(float(loss_atual_pct), 2),
+        "pior_loss_pct": round(float(pior_loss_pct), 2),
+        "piso_p1_pct": round(float(piso_p1_pct), 2),
+        "p5_pct_h": round(float(piso_p5_pct), 2) if math.isfinite(piso_p5_pct) else None,
+        "margem_pp": round(float(loss_atual_pct - piso_p1_pct), 2),
+        "touched_dates": touched_dates,
     }
 
 
@@ -964,6 +1078,7 @@ def _suggested_defensive_sells(view: dict[str, Any]) -> dict[str, Any]:
         if str(ticker).strip()
     }
     defensive: list[dict[str, Any]] = []
+    drawdown_alerts: list[dict[str, Any]] = []
     for row in holdings:
         if not isinstance(row, dict):
             continue
@@ -975,13 +1090,20 @@ def _suggested_defensive_sells(view: dict[str, Any]) -> dict[str, Any]:
         heat = _safe_float(row.get("heat_pct"), 0.0)
         spc = str(row.get("spc_status", "")).upper().strip()
         drawdown = _safe_float(row.get("drawdown_pct"), 0.0)
+        if drawdown <= DRAWDOWN_INFO_THRESHOLD:
+            drawdown_alerts.append(
+                {
+                    "ticker": ticker,
+                    "drawdown_pct": drawdown,
+                    "heat_pct": heat,
+                    "spc_status": spc,
+                }
+            )
         reasons: list[str] = []
         if heat <= -32.42:
             reasons.append(f"heat {heat:.1f}%")
         if spc == "INSTAVEL":
             reasons.append(f"SPC {spc}")
-        if drawdown <= -15.0:
-            reasons.append(f"drawdown {drawdown:.1f}%")
         if reasons:
             defensive.append(
                 {
@@ -1008,12 +1130,14 @@ def _suggested_defensive_sells(view: dict[str, Any]) -> dict[str, Any]:
         "cycles_to_next": forno.get("cycles_to_next_rebalance"),
         "motor_lines": motor_lines,
         "defensive": defensive,
+        "drawdown_alerts": drawdown_alerts,
     }
 
 
 def render_live_html(view: dict[str, Any]) -> str:
     today = str(view.get("today", ""))
     market_day = str(view.get("market_day", today))
+    market_day_dt = _parse_iso_day(market_day)
     pricing_market_day_label = str(view.get("pricing_market_day", market_day))
     cash_free_raw = _safe_float(view.get("cash_free", 0.0), 0.0)
     cash_accounting_raw = _safe_float(view.get("cash_accounting", 0.0), 0.0)
@@ -1113,8 +1237,20 @@ def render_live_html(view: dict[str, Any]) -> str:
     is_rebalance = forno.get("is_rebalance_day")
     cycles = forno.get("cycles_to_next_rebalance")
     next_rebalance = forno.get("next_rebalance_date")
+    last_rebalance_dt = _parse_iso_day(forno.get("last_rebalance_dt"))
+    rebalance_cadence = _safe_int(forno.get("rebalance_cadence"), 0)
     is_d1_pos_rebalance = bool(forno.get("is_d1_pos_rebalance", False))
     suggestions = _suggested_defensive_sells(view)
+    drawdown_alerts = (
+        suggestions.get("drawdown_alerts", []) if isinstance(suggestions.get("drawdown_alerts"), list) else []
+    )
+    drawdown_alert_tickers = sorted(
+        {
+            str(row.get("ticker", "")).upper().strip()
+            for row in drawdown_alerts
+            if isinstance(row, dict) and str(row.get("ticker", "")).strip()
+        }
+    )
 
     positions = view.get("positions", []) if isinstance(view.get("positions"), list) else []
     operations_book = view.get("operations_book", {}) if isinstance(view.get("operations_book"), dict) else {}
@@ -1152,6 +1288,18 @@ def render_live_html(view: dict[str, Any]) -> str:
             nao_realizado_txt = _fmt_usd(nao_realizado_raw) if nao_realizado_raw is not None else "-"
             nao_realizado_cls = _sign_class(nao_realizado_raw if nao_realizado_raw is not None else 0.0)
             heat_class = _sign_class(heat_pct)
+            holding_row = holdings_map.get(ticker, {})
+            if isinstance(holding_row, dict):
+                drawdown_raw = holding_row.get("drawdown_pct")
+            else:
+                drawdown_raw = None
+            drawdown_val = _safe_float(drawdown_raw, float("nan"))
+            if math.isfinite(drawdown_val):
+                drawdown_txt = _fmt_pct(drawdown_val)
+                drawdown_cls = "gneg" if drawdown_val <= DRAWDOWN_INFO_THRESHOLD else "flat"
+            else:
+                drawdown_txt = "-"
+                drawdown_cls = "flat"
             pos_rows.append(
                 "<tr>"
                 f"<td>{html.escape(ticker)}</td>"
@@ -1161,12 +1309,27 @@ def render_live_html(view: dict[str, Any]) -> str:
                 f"<td style='text-align:right'>{_fmt_usd(close_d1) if close_d1 > 0 else '-'}</td>"
                 f"<td class='{heat_class}' style='text-align:right'>{_fmt_pct(heat_pct)}</td>"
                 f"<td class='{nao_realizado_cls}' style='text-align:right'>{nao_realizado_txt}</td>"
+                f"<td class='{drawdown_cls}' style='text-align:right'>{drawdown_txt}</td>"
                 "</tr>"
             )
     else:
-        pos_rows.append("<tr><td colspan='7'>Nenhuma posicao registrada no ledger real.</td></tr>")
+        pos_rows.append("<tr><td colspan='8'>Nenhuma posicao registrada no ledger real.</td></tr>")
+
+    drawdown_alerts_suffix = (
+        f" Tickers no limite neste ciclo: {', '.join(drawdown_alert_tickers)}."
+        if drawdown_alert_tickers
+        else " Nenhum ticker no limite neste ciclo."
+    )
+    drawdown_info_note = (
+        "<p class='muted' style='margin-top:8px'>"
+        "Drawdown desde pico <= -15,0% e alerta informativo na Carteira real. "
+        "Estudo T-SDC-EXIT-MECHANISMS-REPLAY-US-V3 (D-091): INCONCLUSIVO; nao constitui recomendacao de venda."
+        f"{html.escape(drawdown_alerts_suffix)}"
+        "</p>"
+    )
 
     book_rows: list[str] = []
+    book_closed_rows: list[str] = []
 
     def _format_ops_column(rows: Any) -> str:
         if not isinstance(rows, list) or not rows:
@@ -1186,10 +1349,47 @@ def render_live_html(view: dict[str, Any]) -> str:
             row = operations_book.get(ticker, {})
             if not isinstance(row, dict):
                 continue
+            qtd_liquida = _safe_float(row.get("qtd_liquida"), 0.0)
+            close_d1 = _safe_float(row.get("close_d1"), 0.0)
+            market_value = qtd_liquida * close_d1 if close_d1 > 0 else 0.0
+            is_closed = qtd_liquida <= BOOK_QTD_EPS or (
+                close_d1 > 0 and market_value < DUST_CLOSED_USD_THRESHOLD
+            )
+
+            latest_sell_day: date | None = None
+            sells = row.get("vendas", [])
+            if isinstance(sells, list):
+                for item in reversed(sells):
+                    if not isinstance(item, dict):
+                        continue
+                    latest_sell_day = _parse_iso_day(item.get("date"))
+                    if latest_sell_day is not None:
+                        break
+
+            if latest_sell_day is None:
+                move_days: list[date] = []
+                for move_group in (row.get("compras", []), row.get("vendas", [])):
+                    if not isinstance(move_group, list):
+                        continue
+                    for item in move_group:
+                        if not isinstance(item, dict):
+                            continue
+                        move_day = _parse_iso_day(item.get("date"))
+                        if move_day is not None:
+                            move_days.append(move_day)
+                latest_sell_day = max(move_days) if move_days else None
+
+            _, second_rebalance = _next_two_rebalance_dates_after_close(
+                latest_sell_day, last_rebalance_dt, rebalance_cadence
+            )
+            is_expired = (
+                market_day_dt is not None and second_rebalance is not None and market_day_dt > second_rebalance
+            )
+
             nao_realizado_raw = row.get("nao_realizado")
             nao_realizado_fmt = _fmt_usd(nao_realizado_raw) if nao_realizado_raw is not None else "-"
             nao_realizado_cls = _sign_class(nao_realizado_raw if nao_realizado_raw is not None else 0.0)
-            book_rows.append(
+            base_row = (
                 "<tr>"
                 f"<td>{html.escape(ticker)}</td>"
                 f"<td>{_format_ops_column(row.get('compras', []))}</td>"
@@ -1201,8 +1401,34 @@ def render_live_html(view: dict[str, Any]) -> str:
                 f"<td class='{nao_realizado_cls}' style='text-align:right'>{nao_realizado_fmt}</td>"
                 "</tr>"
             )
+            if is_closed:
+                if is_expired:
+                    continue
+                zero_day_txt = latest_sell_day.isoformat() if latest_sell_day is not None else "-"
+                visible_until_txt = second_rebalance.isoformat() if second_rebalance is not None else "-"
+                book_closed_rows.append(
+                    "<tr>"
+                    f"<td>{html.escape(ticker)}</td>"
+                    f"<td>{_format_ops_column(row.get('compras', []))}</td>"
+                    f"<td>{_format_ops_column(row.get('vendas', []))}</td>"
+                    f"<td style='text-align:right'>{_fmt_qtd(row.get('qtd_liquida', 0))}</td>"
+                    f"<td style='text-align:right'>{_fmt_usd(row.get('custo_medio', 0.0))}</td>"
+                    f"<td style='text-align:right'>{_fmt_usd(row.get('close_d1', 0.0))}</td>"
+                    f"<td style='text-align:right'>{_fmt_usd(row.get('realizado', 0.0))}</td>"
+                    f"<td class='{nao_realizado_cls}' style='text-align:right'>{nao_realizado_fmt}</td>"
+                    f"<td>{html.escape(zero_day_txt)}</td>"
+                    f"<td>{html.escape(visible_until_txt)}</td>"
+                    "</tr>"
+                )
+                continue
+
+            book_rows.append(base_row)
     if not book_rows:
-        book_rows.append("<tr><td colspan='8'>Sem operacoes registradas por ativo.</td></tr>")
+        book_rows.append("<tr><td colspan='8'>Sem operacoes ativas por ativo.</td></tr>")
+    if not book_closed_rows:
+        book_closed_rows.append(
+            "<tr><td colspan='10'>Sem operacoes encerradas dentro da janela de persistencia.</td></tr>"
+        )
 
     held_set = {
         str(ticker).upper().strip()
@@ -1252,6 +1478,16 @@ def render_live_html(view: dict[str, Any]) -> str:
                     indicator = "held-flat"
             else:
                 indicator = "cand"
+            top_heat_txt = "-"
+            top_heat_cls = "flat"
+            if ticker in held_set:
+                book_row = operations_book.get(ticker, {})
+                if isinstance(book_row, dict):
+                    custo_medio = _safe_float(book_row.get("custo_medio"), 0.0)
+                    if custo_medio > 0 and close_d1 > 0:
+                        top_heat = ((close_d1 / custo_medio) - 1.0) * 100.0
+                        top_heat_txt = _fmt_pct(top_heat)
+                        top_heat_cls = _sign_class(top_heat)
             top_rows.append(
                 "<tr>"
                 f"<td><span class='{indicator}'></span>{html.escape(ticker)}</td>"
@@ -1259,10 +1495,11 @@ def render_live_html(view: dict[str, Any]) -> str:
                 f"<td style='text-align:right'>{_safe_float(row.get('score_m3', 0.0)):.4f}</td>"
                 f"<td style='text-align:right'>{_fmt_usd(close_d1) if close_d1 > 0 else '-'}</td>"
                 f"<td class='spark-cell'>{spark_map.get(ticker, '<span class=\"flat\">-</span>')}</td>"
+                f"<td class='{top_heat_cls}' style='text-align:right'>{top_heat_txt}</td>"
                 "</tr>"
             )
     else:
-        top_rows.append("<tr><td colspan='5'>Top-20 nao disponivel - rode pipeline/analise_us.py.</td></tr>")
+        top_rows.append("<tr><td colspan='6'>Top-20 nao disponivel - rode pipeline/analise_us.py.</td></tr>")
 
     draft = view.get("draft", {}) if isinstance(view.get("draft"), dict) else {}
     operations = draft.get("operations", []) if isinstance(draft.get("operations"), list) else []
@@ -1302,6 +1539,54 @@ def render_live_html(view: dict[str, Any]) -> str:
     vs_cagr_txt, vs_cagr_cls = _fmt_signed_pct((base_now - expect_now) * 100.0)
     cota_preco_raw = base_now * 100.0 if base_now > 0 else 0.0
     cotas_estimadas = (total_ativo_raw / cota_preco_raw) if cota_preco_raw > 0 else 0.0
+    ruin_floor = view.get("ruin_floor", {}) if isinstance(view.get("ruin_floor"), dict) else {}
+    ruin_state = str(ruin_floor.get("estado", "INDISPONIVEL")).upper()
+    ruin_h = _safe_int(ruin_floor.get("h"), 0)
+    ruin_loss = _safe_float(ruin_floor.get("loss_atual_pct"), math.nan)
+    ruin_p1 = _safe_float(ruin_floor.get("piso_p1_pct"), math.nan)
+    ruin_margin = _safe_float(ruin_floor.get("margem_pp"), math.nan)
+    touched_dates = (
+        [str(v) for v in ruin_floor.get("touched_dates", []) if str(v).strip()]
+        if isinstance(ruin_floor.get("touched_dates"), list)
+        else []
+    )
+
+    ruin_value_cls = "flat"
+    ruin_value_txt = "n/d"
+    ruin_sub_txt = "margem n/d p.p. - h=n/d"
+    ruin_status_html = (
+        "<p class='muted' style='margin-top:8px'>"
+        f"Piso de ruina p1 indisponivel - artefato {RUIN_FLOOR_NAME} ausente."
+        "</p>"
+    )
+    if ruin_state in {"OK", "ALERTA"} and math.isfinite(ruin_p1):
+        ruin_value_txt = f"{ruin_p1:+.2f}%"
+        ruin_sub_txt = (
+            f"margem {ruin_margin:+.2f} p.p. - h={ruin_h} pregoes"
+            if math.isfinite(ruin_margin)
+            else f"margem n/d p.p. - h={ruin_h} pregoes"
+        )
+        if ruin_state == "ALERTA":
+            ruin_value_cls = "gneg"
+            touched_label = ", ".join(touched_dates) if touched_dates else "sem data registrada"
+            ruin_status_html = (
+                "<div class='price-alert' style='margin-top:8px'>"
+                "<div class='pk'>PISO DE RUINA p1 TOCADO</div>"
+                f"<div class='pv'>Toques: {html.escape(touched_label)}. "
+                f"Perda vs C0 {ruin_loss:+.2f}% vs piso {ruin_p1:+.2f}% (h={ruin_h}).</div>"
+                "<p class='muted' style='margin-top:8px'>"
+                "Informativo (D-185/R-020) - venda e decisao manual do Owner."
+                "</p>"
+                "</div>"
+            )
+        else:
+            ruin_value_cls = "gpos"
+            ruin_status_html = (
+                "<p class='muted' style='margin-top:8px'>"
+                f"Piso de ruina p1: OK - perda vs C0 {ruin_loss:+.2f}% vs piso {ruin_p1:+.2f}% (h={ruin_h}). "
+                "Informativo (D-185/R-020) - venda e decisao manual do Owner."
+                "</p>"
+            )
 
     def _ledger_reference_row(label: str, projected_value: float, closed_value: float) -> str:
         if abs(projected_value - closed_value) <= 0.01:
@@ -1355,7 +1640,7 @@ def render_live_html(view: dict[str, Any]) -> str:
         )
     if not defensive_rows:
         defensive_rows.append(
-            "<tr><td colspan='5'><span class='flat'>Nenhuma venda defensiva sugerida (heat/SPC/drawdown dentro dos limites).</span></td></tr>"
+            "<tr><td colspan='5'><span class='flat'>Nenhuma venda defensiva sugerida (heat/SPC dentro dos limites).</span></td></tr>"
         )
     motor_html = "".join(f"<li>{html.escape(str(line))}</li>" for line in suggestions.get("motor_lines", []))
 
@@ -1513,8 +1798,10 @@ def render_live_html(view: dict[str, Any]) -> str:
       <div><div class="k">Base 1 atual</div><div class="v mono">{base_now:.4f}</div><div class="sub {base_delta_cls}">{base_delta_txt} vs ancora</div></div>
       <div><div class="k">CAGR esperado</div><div class="v mono">{expect_now:.4f}</div><div class="sub">composicao diaria em 252 pregoes</div></div>
       <div><div class="k">Delta Base1 - CAGR</div><div class="v mono {vs_cagr_cls}">{vs_cagr_txt}</div><div class="sub">pontos de base</div></div>
+      <div><div class="k">Piso de ruina p1</div><div class="v mono {ruin_value_cls}">{ruin_value_txt}</div><div class="sub">{ruin_sub_txt}</div></div>
     </div>
     <div class="chart-wrap">{base_chart}</div>
+    {ruin_status_html}
   </div>
 
   <div class="sec-label"><span class="idx">02</span> Acao do dia <span class="tag">motor + defensivas</span></div>
@@ -1547,9 +1834,10 @@ def render_live_html(view: dict[str, Any]) -> str:
   <div class="sec-label"><span class="idx">03</span> Carteira real <span class="tag">posicoes - heat - nao realizado</span></div>
   <div class="card">
     <table>
-      <tr><th>Ticker</th><th>Data Compra</th><th style="text-align:right">Qtd</th><th style="text-align:right">Preco Compra</th><th style="text-align:right">Fech. D-1</th><th style="text-align:right">Heat %</th><th style="text-align:right">Nao Realizado</th></tr>
+      <tr><th>Ticker</th><th>Data Compra</th><th style="text-align:right">Qtd</th><th style="text-align:right">Preco Compra</th><th style="text-align:right">Fech. D-1</th><th style="text-align:right">Heat %</th><th style="text-align:right">Nao Realizado</th><th style="text-align:right">Drawdown Pico %</th></tr>
       {''.join(pos_rows)}
     </table>
+    {drawdown_info_note}
   </div>
 
   <div class="sec-label"><span class="idx">04</span> Livro de operacoes <span class="tag">apenas operacoes acontecidas</span></div>
@@ -1560,7 +1848,16 @@ def render_live_html(view: dict[str, Any]) -> str:
     </table>
   </div>
 
-  <div class="sec-label"><span class="idx">05</span> Top-20 operacional <span class="tag">sparkline 62 pregoes</span></div>
+  <div class="sec-label"><span class="idx">05</span> Operacoes encerradas <span class="tag">persistencia de 2 rebalanceamentos</span></div>
+  <div class="card">
+    <table>
+      <tr><th>Ticker</th><th>Compras</th><th>Vendas</th><th style="text-align:right">Qtd Liquida</th><th style="text-align:right">Custo Medio</th><th style="text-align:right">Fech. D-1</th><th style="text-align:right">Resultado Realizado</th><th style="text-align:right">Resultado Nao Realizado</th><th>Data zeragem</th><th>Visivel ate</th></tr>
+      {''.join(book_closed_rows)}
+    </table>
+    <p class="muted" style="margin-top:8px">A remocao apos a janela de 2 rebalanceamentos e apenas visual; o ledger oficial permanece append-only.</p>
+  </div>
+
+  <div class="sec-label"><span class="idx">06</span> Top-20 operacional <span class="tag">sparkline 62 pregoes</span></div>
   <div class="card">
     <p class="muted" style="margin-bottom:8px">
       Bolinha:
@@ -1570,12 +1867,12 @@ def render_live_html(view: dict[str, Any]) -> str:
       <span class="cand"></span> fora da carteira
     </p>
     <table>
-      <tr><th>Ticker</th><th style="text-align:right">M3 Rank</th><th style="text-align:right">Score M3</th><th style="text-align:right">Fech. D-1</th><th style="text-align:right">62d</th></tr>
+      <tr><th>Ticker</th><th style="text-align:right">M3 Rank</th><th style="text-align:right">Score M3</th><th style="text-align:right">Fech. D-1</th><th style="text-align:right">62d</th><th style="text-align:right">Desde ignicao</th></tr>
       {''.join(top_rows)}
     </table>
   </div>
 
-  <div class="sec-label"><span class="idx">06</span> Operacoes sugeridas pelo Analista <span class="tag">owner preenche - local</span></div>
+  <div class="sec-label"><span class="idx">07</span> Operacoes sugeridas pelo Analista <span class="tag">owner preenche - local</span></div>
   <div class="card">
     <div class="op-gate">
       <div class="gate-k">Caixa Livre de Balanco</div>
@@ -1589,7 +1886,7 @@ def render_live_html(view: dict[str, Any]) -> str:
     <div class="op-rows" id="analystOpsRows"></div>
   </div>
 
-  <div class="sec-label"><span class="idx">07</span> Balancete simplificado <span class="tag governs">caixa + ativo + cota</span></div>
+  <div class="sec-label"><span class="idx">08</span> Balancete simplificado <span class="tag governs">caixa + ativo + cota</span></div>
   <div class="card">
     {price_alert_html}
     <p class="muted">Valores principais incluem o rascunho salvo (projecao). Quando houver diferenca, o valor fechado em ledger aparece na linha seguinte.</p>
@@ -1613,7 +1910,7 @@ def render_live_html(view: dict[str, Any]) -> str:
     </div>
   </div>
 
-  <div class="sec-label"><span class="idx">08</span> DFC simplificado + reconciliacao <span class="tag">balanco vs BTG</span></div>
+  <div class="sec-label"><span class="idx">09</span> DFC simplificado + reconciliacao <span class="tag">balanco vs BTG</span></div>
   <div class="card">
     {price_alert_html}
     <div class="sources">

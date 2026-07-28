@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-28
+
+- feat(livereal): T-SDC-RUIN-FLOOR-P1-BOLETIM-LIVEREAL-US-V1 — instrumenta no `/painel` LIVE-REAL-TEST US um alerta visual de piso de ruína p1 da carteira inteira, medido por perda vs C0 e toque único por horizonte, com artefato congelado `data/live_real_test/ruin_floor_us.json` (block bootstrap B=20k, bloco 21, seed 42, holdout `curve_C4_K10` desde 2022-12-31). Mantém o fluxo estritamente informativo, sem CTA de venda, e atualiza `pipeline/real_boletim_web.py`, `tests/test_real_boletim_web.py`, `DECISION_LOG.md` e `GOVERNANCE.md` §6.29. Decision: USA D-169 (ref cruzada: SALA D-185).
+
 ## 2026-07-26
 
 - fix(ledger+governance): T-SDC-DRYRUN-US-LEDGER-PHANTOM-CORRECTION-AUDITGOV-V1 — remedia append-only incidente de auditoria que gravou `SETTLEMENT` fantasma (`id=a3aff53f-9bc1-450f-9e93-f63930dab98f`, `amount=2500.68`, `reason="some-sell-id"`) no dry-run US: adiciona `CORRECTION` referenciado, regenera somente `data/real/2026-07-15.json` e `data/cycles/2026-07-15/boletim_preenchido.json`, adiciona script supervisionado `scripts/fix_ledger_20260726_phantom_settlement_correction.py` e teste `test_correction_cancels_unmatched_settlement`; formaliza em `GOVERNANCE.md` §6.11.2 a politica vigente de plano diferido sem TTL (bloqueio de rebalance por sobreposicao e intencional) e fecha finding de governanca com `create_motor_tag: v1.20.0-motor-us` no handoff. Decision: USA D-164 (ref cruzada: SALA D-167).

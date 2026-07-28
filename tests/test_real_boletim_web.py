@@ -24,6 +24,29 @@ def _write_price_window(path: Path, rows: list[tuple[str, str, float]]) -> None:
     frame.to_parquet(path, index=False)
 
 
+def _write_ruin_floor(path: Path, p1_pct: list[float], p5_pct: list[float] | None = None) -> None:
+    payload = {
+        "decision_ref": "SALA D-185 / USA D-169",
+        "params": {
+            "source_csv": "backtest/results/curve_C4_K10.csv",
+            "holdout_start_date": "2022-12-31",
+            "bootstrap_paths": 20000,
+            "block_len": 21,
+            "seed": 42,
+            "horizon_max": len(p1_pct),
+            "method": "block bootstrap + prefix-min (perda vs C0 em %)",
+            "n_retornos_holdout": 800,
+            "computed_at": "2026-07-28T16:00:00Z",
+        },
+        "floors": {
+            "horizons": list(range(1, len(p1_pct) + 1)),
+            "p1_pct": p1_pct,
+            "p5_pct": p5_pct if p5_pct is not None else p1_pct,
+        },
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def test_add_operation_roundtrip_persists_only_draft(tmp_path, monkeypatch):
     monkeypatch.setattr(real_boletim_web, "DRAFT_DIR", tmp_path / "drafts")
     exec_day = date(2026, 7, 16)
@@ -900,6 +923,8 @@ def test_load_live_view_exposes_base1_bridge_keys(tmp_path, monkeypatch):
     assert isinstance(view["sparklines_tickers"], list)
     assert isinstance(view["corretagem_total"], float)
     assert isinstance(view["capital_em_uso"], float)
+    assert "ruin_floor" in view
+    assert isinstance(view["ruin_floor"], dict)
 
 
 def test_render_live_html_has_bridge_spark_and_no_cdn(monkeypatch):
@@ -967,4 +992,111 @@ def test_render_live_html_has_bridge_spark_and_no_cdn(monkeypatch):
     assert "cdn." not in html
     assert '<script src="http' not in html
     assert "<script src='http" not in html
+
+
+def test_ruin_floor_status_ok_above_floor(tmp_path):
+    artifact = tmp_path / "ruin_floor_us.json"
+    _write_ruin_floor(artifact, p1_pct=[-18.2] * 10, p5_pct=[-10.2] * 10)
+    series = [
+        {"date": "2026-07-16", "base1": 1.00},
+        {"date": "2026-07-17", "base1": 0.97},
+        {"date": "2026-07-18", "base1": 0.95},
+    ]
+    out = real_boletim_web._ruin_floor_status(series, artifact)
+    assert out["estado"] == "OK"
+    assert out["h"] == 3
+    assert out["loss_atual_pct"] == -5.0
+    assert out["pior_loss_pct"] == -5.0
+    assert out["piso_p1_pct"] == -18.2
+    assert out["margem_pp"] == 13.2
+    assert out["touched_dates"] == []
+
+
+def test_ruin_floor_status_alerta_on_historical_touch(tmp_path):
+    artifact = tmp_path / "ruin_floor_us.json"
+    _write_ruin_floor(artifact, p1_pct=[-18.2] * 10, p5_pct=[-10.2] * 10)
+    series = [
+        {"date": "2026-07-16", "base1": 1.00},
+        {"date": "2026-07-17", "base1": 0.80},
+        {"date": "2026-07-18", "base1": 0.95},
+    ]
+    out = real_boletim_web._ruin_floor_status(series, artifact)
+    assert out["estado"] == "ALERTA"
+    assert out["loss_atual_pct"] == -5.0
+    assert out["pior_loss_pct"] == -20.0
+    assert out["touched_dates"] == ["2026-07-17"]
+
+
+def test_ruin_floor_status_indisponivel_when_artifact_missing():
+    series = [{"date": "2026-07-16", "base1": 1.0}]
+    out = real_boletim_web._ruin_floor_status(series, Path("/tmp/arquivo_inexistente_ruin_floor.json"))
+    assert out["estado"] == "INDISPONIVEL"
+    assert out["touched_dates"] == []
+
+
+def test_ruin_floor_status_uses_loss_vs_c0_not_drawdown(tmp_path):
+    artifact = tmp_path / "ruin_floor_us.json"
+    _write_ruin_floor(artifact, p1_pct=[-10.0] * 10, p5_pct=[-5.0] * 10)
+    series = [
+        {"date": "2026-07-16", "base1": 1.00},
+        {"date": "2026-07-17", "base1": 1.10},
+        {"date": "2026-07-18", "base1": 0.95},
+    ]
+    out = real_boletim_web._ruin_floor_status(series, artifact)
+    assert out["estado"] == "OK"
+    assert out["loss_atual_pct"] == -5.0
+    assert out["piso_p1_pct"] == -10.0
+    assert out["touched_dates"] == []
+
+
+def test_render_live_html_shows_ruin_alert_without_defensive_cta():
+    view = {
+        "today": "2026-07-23",
+        "market_day": "2026-07-22",
+        "cash_free": 100.0,
+        "cash_accounting": 0.0,
+        "cash_free_projetado": 100.0,
+        "cash_accounting_projetado": 0.0,
+        "carteira_d1_valor": 1000.0,
+        "carteira_projetada_valor": 1000.0,
+        "caixa_real_informado": 90.0,
+        "friccao_balanco_real": 10.0,
+        "positions": [],
+        "positions_projetado": [],
+        "holdings": [],
+        "held_set": [],
+        "top_operational": [],
+        "target_weights": {},
+        "operations_book": {},
+        "operations_book_projetado": {},
+        "pending_settlements": [],
+        "forno": {},
+        "draft": {"operations": []},
+        "closed_boletim_exists": False,
+        "base1_series": [
+            {"date": "2026-07-16", "nav": 1000.0, "base1": 1.0, "daily_var_pct": 0.0, "cagr_expect": 1.0},
+            {"date": "2026-07-17", "nav": 800.0, "base1": 0.8, "daily_var_pct": -20.0, "cagr_expect": 1.0},
+            {"date": "2026-07-18", "nav": 950.0, "base1": 0.95, "daily_var_pct": 18.75, "cagr_expect": 1.0},
+        ],
+        "corretagem_dia": 0.0,
+        "corretagem_total": 0.0,
+        "capital_em_uso": 900.0,
+        "sparklines_tickers": [],
+        "missing_price_tickers": [],
+        "dfc_diario": {},
+        "ruin_floor": {
+            "estado": "ALERTA",
+            "h": 3,
+            "loss_atual_pct": -5.0,
+            "pior_loss_pct": -20.0,
+            "piso_p1_pct": -18.2,
+            "p5_pct_h": -10.2,
+            "margem_pp": 13.2,
+            "touched_dates": ["2026-07-17"],
+        },
+    }
+    html = real_boletim_web.render_live_html(view)
+    assert "PISO DE RUINA p1 TOCADO" in html
+    assert "Informativo (D-185/R-020) - venda e decisao manual do Owner." in html
+    assert "Nenhuma venda defensiva sugerida (heat/SPC dentro dos limites)." in html
 

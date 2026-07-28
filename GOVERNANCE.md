@@ -938,6 +938,74 @@ explicito de precificacao e bloqueio operacional:
 
 Ref: SALA D-143, USA D-160, USA D-150, R-018, R-046, R-049.
 
+### 6.28 Drawdown informativo no LIVE-REAL + Top-20 desde ignicao + operacoes encerradas com expiracao visual (D-168)
+
+A partir de D-168, o `/painel` LIVE-REAL-TEST US ajusta a superficie consultiva
+sem alterar motor blindado nem ledger:
+
+1. **Drawdown deixa de ser CTA defensivo**:
+   `pipeline/real_boletim_web.py::_suggested_defensive_sells(...)` para de
+   usar `drawdown <= -15%` como gatilho de "venda defensiva sugerida". O
+   drawdown permanece calculado e exibido como alerta informativo na Carteira
+   real (coluna `Drawdown Pico %`), em linha com D-091 (`INCONCLUSIVO`) e
+   R-048.
+2. **Defensivas sugeridas mantidas por heat/SPC**:
+   gatilhos operacionais da tabela de defensivas seguem somente:
+   `heat_pct <= -32,42%` e `spc_status == INSTAVEL`.
+3. **Top-20 com telemetria "Desde ignicao"**:
+   novo campo visual no ranking operacional para tickers acesos:
+   `((close_d1 / custo_medio) - 1) * 100`, sem impacto em decisão blindada.
+4. **Bloco "Operacoes encerradas" com persistencia de 2 rebalanceamentos**:
+   a separacao entre operacoes ativas e encerradas e de **renderizacao**:
+   `qtd_liquida <= 1e-6` ou valor residual (`qtd_liquida * close_d1 < US$ 1`)
+   migra para o bloco encerrado, com data de zeragem e validade visual ate o
+   segundo rebalanceamento posterior.
+5. **Expiracao sem estado e sem escrita**:
+   a limpeza de operacoes encerradas e recomputada em runtime e remove apenas
+   da exibicao; nao apaga nem altera eventos historicos.
+
+**Contrato de escopo**:
+
+- Nenhum arquivo blindado de §6.6 foi tocado.
+- `ledger_real.jsonl` permanece append-only e intocado.
+- Remocao de operacoes encerradas e exclusivamente visual.
+- Drawdown informativo nao gera recomendacao de venda automatica.
+
+Ref: SALA D-183, USA D-168, D-091, R-020, R-036, R-046, R-048.
+
+### 6.29 Piso de ruina p1 no /painel LIVE-REAL-TEST (D-169)
+
+A partir de D-169, o `/painel` LIVE-REAL-TEST US incorpora um alerta visual de
+piso de ruina da carteira real, sem tocar motor blindado nem ledger:
+
+1. **Metrica oficial (Owner-confirmed)**:
+   perda da carteira total contra C0 (`perda_vs_c0_pct = (Base1 - 1) * 100`),
+   calculada sobre a serie real cotizada (`base1_series`) do proprio boletim.
+   Nao usar drawdown vs pico e nao usar metrica por ticker.
+2. **Piso por horizonte com pre-registro congelado**:
+   o arquivo `data/live_real_test/ruin_floor_us.json` guarda os pisos p1/p5 por
+   horizonte de pregoes (h=1..504), calibrados no holdout
+   `backtest/results/curve_C4_K10.csv` desde 2022-12-31 via block bootstrap
+   (`B=20000`, `bloco=21`, `seed=42`, estatistica = pior ponto prefix-min da
+   trajetoria). Novo freeze exige nova decisao no `DECISION_LOG.md`.
+3. **Regra de disparo**:
+   toque unico no p1 do horizonte corrente (ou em qualquer horizonte anterior da
+   mesma trajetoria) coloca estado `ALERTA`; sem toque, estado `OK`.
+4. **Carater operacional**:
+   alerta estritamente informativo. Nao gera CTA, nao executa venda automatica e
+   nao altera os gatilhos de defensiva por heat/SPC.
+
+**Contrato de escopo**:
+
+- Nenhum arquivo blindado de §6.6 foi tocado.
+- `ledger_real.jsonl` permanece append-only e intocado.
+- O helper de leitura (`pipeline/real_boletim_web.py::_ruin_floor_status`) e
+  puro/read-only e depende exclusivamente de `base1_series` + artefato
+  congelado.
+- Interpretacao e acao final continuam sob decisao manual do Owner (R-020).
+
+Ref: SALA D-185, USA D-169, R-018, R-020, R-048, R-049.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.
