@@ -2,6 +2,8 @@
 
 ## 2026-07-28
 
+- docs(curadoria): T-SDC-EODHD-US-SOMBRA-INGEST-SEMANTICA-V1 — fecha a rastreabilidade do pacote sombra EODHD US: adaptador `lib/eodhd_source_us.py`, replay em sandbox via `scripts/shadow_eodhd_ingest_us.py`, comparador `scripts/comparar_sombra_eodhd_us.py`, testes dedicados e veredito `NO-GO` por divergência de `dividend_rate` na janela sombra; atualização documental em `GOVERNANCE.md` §6.30. Artefatos: `lib/eodhd_source_us.py`, `scripts/shadow_eodhd_ingest_us.py`, `scripts/comparar_sombra_eodhd_us.py`, `tests/test_eodhd_source_us.py`, `GOVERNANCE.md`, `DECISION_LOG.md`. Decision: SALA D-190 / USA D-190 (ref cruzada: D-189, R-065).
+
 - feat(livereal): T-SDC-RUIN-FLOOR-P1-BOLETIM-LIVEREAL-US-V1 — instrumenta no `/painel` LIVE-REAL-TEST US um alerta visual de piso de ruína p1 da carteira inteira, medido por perda vs C0 e toque único por horizonte, com artefato congelado `data/live_real_test/ruin_floor_us.json` (block bootstrap B=20k, bloco 21, seed 42, holdout `curve_C4_K10` desde 2022-12-31). Mantém o fluxo estritamente informativo, sem CTA de venda, e atualiza `pipeline/real_boletim_web.py`, `tests/test_real_boletim_web.py`, `DECISION_LOG.md` e `GOVERNANCE.md` §6.29. Decision: USA D-169 (ref cruzada: SALA D-185).
 
 ## 2026-07-26
