@@ -1006,6 +1006,45 @@ piso de ruina da carteira real, sem tocar motor blindado nem ledger:
 
 Ref: SALA D-185, USA D-169, R-018, R-020, R-048, R-049.
 
+### 6.30 Sombra EODHD do ingest US (SALA D-190)
+
+Em D-190, a cadeia executou um pacote de sombra nao-blindado para validar a
+migracao de fonte do Step 02 sem tocar os arquivos de `§6.6`:
+
+1. **Diagnostico de notacao no bulk**:
+   `eodhd_base_unica/relatorios/diagnostico_bulk_notacao_us.json` confirmou que
+   classes duais chegam no feed em variantes com hifen (ex.: `GEF-B`), nao no
+   formato com ponto do universo (`GEF.B`).
+2. **Reparo aditivo na SALA**:
+   `atualizar_incremental_us.py` passou a suportar mapeamento de codigo
+   (`.`/`-`) e `--repair-sessions`, com reprocesso aditivo de 27-29/07 para
+   preencher apenas pares ausentes.
+3. **Replay canonico em sandbox**:
+   `scripts/shadow_eodhd_ingest_us.py` montou
+   `data/shadow_eodhd_ws/`, gerou `us_market_data_raw.parquet` sombra e rodou
+   `t008 -> t009 -> t010` sobre o sandbox.
+4. **Guarda de integridade de producao**:
+   hashes pre/pos de
+   `data/ssot/us_market_data_raw.parquet`,
+   `data/ssot/operational_market_data_raw.parquet`,
+   `data/ssot/canonical_us.parquet` e
+   `data/ssot/operational_window.parquet` permaneceram identicos
+   (`changed=[]` em `sombra_shadow_exec_us.json`).
+5. **Comparacao formal da sombra**:
+   `scripts/comparar_sombra_eodhd_us.py` emitiu
+   `eodhd_base_unica/relatorios/sombra_ingest_us.json` com veredito `NO-GO`
+   por divergencia de `dividend_rate` na janela sombra (casos nominais `RY` e
+   `FLXN`).
+
+**Contrato de escopo**:
+
+- Nenhum arquivo blindado de `§6.6` foi alterado.
+- O caminho operacional oficial permanece Polygon no Step 02.
+- A troca de fonte no motor US segue bloqueada ate novo ciclo formal com
+  Auditor duplo e aprovacao explicita do Owner.
+
+Ref: SALA D-190, SALA D-189, R-065.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.
