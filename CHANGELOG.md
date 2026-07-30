@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-30
+
+- docs(curadoria): T-SDC-EODHD-US-FONTE-PRIMARIA-STEP02-V1 — fecha a rastreabilidade da virada operacional do Step 02 US para EODHD local: Step 02 blindado migrado para `lib.eodhd_source_us`, comparador da sombra recalibrado com `diagnostico_dividendos_us.json`, lançadores bloqueando a atualização EODHD US antes do ingest e governança atualizada para registrar o desvio autorizado pelo Owner após `NO-GO` residual. Artefatos: `pipeline/02_ingest_prices_us.py`, `scripts/comparar_sombra_eodhd_us.py`, `tests/test_step02_eodhd.py`, `GOVERNANCE.md`, `DECISION_LOG.md`. Decision: USA D-170 (ref cruzada: SALA D-191, SALA D-190, R-065). Tag: `v1.21.0-motor-us`.
+
 ## 2026-07-28
 
 - docs(curadoria): T-SDC-EODHD-US-SOMBRA-INGEST-SEMANTICA-V1 — fecha a rastreabilidade do pacote sombra EODHD US: adaptador `lib/eodhd_source_us.py`, replay em sandbox via `scripts/shadow_eodhd_ingest_us.py`, comparador `scripts/comparar_sombra_eodhd_us.py`, testes dedicados e veredito `NO-GO` por divergência de `dividend_rate` na janela sombra; atualização documental em `GOVERNANCE.md` §6.30. Artefatos: `lib/eodhd_source_us.py`, `scripts/shadow_eodhd_ingest_us.py`, `scripts/comparar_sombra_eodhd_us.py`, `tests/test_eodhd_source_us.py`, `GOVERNANCE.md`, `DECISION_LOG.md`. Decision: SALA D-190 / USA D-190 (ref cruzada: D-189, R-065).

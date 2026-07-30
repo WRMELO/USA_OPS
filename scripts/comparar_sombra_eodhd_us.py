@@ -21,6 +21,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sessions", default="2026-07-27,2026-07-28,2026-07-29", help="Sessoes alvo CSV.")
     parser.add_argument("--history-sessions", type=int, default=20, help="Numero de sessoes historicas comuns.")
     parser.add_argument(
+        "--diagnostico-path",
+        default="/home/wilson/SALA_DE_CONTROLE/eodhd_base_unica/relatorios/diagnostico_dividendos_us.json",
+        help="Diagnostico nominal de dividendos (classificacao de casos de conversao).",
+    )
+    parser.add_argument(
         "--out-json",
         default="/home/wilson/SALA_DE_CONTROLE/eodhd_base_unica/relatorios/sombra_ingest_us.json",
         help="Relatorio JSON.",
@@ -213,6 +218,17 @@ def main() -> int:
     split_match = split_events["split_factor_off"].eq(split_events["split_factor_shadow"])
     split_mismatch_rows = split_events.loc[~split_match.fillna(False), ["date", "ticker", "split_factor_off", "split_factor_shadow"]]
 
+    diag_path = Path(args.diagnostico_path)
+    diag_payload = _load_json(diag_path) if diag_path.exists() else {}
+    diag_by_class = (
+        diag_payload.get("by_classification", {}) if isinstance(diag_payload, dict) else {}
+    )
+    currency_case_tickers = {
+        str(t).upper().strip()
+        for t in diag_by_class.get("currency_conversion", [])
+        if str(t).strip()
+    }
+
     div_merge = opw[opw["date"].isin(sessions)][["date", "ticker", "dividend_rate"]].merge(
         shadow[shadow["date"].isin(sessions)][["date", "ticker", "dividend_rate"]],
         on=["date", "ticker"],
@@ -222,7 +238,10 @@ def main() -> int:
     div_merge["dividend_rate_off"] = pd.to_numeric(div_merge["dividend_rate_off"], errors="coerce").fillna(0.0)
     div_merge["dividend_rate_shadow"] = pd.to_numeric(div_merge["dividend_rate_shadow"], errors="coerce").fillna(0.0)
     div_merge["abs_diff"] = (div_merge["dividend_rate_off"] - div_merge["dividend_rate_shadow"]).abs()
-    div_mismatch = div_merge[div_merge["abs_diff"] > 1e-6].copy()
+    div_threshold = 1e-4
+    div_mismatch_all = div_merge[div_merge["abs_diff"] > div_threshold].copy()
+    div_currency_cases = div_mismatch_all[div_mismatch_all["ticker"].isin(currency_case_tickers)].copy()
+    div_mismatch = div_mismatch_all[~div_mismatch_all["ticker"].isin(currency_case_tickers)].copy()
 
     # Presence in EODHD base and draft exclusions.
     universe_payload = _load_json(universe_path)
@@ -340,6 +359,7 @@ def main() -> int:
             "universe_us": str(universe_path),
             "ledger_real": str(workspace / "data/live_real_test/ledger_real.jsonl"),
             "contexto_analista_us": str(workspace / "data/ssot/contexto_analista_us.json"),
+            "diagnostico_dividendos_us": str(diag_path),
         },
         "coverage_by_session": coverage_by_session,
         "price_metrics": {
@@ -360,7 +380,15 @@ def main() -> int:
         "dividend_window": {
             "rows_compared": int(len(div_merge)),
             "mismatch_count": int(len(div_mismatch)),
+            "mismatch_count_all_above_threshold": int(len(div_mismatch_all)),
+            "currency_case_count": int(len(div_currency_cases)),
             "mismatch_sample": div_mismatch.head(20).to_dict(orient="records"),
+        },
+        "dividend_currency_cases": {
+            "source_path": str(diag_path),
+            "tickers": sorted(currency_case_tickers),
+            "count": int(len(div_currency_cases)),
+            "sample": div_currency_cases.head(20).to_dict(orient="records"),
         },
         "missing_intersections": {
             "missing_union_count": len(missing_union_sorted),
@@ -387,7 +415,7 @@ def main() -> int:
             "within_0_5pct_rate_min": 0.99,
             "p95_abs_pct_diff_max": 0.001,
             "split_factor_exact_match_required": True,
-            "dividend_rate_abs_diff_max": 1e-6,
+            "dividend_rate_abs_diff_max": div_threshold,
             "missing_intersection_allowed": 0,
             "credits_ceiling": 1000,
         },
@@ -435,6 +463,7 @@ def main() -> int:
             "## Eventos",
             f"- split_mismatch_count: {len(split_mismatch_rows)}",
             f"- dividend_mismatch_count: {len(div_mismatch)}",
+            f"- dividend_currency_case_count: {len(div_currency_cases)}",
             "",
             "## Intersecoes de risco",
             f"- missing_in_open_positions: {missing_in_open_positions}",

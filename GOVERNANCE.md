@@ -155,7 +155,7 @@ ou parquets operacionais vivos) apenas por serem grandes.
 | Arquivo | Função | Auditorias |
 |---------|--------|------------|
 | `pipeline/painel_diario.py` | Venda defensiva SPC, Base 1 patrimônio real, duplo-caixa, resolução de datas para pregão real e reconciliação D0 de rebalance (sell+buy) para autosave dry-run | Phase 5 completa, D-027, D-033, D-038, D-137 |
-| `pipeline/02_ingest_prices_us.py` | Ingestão Polygon.io (OHLCV, dividendos, splits) | Phase 1 v2, D-007, D-026 |
+| `pipeline/02_ingest_prices_us.py` | Ingestão via base local EODHD (OHLCV, dividendos, splits) com guarda de frescor fail-loud | Phase 1 v2, D-007, D-026, D-170 |
 | `pipeline/04_build_canonical.py` | Build canonical + operational_window | Phase 1 v2, D-026 |
 | `pipeline/09_decide.py` | Motor C4 puro (TopN=20, Cad=10, K=10, cap=6%, min_market_cap=300M) | Phase 3-4, D-021, D-029, D-033, D-044, D-065 |
 | `config/winner_us.json` | Declaração canônica do winner C4 com SHA256 das evidências | D-021, T-024 |
@@ -1039,11 +1039,53 @@ migracao de fonte do Step 02 sem tocar os arquivos de `§6.6`:
 **Contrato de escopo**:
 
 - Nenhum arquivo blindado de `§6.6` foi alterado.
-- O caminho operacional oficial permanece Polygon no Step 02.
-- A troca de fonte no motor US segue bloqueada ate novo ciclo formal com
-  Auditor duplo e aprovacao explicita do Owner.
+- No fechamento de D-190, o caminho operacional oficial permaneceu Polygon no
+  Step 02.
+- O bloqueio de troca registrado em D-190 foi superado somente em D-170, com
+  decisao explicita do Owner e novo ciclo formal descrito em §6.31.
 
 Ref: SALA D-190, SALA D-189, R-065.
+
+### 6.31 Migracao primaria do Step 02 US para EODHD (SALA D-191 / USA D-170)
+
+Em D-170, a fabrica US executou a migracao primaria do Step 02 para consumir
+somente a base local EODHD, com ordem explicita do Owner para concluir a virada
+no mesmo dia mesmo sem condicionar a decisao final ao veredito da sombra:
+
+1. **Step 02 blindado migrado**:
+   `pipeline/02_ingest_prices_us.py` deixou de invocar `t007`/Polygon e passou
+   a carregar incremental via `lib.eodhd_source_us.load_incremental_rows_from_eodhd`,
+   com merge idempotente por `ticker+date` e `keep=last`.
+2. **Guarda de frescor fail-loud**:
+   o Step 02 valida `max(date)` de
+   `SALA_DE_CONTROLE/eodhd_base_unica/data/eodhd_raw_us.parquet` contra
+   `prev_session(XNYS)` do `target_end`; se a base estiver defasada, aborta com
+   `RuntimeError` (sem fallback silencioso).
+3. **Launcher oficial atualizado**:
+   `SALA_DE_CONTROLE/iniciar.sh` e
+   `SALA_DE_CONTROLE/iniciar_fim_de_semana.sh` agora executam
+   `atualizar_incremental_us.py` como etapa bloqueante imediatamente antes do
+   `--ingest-only` US, em aderencia a R-065.
+4. **Sombra reexecutada e diagnostico nominal**:
+   `diagnostico_dividendos_us.json` classificou `FLXN` como precisao de
+   arredondamento e `RY` como `unexplained`; a comparacao final manteve
+   veredito `NO-GO` por divergencia remanescente de `dividend_rate` em `RY`.
+5. **Desvio autorizado e materialidade operacional**:
+   por decisao explicita do Owner, a migracao foi mantida com `NO-GO`
+   documentado. A materialidade residual foi classificada como baixa para o
+   motor: `dividend_rate` nao entra em regra de decisao/risco do C4 (campo de
+   transporte no ingest/canonical) e os checks de cobertura, preco, splits e
+   intersecoes de risco permaneceram `OK`.
+
+**Contrato operacional vigente (D-170)**:
+
+- Step 02 oficial da fabrica US = EODHD local (nao Polygon).
+- Fallback para Polygon no caminho operacional e proibido por default.
+- Qualquer retorno da fonte antiga exige novo `D-NNN` via cadeia completa (R-065).
+- Por tocar arquivo blindado de `§6.6`, o ciclo segue com Auditor duplo e nova
+  tag de motor (`v1.21.0-motor-us`) no fechamento de curadoria.
+
+Ref: USA D-170, SALA D-191, SALA D-190, R-065, R-018.
 
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
