@@ -4,14 +4,13 @@ Este script NAO executa o corte real automaticamente.
 Ele fornece comandos operacionais auditaveis para:
   - registrar BUY do gemeo sombra (preco ideal),
   - emitir relatorio de friccao de execucao (real vs sombra),
-  - comparar cross-check operacional contra o dry-run paralelo.
+  - validar cross-check operacional somente no caminho real.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from collections import defaultdict, deque
 from datetime import UTC, date, datetime
@@ -75,15 +74,6 @@ def _json_dump(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _safe_float_or_none(value: Any) -> float | None:
-    if value is None:
-        return None
-    try:
-        return float(value)
-    except Exception:
-        return None
-
-
 def _buy_events_until(ledger_path: Path, as_of: date) -> list[Any]:
     _configure_target_ledger(ledger_path)
     rows = [
@@ -107,27 +97,6 @@ def _event_buy_payload(ev: Any) -> dict[str, Any]:
         "preco": float(ev.price or 0.0),
         "amount": float(ev.amount or 0.0),
     }
-
-
-def _find_latest_dryrun_boletim(real_dir: Path, as_of: date) -> Path | None:
-    if not real_dir.exists():
-        return None
-
-    pat = re.compile(r"^\d{4}-\d{2}-\d{2}\.json$")
-    candidates: list[tuple[date, Path]] = []
-    for file in real_dir.glob("*.json"):
-        if not file.is_file() or not pat.match(file.name):
-            continue
-        try:
-            file_date = date.fromisoformat(file.stem)
-        except Exception:
-            continue
-        if file_date <= as_of:
-            candidates.append((file_date, file))
-
-    if not candidates:
-        return None
-    return max(candidates, key=lambda item: item[0])[1]
 
 
 def cmd_record_shadow_buy(args: argparse.Namespace) -> int:
@@ -176,7 +145,8 @@ def build_friction_report_payload(
     real_dir: Path | None = None,
 ) -> dict[str, Any]:
     resolved_ledger_dir = ledger_dir if ledger_dir is not None else DEFAULT_LEDGER_DIR
-    resolved_real_dir = real_dir if real_dir is not None else DEFAULT_REAL_DIR
+    # Compatibilidade de assinatura: --real-dir segue aceito, mas esta aposentado por D-194/USA D-171.
+    _ = real_dir if real_dir is not None else DEFAULT_REAL_DIR
 
     real_ledger_path = _configure_real_ledger(resolved_ledger_dir)
     shadow_ledger_path = _configure_shadow_ledger(resolved_ledger_dir)
@@ -240,22 +210,6 @@ def build_friction_report_payload(
     real_positions = export_snapshot(as_of)
     real_cash = compute_cash(as_of)
 
-    dryrun_file = _find_latest_dryrun_boletim(resolved_real_dir, as_of)
-    dryrun_source_missing = dryrun_file is None
-    dryrun_source_file: str | None = None
-    dryrun_cash_free: float | None = None
-    dryrun_cash_accounting: float | None = None
-    dryrun_n_positions: int | None = None
-
-    if dryrun_file is not None:
-        dryrun_payload = json.loads(dryrun_file.read_text(encoding="utf-8"))
-        dryrun_source_file = str(dryrun_file)
-        dryrun_cash_free = _safe_float_or_none(dryrun_payload.get("cash_free"))
-        dryrun_cash_accounting = _safe_float_or_none(dryrun_payload.get("cash_accounting"))
-        positions_snapshot = dryrun_payload.get("positions_snapshot")
-        if isinstance(positions_snapshot, list):
-            dryrun_n_positions = len(positions_snapshot)
-
     return {
         "as_of_date": as_of.isoformat(),
         "generated_at": datetime.now(tz=UTC).isoformat(),
@@ -274,18 +228,15 @@ def build_friction_report_payload(
             "real_cash_free": float(real_cash.get("cash_free", 0.0)),
             "real_cash_accounting": float(real_cash.get("cash_accounting", 0.0)),
             "real_n_positions": len(real_positions),
-            "dryrun_cash_free": dryrun_cash_free,
-            "dryrun_cash_accounting": dryrun_cash_accounting,
-            "dryrun_n_positions": dryrun_n_positions,
-            "dryrun_source_file": dryrun_source_file,
-            "dryrun_source_missing": dryrun_source_missing,
+            "dryrun_retired": True,
+            "dryrun_retirement_ref": "SALA D-194 / USA D-171",
         },
         "statistically_meaningful_return_comparison": False,
         "methodology_note": (
             "Comparacao formal de Sharpe/retorno da serie real fica fora deste relatorio inicial: "
             "exige acumulacao de observacoes (n_live_real) apos o dia-D. "
-            "Este artefato mede friccao de execucao (real vs gemeo sombra) e cross-check operacional "
-            "(real vs dry-run paralelo), em linha com D-103 e R-049."
+            "Este artefato mede friccao de execucao (real vs gemeo sombra). "
+            "O cross-check contra dry-run foi aposentado por SALA D-194 / USA D-171."
         ),
     }
 

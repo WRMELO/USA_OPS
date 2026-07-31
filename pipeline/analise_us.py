@@ -162,16 +162,6 @@ def _load_real_ledger_doc(ledger_path: Path, exec_day: date) -> dict[str, Any]:
     }
 
 
-def _load_last_rebalance() -> dict[str, Any]:
-    p = ROOT / "data" / "daily" / "last_rebalance.json"
-    if not p.exists():
-        return {}
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
 def _calc_rebalance_info(last_rebalance_dt_str: str, cadence: int, as_of_day: date) -> dict[str, Any]:
     cadence = max(int(cadence), 1)
     try:
@@ -216,6 +206,34 @@ def _calc_rebalance_info(last_rebalance_dt_str: str, cadence: int, as_of_day: da
         "next_rebalance_date": str(next_reb) if next_reb else None,
         "cycles_to_next_rebalance": cycles_remaining,
     }
+
+
+def _derive_last_rebalance_from_anchor(
+    anchor_dt_str: str,
+    cadence: int,
+    phase_offset: int,
+    as_of_day: date,
+) -> str:
+    cadence = max(int(cadence), 1)
+    phase_offset = int(phase_offset)
+    try:
+        anchor_day = date.fromisoformat(str(anchor_dt_str))
+    except Exception:
+        return str(anchor_dt_str or "")
+
+    first_session_after_anchor = _next_session(anchor_day, exchange="XNYS")
+    if first_session_after_anchor >= as_of_day:
+        return str(anchor_day)
+
+    sessions_until_asof = _sessions_in_range(first_session_after_anchor, as_of_day, exchange="XNYS")
+    last_rebalance = anchor_day
+    for idx, session_day in enumerate(sessions_until_asof, start=1):
+        if session_day >= as_of_day:
+            break
+        if ((idx - phase_offset) % cadence) == 0:
+            last_rebalance = session_day
+
+    return str(last_rebalance)
 
 
 def _load_spc_window(market_day: date, tickers: list[str]) -> pd.DataFrame:
@@ -364,10 +382,10 @@ def build_context(
     top_n = int(wcfg.get("top_n", 20))
     cadence = int(wcfg.get("rebalance_cadence", 10))
     anchor = str(wcfg.get("rebalance_anchor_date", ""))
+    phase_offset = int(wcfg.get("rebalance_phase_offset", 0))
     max_weight_cap = float(wcfg.get("max_weight_cap", 0.06))
 
-    last_reb_doc = _load_last_rebalance()
-    last_rebalance_dt = str(last_reb_doc.get("last_rebalance_dt", "") or anchor)
+    last_rebalance_dt = _derive_last_rebalance_from_anchor(anchor, cadence, phase_offset, market_day)
     rebalance_info = _calc_rebalance_info(last_rebalance_dt, cadence, market_day)
 
     daily_doc = _load_latest_daily(market_day) or {}

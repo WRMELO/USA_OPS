@@ -168,7 +168,7 @@ def test_emit_friction_report_flags_unmatched_buys(tmp_path):
     assert payload["execution_friction"]["total_slippage_amount"] == 0.0
 
 
-def test_emit_friction_report_includes_operational_crosscheck(tmp_path):
+def test_emit_friction_report_marks_dryrun_as_retired(tmp_path):
     ledger_dir = tmp_path / "live_real"
     real_dir = tmp_path / "real"
     real_dir.mkdir(parents=True, exist_ok=True)
@@ -180,8 +180,10 @@ def test_emit_friction_report_includes_operational_crosscheck(tmp_path):
         "cash_free": 123.45,
         "cash_accounting": 67.89,
     }
-    source_file = real_dir / "2026-07-15.json"
-    source_file.write_text(json.dumps(dryrun_payload, ensure_ascii=False), encoding="utf-8")
+    (real_dir / "2026-07-15.json").write_text(
+        json.dumps(dryrun_payload, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
     rc_emit = friction.main(
         [
@@ -198,35 +200,13 @@ def test_emit_friction_report_includes_operational_crosscheck(tmp_path):
 
     payload = _read_json(ledger_dir / "friction_report_2026-07-16.json")
     cross = payload["operational_crosscheck"]
-    assert cross["dryrun_source_missing"] is False
-    assert cross["dryrun_source_file"] == str(source_file)
-    assert cross["dryrun_n_positions"] == 1
-    assert abs(float(cross["dryrun_cash_free"]) - 123.45) < 1e-9
-    assert abs(float(cross["dryrun_cash_accounting"]) - 67.89) < 1e-9
-
-
-def test_emit_friction_report_flags_missing_dryrun_source(tmp_path):
-    ledger_dir = tmp_path / "live_real"
-    empty_real_dir = tmp_path / "real_empty"
-    empty_real_dir.mkdir(parents=True, exist_ok=True)
-
-    rc_emit = friction.main(
-        [
-            "emit-friction-report",
-            "--as-of-date",
-            "2026-07-16",
-            "--ledger-dir",
-            str(ledger_dir),
-            "--real-dir",
-            str(empty_real_dir),
-        ]
-    )
-    assert rc_emit == 0
-
-    payload = _read_json(ledger_dir / "friction_report_2026-07-16.json")
-    cross = payload["operational_crosscheck"]
-    assert cross["dryrun_source_missing"] is True
-    assert cross["dryrun_source_file"] is None
-    assert cross["dryrun_cash_free"] is None
-    assert cross["dryrun_cash_accounting"] is None
-    assert cross["dryrun_n_positions"] is None
+    assert abs(float(cross["real_cash_free"])) < 1e-9
+    assert abs(float(cross["real_cash_accounting"])) < 1e-9
+    assert cross["real_n_positions"] == 0
+    assert cross["dryrun_retired"] is True
+    assert cross["dryrun_retirement_ref"] == "SALA D-194 / USA D-171"
+    assert "dryrun_source_missing" not in cross
+    assert "dryrun_source_file" not in cross
+    assert "dryrun_cash_free" not in cross
+    assert "dryrun_cash_accounting" not in cross
+    assert "dryrun_n_positions" not in cross

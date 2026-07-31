@@ -9,7 +9,7 @@ import os
 import sys
 import traceback
 from collections.abc import Callable
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -262,17 +262,8 @@ def run(
             panel_path = _load_step("painel_diario").run(target_date=run_date)
             logger.info("Daily panel generated at: %s", panel_path)
 
-        _step(base_n + 8, "Step 13: Autosave dry-run US...")
-        if dry_run:
-            logger.info("[DRY-RUN] Step 13: Autosave dry-run US...")
-        else:
-            try:
-                from pipeline import dryrun_autosave
-
-                autosave_results = dryrun_autosave.autosave_pending_days(as_of=run_date + timedelta(days=1))
-                logger.info("Autosave dry-run concluido: %s dia(s) processado(s).", len(autosave_results))
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Autosave dry-run falhou (nao bloqueante): %s", exc)
+        _step(base_n + 8, "Step 13: Dry-run US aposentado (D-194/USA D-171)...")
+        logger.info("Step 13 desativado permanentemente: dry-run US aposentado (D-194/USA D-171).")
 
         _step(base_n + 9, "Step 14: Refresh contexto Analista US...")
         if dry_run:

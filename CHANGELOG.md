@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-07-31
+
+- docs(curadoria): T-SDC-DRYRUN-US-APOSENTADORIA-LIVEREAL-V1 — fecha a rastreabilidade da aposentadoria do dry-run US e do endurecimento do LIVE-REAL: Step 13 desativado, `pending_rebalance_buy.json` arquivado sem delete, janela de rebalance do Analista derivada da grade canonica, friccao real-only e cross-check dry-run aposentado. Artefatos: `pipeline/run_daily.py`, `pipeline/analise_us.py`, `scripts/friction_ruler.py`, `tests/test_friction_ruler.py`, `data/daily/pending_rebalance_buy.json.retired-20260731-D194`, `data/ssot/contexto_analista_us.json`, `data/live_real_test/friction_report_2026-07-31.json`, `DECISION_LOG.md`, `GOVERNANCE.md`. Decision: D-171.
+
 ## 2026-07-30
 
 - docs(curadoria): T-SDC-EODHD-US-FONTE-PRIMARIA-STEP02-V1 — fecha a rastreabilidade da virada operacional do Step 02 US para EODHD local: Step 02 blindado migrado para `lib.eodhd_source_us`, comparador da sombra recalibrado com `diagnostico_dividendos_us.json`, lançadores bloqueando a atualização EODHD US antes do ingest e governança atualizada para registrar o desvio autorizado pelo Owner após `NO-GO` residual. Artefatos: `pipeline/02_ingest_prices_us.py`, `scripts/comparar_sombra_eodhd_us.py`, `tests/test_step02_eodhd.py`, `GOVERNANCE.md`, `DECISION_LOG.md`. Decision: USA D-170 (ref cruzada: SALA D-191, SALA D-190, R-065). Tag: `v1.21.0-motor-us`.

@@ -13,6 +13,7 @@
 
 | Task | Descrição | Status | Decisão |
 |------|-----------|--------|---------|
+| T-SDC-DRYRUN-US-APOSENTADORIA-LIVEREAL-V1 | Aposentadoria do dry-run US e endurecimento do LIVE-REAL: Step 13 desativado, plano pendente arquivado, contexto do Analista derivado da grade canonica e friccao real-only | DONE | SALA D-194 / USA D-171 |
 | T-SDC-LIVEREAL-BOLETIM-CASH-DFC-LAYOUT-US-V1 | Correcao do LIVE-REAL US: projeção de rascunho no Balancete/DFC, confirmacao de liquidacao pendente, limiar defensivo `-32,42%` e reorganizacao do layout com encerramento no fim | DONE | SALA D-141 / USA D-158 |
 | T-SDC-LIVEREAL-FRACIONARIO-LOTE-DEFENSIVA-DUST-US-V1 | Pacote unico de dados LIVE-REAL US: fracionario ponta a ponta no contexto (`analise_us.py`), heat/nao-realizado por lote no boletim, gatilho SPC defensivo restrito a `INSTAVEL`, cheque read-only de DFC/Balancete e fechamento da trilha de dust compartilhado | DONE | SALA D-142 / USA D-159 |
 | T-REBALANCE-WEAKNESS-US | Backtest HOLDOUT US de rank-decay pre-rebalance (paridade RENDA_OPS D-082/D-083) | DONE | D-070, D-066; Fase B-Prep concluida (D-075); Opcao A aprovada (D-076) |

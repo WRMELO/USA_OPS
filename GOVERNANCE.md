@@ -1087,6 +1087,47 @@ no mesmo dia mesmo sem condicionar a decisao final ao veredito da sombra:
 
 Ref: USA D-170, SALA D-191, SALA D-190, R-065, R-018.
 
+### 6.32 Aposentadoria do dry-run US e endurecimento do LIVE-REAL (SALA D-194 / USA D-171)
+
+Por decisao explicita do Owner em 2026-07-31, o dry-run paralelo do Forno US foi
+aposentado antes da operacao plena, com foco em eliminar dependencias de estado
+congelado e manter o regime LIVE-REAL-TEST operacional sem exigir novas decisoes
+do Owner no trilho dry-run.
+
+Contrato operacional vigente apos D-194/D-171:
+
+1. **Step 13 desativado permanentemente**:
+   `pipeline/run_daily.py` nao executa mais autosave dry-run; o passo fica como
+   no-op com log de aposentadoria.
+2. **Autosave vira legado inerte**:
+   `pipeline/dryrun_autosave.py` permanece preservado para rastreabilidade, mas
+   sem chamadores operacionais ativos.
+3. **Secoes historicas**:
+   `§6.11`, `§6.11.1` e `§6.11.2` permanecem como historico de evolucao; nao
+   regem mais o caminho operacional atual do US.
+4. **Plano pendente arquivado sem delete**:
+   `data/daily/pending_rebalance_buy.json` foi movido para
+   `data/daily/pending_rebalance_buy.json.retired-20260731-D194` com conteudo
+   intacto, preservando trilha.
+5. **Estado mutavel de rebalance congelado como legado**:
+   `data/daily/last_rebalance.json` deixa de ser referencia operacional; o
+   contexto do Analista passa a derivar `last_rebalance_dt` pela grade canonica
+   (`anchor=2026-04-16`, `cadence=10`, `phase=0`) em semantica `market_day`.
+6. **Regua de friccao real-only**:
+   `scripts/friction_ruler.py` mantém friccao de execucao real vs gemeo sombra e
+   marca explicitamente o cross-check dry-run como aposentado.
+7. **Ledger dry-run congelado como historico**:
+   `data/ssot/ledger.jsonl` permanece sob protecao append-only de `§6.6.1`,
+   sem novas operacoes esperadas nesse trilho.
+8. **Painel dry-run legado sem manutencao**:
+   superficies legadas de dry-run (`/painel/<data>`) ficam fora do caminho
+   operacional vivo e sem manutencao evolutiva.
+9. **Follow-ups obrigatorios em task propria**:
+   gate de integridade SSOT US (equivalente R-062/R-063) e fail-loud do Step 14
+   do `run_daily.py` exigem cadeia completa em task dedicada.
+
+Ref: SALA D-194, USA D-171, USA D-164, R-049, R-055, R-019.
+
 ## 7) Gate de paridade metodológica com RENDA_OPS (D-009, D-012)
 
 **Regra**: toda task que introduzir um mecanismo, threshold, filtro ou lógica de pipeline **deve** demonstrar correspondência explícita com o RENDA_OPS antes de ser aprovada. Se o mecanismo não existir no RENDA_OPS, o Architect deve declarar isso no JSON da task e justificar a divergência. O Auditor deve verificar este gate.
