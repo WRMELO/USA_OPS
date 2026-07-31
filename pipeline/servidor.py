@@ -88,6 +88,23 @@ def _list_existing_panels() -> list[date]:
     return sorted(set(out))
 
 
+def _live_real_boletim_path(day: date) -> Path:
+    return ROOT / "data" / "live_real_test" / f"{day.isoformat()}.json"
+
+
+def _list_live_real_closed_boletins() -> list[date]:
+    live_dir = ROOT / "data" / "live_real_test"
+    if not live_dir.exists():
+        return []
+    out: list[date] = []
+    for p in live_dir.glob("*.json"):
+        try:
+            out.append(date.fromisoformat(p.stem))
+        except ValueError:
+            continue
+    return sorted(set(out))
+
+
 def _trading_days() -> list[date]:
     operational_window = ROOT / "data" / "ssot" / "operational_window.parquet"
     canonical = ROOT / "data" / "ssot" / "canonical_us.parquet"
@@ -422,6 +439,13 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
                 except ValueError:
                     self._respond_html("<h3>Data invalida.</h3>", code=400)
                     return
+                if _real_test_active():
+                    live_boletim = _live_real_boletim_path(day)
+                    if live_boletim.exists():
+                        view = real_boletim_web.load_live_view(day, ROOT / "data" / "live_real_test")
+                        html = real_boletim_web.render_live_html(view)
+                        self._respond_html(html, code=200)
+                        return
                 panel = _panel_path(day)
                 if not panel.exists():
                     self._respond_html("<h3>Painel historico nao encontrado.</h3>", code=404)
@@ -646,7 +670,11 @@ def serve(host: str = "127.0.0.1", port: int = 8788, auto_open: bool = True, ove
             self._respond_json(result, code=200)
 
         def _render_home(self, today: date) -> str:
-            hist = _list_existing_panels()
+            hist = (
+                _list_live_real_closed_boletins()
+                if _real_test_active()
+                else _list_existing_panels()
+            )
             items = [
                 f"<li><a href='/painel/{d.isoformat()}'>{d.isoformat()}</a>{' (hoje)' if d == today else ''}</li>"
                 for d in reversed(hist[-60:])

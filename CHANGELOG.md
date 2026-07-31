@@ -2,6 +2,8 @@
 
 ## 2026-07-31
 
+- fix(web): LEVE-20260731-01 — com LIVE-REAL ativo, a home lista só boletins fechados em `data/live_real_test/YYYY-MM-DD.json` e `/painel/<data>` renderiza o boletim LIVE-REAL salvo (via `real_boletim_web`) em vez do HTML dry-run legado; catch-up dry-run permanece em `_list_existing_panels()`. Artefatos: `pipeline/servidor.py`, `tests/test_servidor_real_boletim.py`.
+
 - docs(curadoria): T-SDC-DRYRUN-US-APOSENTADORIA-LIVEREAL-V1 — fecha a rastreabilidade da aposentadoria do dry-run US e do endurecimento do LIVE-REAL: Step 13 desativado, `pending_rebalance_buy.json` arquivado sem delete, janela de rebalance do Analista derivada da grade canonica, friccao real-only e cross-check dry-run aposentado. Artefatos: `pipeline/run_daily.py`, `pipeline/analise_us.py`, `scripts/friction_ruler.py`, `tests/test_friction_ruler.py`, `data/daily/pending_rebalance_buy.json.retired-20260731-D194`, `data/ssot/contexto_analista_us.json`, `data/live_real_test/friction_report_2026-07-31.json`, `DECISION_LOG.md`, `GOVERNANCE.md`. Decision: D-171.
 
 ## 2026-07-30

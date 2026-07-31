@@ -283,3 +283,99 @@ def test_painel_encerrar_route_returns_409_when_close_day_is_blocked(monkeypatch
     assert response["code"] == 409
     assert "Encerramento bloqueado" in str(response["html"])
     assert "redirect" not in calls
+
+
+def _seed_live_real_active(tmp_path: Path) -> None:
+    ledger_path = tmp_path / "data" / "live_real_test" / "ledger_real.jsonl"
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    ledger_path.write_text(
+        json.dumps({"type": "APORTE", "amount": 20008.72, "exec_date": "2026-07-16"}) + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_list_live_real_closed_boletims_filters_non_date_files(tmp_path, monkeypatch):
+    servidor = _load_servidor_module()
+    monkeypatch.setattr(servidor, "ROOT", tmp_path)
+
+    live_dir = tmp_path / "data" / "live_real_test"
+    live_dir.mkdir(parents=True, exist_ok=True)
+    (live_dir / "2026-07-16.json").write_text("{}", encoding="utf-8")
+    (live_dir / "2026-07-17.json").write_text("{}", encoding="utf-8")
+    (live_dir / "draft_2026-07-16_encerrado_204609.json").write_text("{}", encoding="utf-8")
+    (live_dir / "friction_report_2026-07-16.json").write_text("{}", encoding="utf-8")
+    (live_dir / "abertura_2026-07-16.json").write_text("{}", encoding="utf-8")
+
+    assert servidor._list_live_real_closed_boletins() == [date(2026, 7, 16), date(2026, 7, 17)]
+
+
+def test_render_home_lists_live_real_boletims_when_active(tmp_path, monkeypatch):
+    servidor = _load_servidor_module()
+    monkeypatch.setattr(servidor, "ROOT", tmp_path)
+    _seed_live_real_active(tmp_path)
+
+    live_dir = tmp_path / "data" / "live_real_test"
+    (live_dir / "2026-07-16.json").write_text("{}", encoding="utf-8")
+    (live_dir / "2026-07-17.json").write_text("{}", encoding="utf-8")
+
+    cycles_dir = tmp_path / "data" / "cycles" / "2026-06-01"
+    cycles_dir.mkdir(parents=True, exist_ok=True)
+    (cycles_dir / "painel.html").write_text("<html>dry-run</html>", encoding="utf-8")
+
+    handler_cls = _capture_handler_class(monkeypatch, servidor, override_day=date(2026, 7, 17))
+    handler = object.__new__(handler_cls)
+    html = handler._render_home(date(2026, 7, 17))
+
+    assert "/painel/2026-07-17" in html
+    assert "/painel/2026-07-16" in html
+    assert "/painel/2026-06-01" not in html
+
+
+def test_painel_historico_serves_live_real_when_active(tmp_path, monkeypatch):
+    servidor = _load_servidor_module()
+    monkeypatch.setattr(servidor, "ROOT", tmp_path)
+    _seed_live_real_active(tmp_path)
+
+    live_dir = tmp_path / "data" / "live_real_test"
+    (live_dir / "2026-07-16.json").write_text("{}", encoding="utf-8")
+
+    cycles_dir = tmp_path / "data" / "cycles" / "2026-07-16"
+    cycles_dir.mkdir(parents=True, exist_ok=True)
+    (cycles_dir / "painel.html").write_text("<html>dry-run historico</html>", encoding="utf-8")
+
+    load_calls: dict[str, object] = {}
+    monkeypatch.setattr(
+        servidor.real_boletim_web,
+        "load_live_view",
+        lambda day, ledger_dir: load_calls.update({"day": day, "ledger_dir": ledger_dir}) or {"today": day.isoformat()},
+    )
+    monkeypatch.setattr(
+        servidor.real_boletim_web,
+        "render_live_html",
+        lambda view: f"<html>live-real {view['today']}</html>",
+    )
+
+    handler_cls = _capture_handler_class(monkeypatch, servidor, override_day=date(2026, 7, 17))
+    handler = object.__new__(handler_cls)
+    handler.path = "/painel/2026-07-16"
+    handler.headers = {}
+    calls: dict[str, object] = {}
+    handler._respond_html = types.MethodType(
+        lambda self, html, code=200: calls.setdefault("respond_html", {"html": html, "code": code}),
+        handler,
+    )
+    handler._respond_bytes = types.MethodType(
+        lambda self, content_type, body, code=200: calls.setdefault(
+            "respond_bytes", {"content_type": content_type, "body": body, "code": code}
+        ),
+        handler,
+    )
+
+    handler_cls.do_GET(handler)
+
+    response = calls.get("respond_html")
+    assert isinstance(response, dict)
+    assert response["code"] == 200
+    assert "live-real 2026-07-16" in str(response["html"])
+    assert load_calls["day"] == date(2026, 7, 16)
+    assert "respond_bytes" not in calls
