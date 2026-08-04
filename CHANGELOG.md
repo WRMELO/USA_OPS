@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-08-04
+
+- docs(curadoria): `T-SDC-SSOT-RECONCILIACAO-OFICIAL-LAUNCHERS-V1` - fecha a rastreabilidade da adequacao do consumidor US para a nova semantica da Camada 1 EODHD: cobertura critica passa a ser `posicoes reais abertas ∪ ranking operacional corrente`, a rotina passa a reconciliar com CTA EOD Summary quando houver fail de completude e o launcher legado `iniciar.sh` segue como backend do novo fluxo operacional. Artefatos: `iniciar.sh`, `lib/eodhd_source_us.py`, `data/live_real_test/ledger_real.jsonl`, `data/live_real_test/reconciliation_checkpoint.json`, `data/live_real_test/reconciliation_log.jsonl`, `DECISION_LOG.md`, `GOVERNANCE.md`, `ROADMAP.md`. Decision: D-198 (ref cruzada: R-071, R-072).
+
 ## 2026-07-31
 
 - fix(web): LEVE-20260731-01 — com LIVE-REAL ativo, a home lista só boletins fechados em `data/live_real_test/YYYY-MM-DD.json` e `/painel/<data>` renderiza o boletim LIVE-REAL salvo (via `real_boletim_web`) em vez do HTML dry-run legado; catch-up dry-run permanece em `_list_existing_panels()`. Artefatos: `pipeline/servidor.py`, `tests/test_servidor_real_boletim.py`.

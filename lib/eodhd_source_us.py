@@ -181,7 +181,11 @@ def load_incremental_rows_from_eodhd(
     raw["dividend_rate"] = pd.to_numeric(raw["dividend_rate"], errors="coerce").fillna(0.0).astype(float)
     raw["split_from"] = pd.to_numeric(raw["split_from"], errors="coerce")
     raw["split_to"] = pd.to_numeric(raw["split_to"], errors="coerce")
-    raw["source"] = "eodhd_local_base_v1"
+    if "data_source" in raw.columns:
+        raw["source"] = raw["data_source"].fillna("eodhd_local_base_v1").astype(str).str.strip()
+        raw.loc[raw["source"] == "", "source"] = "eodhd_local_base_v1"
+    else:
+        raw["source"] = "eodhd_local_base_v1"
     raw["ingested_at"] = datetime.now(timezone.utc).isoformat()
 
     out = (

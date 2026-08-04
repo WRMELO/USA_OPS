@@ -90,7 +90,7 @@ def resolve_marking_prices(
     frame["ticker"] = frame["ticker"].astype(str).str.upper().str.strip()
     scoped = frame[
         (frame["ticker"].isin(normalized))
-        & (frame["date"] <= market_day)
+        & (frame["date"] == market_day)
         & (~pd.isna(frame["close_operational"]))
     ]
     if scoped.empty:

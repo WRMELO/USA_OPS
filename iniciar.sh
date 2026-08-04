@@ -8,8 +8,10 @@ cd "${ROOT_DIR}"
 DECISION_LOG_FILE="/tmp/usa_ops_decision.log"
 echo "=== $(date '+%F %T') ==" >> "${DECISION_LOG_FILE}"
 if ! .venv/bin/python3 pipeline/run_daily.py --decision-only >> "${DECISION_LOG_FILE}" 2>&1; then
-  notify-send "USA OPS" "Boletim do dia falhou. Veja ${DECISION_LOG_FILE}. Abrindo ultimo painel valido." \
-    --icon=dialog-warning 2>/dev/null || true
+  notify-send "USA OPS" \
+    "PARADA DO FORNO US: boletim do dia falhou (fail-closed). Painel nao sera aberto. Veja ${DECISION_LOG_FILE}." \
+    --icon=dialog-error 2>/dev/null || true
+  exit 1
 fi
 
 HOST="127.0.0.1"
