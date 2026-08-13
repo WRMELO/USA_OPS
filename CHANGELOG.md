@@ -1,5 +1,9 @@
 # CHANGELOG — USA_OPS
 
+## 2026-08-13
+
+- docs(curadoria): `reconciliacao-btg-20260812` - fecha a rastreabilidade da migracao supervisionada que alinhou ELF, PD, PLSE, SLS, TNET, WGS e ZETA aos valores da nota BTG de 2026-08-12, com checkpoint avançado para `Confirm_BTGP_001_BPXB000057_08122026.pdf` e auditoria PASS. Artefatos: `data/live_real_test/ledger_real.jsonl`, `data/live_real_test/reconciliation_log.jsonl`, `data/live_real_test/reconciliation_checkpoint.json`. Commit: `6939725`.
+
 ## 2026-08-04
 
 - docs(curadoria): `T-SDC-SSOT-RECONCILIACAO-OFICIAL-LAUNCHERS-V1` - fecha a rastreabilidade da adequacao do consumidor US para a nova semantica da Camada 1 EODHD: cobertura critica passa a ser `posicoes reais abertas ∪ ranking operacional corrente`, a rotina passa a reconciliar com CTA EOD Summary quando houver fail de completude e o launcher legado `iniciar.sh` segue como backend do novo fluxo operacional. Artefatos: `iniciar.sh`, `lib/eodhd_source_us.py`, `data/live_real_test/ledger_real.jsonl`, `data/live_real_test/reconciliation_checkpoint.json`, `data/live_real_test/reconciliation_log.jsonl`, `DECISION_LOG.md`, `GOVERNANCE.md`, `ROADMAP.md`. Decision: D-198 (ref cruzada: R-071, R-072).
